@@ -1,0 +1,24 @@
+# Nada de datos ni credenciales: viven en DATA_DIR, fuera de public_html.
+secrets.php
+PIN-INICIAL.txt
+*.sqlite
+*.sql
+*.sql.gz
+
+# Extractos bancarios y cualquier archivo subido
+uploads/
+*.xlsx
+*.xls
+*.csv
+
+# Registros del servidor
+error_log
+*.log
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
