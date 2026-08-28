@@ -38,12 +38,38 @@ function exportar_xlsx(string $nombre, array $encabezados, iterable $filas, arra
         . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
         . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
         . '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        . '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+        . '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
         . '</Types>');
+
+    // Propiedades del documento: quién lo generó y cuándo.
+    $ahora = gmdate('Y-m-d\TH:i:s\Z');
+    $zip->addFromString('docProps/core.xml',
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"'
+        . ' xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/"'
+        . ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+        . '<dc:title>' . htmlspecialchars($nombre, ENT_XML1, 'UTF-8') . '</dc:title>'
+        . '<dc:subject>' . APP_LEMA . '</dc:subject>'
+        . '<dc:creator>' . APP_CREDITO . '</dc:creator>'
+        . '<cp:lastModifiedBy>' . APP_CREDITO . '</cp:lastModifiedBy>'
+        . '<dcterms:created xsi:type="dcterms:W3CDTF">' . $ahora . '</dcterms:created>'
+        . '<dcterms:modified xsi:type="dcterms:W3CDTF">' . $ahora . '</dcterms:modified>'
+        . '</cp:coreProperties>');
+    $zip->addFromString('docProps/app.xml',
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">'
+        . '<Application>' . APP_CREDITO . '</Application>'
+        . '<AppVersion>' . APP_VERSION . '</AppVersion>'
+        . '<Company>' . APP_MARCA . '</Company>'
+        . '</Properties>');
 
     $zip->addFromString('_rels/.rels',
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
         . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+        . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+        . '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
         . '</Relationships>');
 
     $zip->addFromString('xl/workbook.xml',

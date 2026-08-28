@@ -10,14 +10,18 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title><?= e($titulo) ?> · <?= e(APP_NAME) ?></title>
+<title><?= e($titulo) ?> · <?= e(APP_CREDITO) ?></title>
+<meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
+<meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=8">
+<link rel="stylesheet" href="assets/app.css?v=9">
 </head>
 <body>
 <div class="app">
   <aside class="lateral">
-    <div class="marca"><b>VIP Soft</b><span>Conciliación</span></div>
+    <div class="marca">
+      <b><?= e(APP_NOMBRE) ?></b><span>by <?= e(APP_MARCA) ?></span>
+    </div>
     <nav class="nav">
       <div class="nav-titulo">Trabajo diario</div>
       <a href="?r=panel"       class="<?= $ruta === 'panel' ? 'on' : '' ?>">Panel</a>
@@ -33,7 +37,14 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <a href="?r=ajustes"    class="<?= $ruta === 'ajustes' ? 'on' : '' ?>">Ajustes</a>
       <a href="#" class="guia-abrir" data-guia-abrir>Visita guiada</a>
     </nav>
-    <div class="lateral-pie"><a href="?r=salir">Cerrar sesión</a></div>
+    <div class="lateral-pie">
+      <a href="?r=salir">Cerrar sesión</a>
+      <div class="credito">
+        <b><?= e(APP_NOMBRE) ?></b> v<?= e(APP_VERSION) ?><br>
+        <span><?= e(APP_LEMA) ?></span><br>
+        <span>by <?= e(APP_MARCA) ?></span>
+      </div>
+    </div>
   </aside>
   <main class="principal">
     <div class="encabezado">
@@ -67,8 +78,8 @@ window.GUIA = <?= json_encode([
     'pasos' => guia_pasos(),
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
-<script src="assets/app.js?v=8"></script>
-<script src="assets/guia.js?v=8"></script>
+<script src="assets/app.js?v=9"></script>
+<script src="assets/guia.js?v=9"></script>
 </body>
 </html>
 <?php

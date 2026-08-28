@@ -39,7 +39,7 @@ if ($export === 'csv' || $export === 'xlsx') {
         }
     })();
 
-    $nombre = 'movimientos_' . ($f['desde'] ?: 'inicio') . '_a_' . ($f['hasta'] ?: 'hoy');
+    $nombre = 'CONSIL_movimientos_' . ($f['desde'] ?: 'inicio') . '_a_' . ($f['hasta'] ?: 'hoy');
     bitacora('exportacion', strtoupper($export) . ' · ' . $nombre);
     if ($export === 'csv') {
         exportar_csv($nombre, $cab, $filas);

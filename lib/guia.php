@@ -19,9 +19,10 @@ function guia_pasos(): array
         // ---------------------------------------------------------- Apertura
         [
             'ruta' => 'panel', 'sel' => '',
-            'titulo' => 'Esto responde una sola pregunta:<br>¿en qué se fue el dinero?',
+            'titulo' => 'Bienvenido a CONSIL',
             'texto' => 'Cada mes salen cientos de pagos de las cuentas. El banco los entrega en un archivo, '
-                     . 'pero ese archivo no dice <b>para qué</b> fue cada pago. Este sistema arma esa respuesta.',
+                     . 'pero ese archivo no dice <b>para qué</b> fue cada pago. '
+                     . 'CONSIL responde esa pregunta: <b>¿en qué se fue el dinero?</b>',
             'nota' => 'La visita dura un minuto. Puede salirse cuando quiera y volver a verla después.',
         ],
         [
@@ -159,7 +160,8 @@ function guia_pasos(): array
             'titulo' => 'Eso es todo. Su día a día son tres pasos',
             'texto' => '<b>1.</b> Sube los archivos del banco. &nbsp; <b>2.</b> Explica lo poco que quedó pendiente. '
                      . '&nbsp; <b>3.</b> Saca el reporte cuando lo necesite.',
-            'nota' => 'Puede repetir esta visita cuando quiera, con el botón «Visita guiada» del menú.',
+            'nota' => 'Puede repetir esta visita cuando quiera, con el botón «Visita guiada» del menú. '
+                    . 'CONSIL <i>by</i> VIP Soft.',
         ],
     ];
 }

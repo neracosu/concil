@@ -45,7 +45,7 @@ if ($export === 'csv' || $export === 'xlsx') {
         date('d/m/Y', strtotime($r['f1'])),
         date('d/m/Y', strtotime($r['f2'])),
     ], $filas);
-    $nombre = 'reporte_por_' . $corte . '_' . ($f['desde'] ?: 'inicio') . '_a_' . ($f['hasta'] ?: 'hoy');
+    $nombre = 'CONSIL_reporte_por_' . $corte . '_' . ($f['desde'] ?: 'inicio') . '_a_' . ($f['hasta'] ?: 'hoy');
     bitacora('exportacion', 'reporte ' . $corte);
     if ($export === 'csv') {
         exportar_csv($nombre, $cab, $datos);

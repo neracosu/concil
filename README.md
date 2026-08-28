@@ -1,11 +1,19 @@
-# Consil — Conciliación bancaria
+<div align="center">
+
+# CONSIL
+
+**by VIP Soft** · Premium Systems Solutions
+
+*Conciliación bancaria · ¿en qué se fue el dinero?*
+
+</div>
+
+---
 
 Sistema web para conciliar y justificar los movimientos bancarios de varias
 cuentas. Toma los extractos que entrega cada banco, reconoce solo los pagos que
 se repiten todos los meses y deja para revisión humana únicamente aquello que el
 banco no explica.
-
-Responde a una pregunta: **¿en qué se fue el dinero?**
 
 ---
 
@@ -385,6 +393,19 @@ banco.
 - La agrupación de pendientes usa `REGEXP_REPLACE`, disponible en MySQL 8 y
   MariaDB 10.0.5+.
 
+## Créditos
+
+**CONSIL** es un producto de **VIP Soft** — Premium Systems Solutions.
+
+La marca aparece en la aplicación, en la visita guiada y en las propiedades de
+todos los archivos que exporta: un XLSX generado por CONSIL se abre en Excel
+mostrando `CONSIL by VIP Soft` como aplicación de origen.
+
 ---
 
-Desarrollado para **VIP Soft** · Premium Systems Solutions
+<div align="center">
+
+**CONSIL** *by* **VIP Soft**
+Premium Systems Solutions · [vipsoft.cloud](https://vipsoft.cloud)
+
+</div>

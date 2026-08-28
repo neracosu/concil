@@ -1,4 +1,4 @@
-# Notas para Claude Code
+# Notas para Claude Code — CONSIL
 
 Contexto y convenciones de este repositorio. Lo que ya está explicado en el
 [README](README.md) no se repite aquí; esto recoge lo que no se deduce leyendo
@@ -6,7 +6,7 @@ el código.
 
 ## Qué es
 
-Sistema de conciliación bancaria en PHP 8.2 + MySQL, **sin dependencias**: ni
+**CONSIL by VIP Soft**: sistema de conciliación bancaria en PHP 8.2 + MySQL, **sin dependencias**: ni
 Composer ni Node. El lector y el escritor de XLSX están implementados a mano
 sobre `ZipArchive` y `XMLReader`. No introduzcas librerías externas: el destino
 es hosting cPanel compartido y esa restricción es deliberada.
@@ -98,6 +98,17 @@ activarlos, es quitar ese filtro, no volver a importar.
 `data-guia="..."` de las vistas. Si renombras o quitas uno de esos elementos, el
 paso correspondiente se salta en silencio. Al añadir una sección nueva, añade su
 ancla y su paso.
+
+## La marca
+
+El producto se llama **CONSIL** y el crédito es **by VIP Soft**. Se escribe
+`CONSIL` en mayúsculas y `VIP Soft` con espacio. Las constantes están en
+`lib/config.php` (`APP_NOMBRE`, `APP_MARCA`, `APP_LEMA`, `APP_CREDITO`,
+`APP_VERSION`): úsalas, no escribas la marca a mano en las vistas.
+
+Aparece en el menú, en la pantalla de acceso, en los títulos del navegador, en
+el primer y el último paso de la visita guiada, en el nombre de los archivos
+exportados y en las propiedades de los XLSX (`docProps/app.xml`).
 
 ## Al escribir textos de interfaz
 

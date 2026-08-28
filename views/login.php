@@ -24,15 +24,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Acceso · <?= e(APP_NAME) ?></title>
+<title>Acceso · <?= e(APP_CREDITO) ?></title>
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=4">
+<link rel="stylesheet" href="assets/app.css?v=9">
 </head>
 <body>
 <div class="acceso">
   <div class="acceso-caja">
-    <div class="acceso-marca">VIP Soft</div>
-    <h1>Conciliación bancaria</h1>
+    <h1 class="acceso-logo"><?= e(APP_NOMBRE) ?></h1>
+    <div class="acceso-marca">by <?= e(APP_MARCA) ?></div>
+    <p class="acceso-lema"><?= e(APP_LEMA) ?></p>
     <p>Escribe tu PIN de 6 dígitos.</p>
 
     <?php if ($error !== ''): ?>
@@ -56,8 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <b class="num" style="font-size:12px">PIN-INICIAL.txt</b> del servidor. Cámbialo en Ajustes al entrar.
       </div>
     <?php endif ?>
+
+    <div class="acceso-pie"><?= e(APP_CREDITO) ?> · v<?= e(APP_VERSION) ?></div>
   </div>
 </div>
-<script src="assets/app.js?v=4"></script>
+<script src="assets/app.js?v=8"></script>
 </body>
 </html>

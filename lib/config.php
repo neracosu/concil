@@ -5,8 +5,13 @@
  * fuera de public_html: no son accesibles por web.
  */
 
-const APP_NAME    = 'Conciliación Bancaria';
+// Identidad del producto
+const APP_NOMBRE  = 'CONSIL';
 const APP_MARCA   = 'VIP Soft';
+const APP_LEMA    = 'Conciliación bancaria';
+const APP_CREDITO = 'CONSIL by VIP Soft';
+const APP_VERSION = '1.0';
+const APP_NAME    = APP_CREDITO;   // usado en los títulos del navegador
 const DATA_DIR    = '/home/mardenli/conciliacion_data';
 const UPLOAD_DIR  = DATA_DIR . '/uploads';
 const SECRETS     = DATA_DIR . '/secrets.php';
