@@ -8,6 +8,13 @@ DirectoryIndex index.php
 # (además cada carpeta tiene su propio .htaccess que lo deniega).
 RedirectMatch 404 ^/conciliacion/(lib|views)/.*$
 
+# Ningún extracto bancario se sirve por web, esté donde esté. Los archivos del
+# banco van en DATA_DIR, fuera de public_html; esto es la red de seguridad para
+# cuando alguien deja una copia aquí sin darse cuenta.
+<FilesMatch "\.(xlsx|xls|csv|ods|qif|ofx|mt940|sta)$">
+  Require all denied
+</FilesMatch>
+
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
