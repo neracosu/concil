@@ -87,6 +87,12 @@ repite en **todas** las filas de la muestra (así se detecta Venezuela, que trae
 `numeroCuenta` por fila). Aflojar ese criterio hace que el sistema bloquee
 importaciones correctas.
 
+**El bloqueo compara número contra número, no nombres.** Los cuatro primeros
+dígitos de la cuenta del archivo contra los de `cuentas.numero`. Comparar por el
+nombre del banco dejaba pasar los archivos cuando la cuenta se creó sin él —el
+caso de los cinco bancos que no dicen quiénes son—, y así se coló un extracto de
+Venezuela en una cuenta del BNC durante el recorrido de prueba.
+
 **Solo bloquea lo concluyente.** El código de banco del número de cuenta
 (primeros 4 dígitos) y los totales del pie del archivo detienen la importación;
 la cadena del saldo solo confirma. Banplus no entrega las filas en orden de
@@ -168,6 +174,21 @@ El público incluye personas que no trabajan con sistemas. Evita «conciliar»,
 «mapear», «regla», «patrón», «importar» o «filtro» sin explicarlos, sobre todo
 en la visita guiada y en la ayuda de cada pantalla. Di qué gana quien lo usa, no
 qué hace el programa. Frases cortas.
+
+## Probar de punta a punta
+
+Se puede recorrer la aplicación por HTTP sin conocer el PIN: crear la sesión con
+las propias funciones de `lib/auth.php` desde un script CLI, con
+`session_save_path('/var/cpanel/php/sessions/ea-php83')` y el nombre de cookie
+**`CONCILSESS`** (no `PHPSESSID`), y luego `curl -b "CONCILSESS=<id>"`.
+
+Dos trampas al hacerlo:
+- `curl -X POST` junto con `-L` reenvía el POST a la redirección y produce un
+  419 que no es de la aplicación. Usa `--data` sin `-X`, o no sigas redirecciones.
+- Haz las pruebas destructivas dentro de una **unidad de negocio de usar y
+  tirar**. `cuentas.sede_id` no tiene clave foránea, así que borrar la sede deja
+  cuentas y movimientos huérfanos: hay que borrar las cuentas (sus movimientos
+  caen por FK) y las filas de `importaciones` que quedan con `cuenta_id` a NULL.
 
 ## Antes de subir cambios
 

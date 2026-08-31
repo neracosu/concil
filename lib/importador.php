@@ -519,21 +519,39 @@ function comparar_totales(array $dec, float $sumaD, float $sumaC, int $nD, int $
  */
 function choque_de_banco(int $cuentaId, array $a): string
 {
-    $delArchivo = banco_por_codigo((string) ($a['codigo'] ?? ''));
+    $codigo = (string) ($a['codigo'] ?? '');
+    $delArchivo = banco_por_codigo($codigo);
     if ($delArchivo === '') {
         return '';
     }
-    $s = db()->prepare('SELECT nombre, banco FROM cuentas WHERE id = ?');
+    $s = db()->prepare('SELECT nombre, banco, numero FROM cuentas WHERE id = ?');
     $s->execute([$cuentaId]);
     $c = $s->fetch();
-    if ($c === false || (string) $c['banco'] === '') {
+    if ($c === false) {
         return '';
     }
-    if (norm((string) $c['banco']) === norm($delArchivo)) {
+
+    // Lo primero es comparar número contra número: los cuatro primeros dígitos
+    // son el banco, y eso vale aunque la cuenta no tenga anotado su nombre.
+    // Comparar solo por el nombre del banco dejaba pasar los archivos cuando la
+    // cuenta se había creado sin él, que es el caso de los cinco bancos que no
+    // dicen quiénes son.
+    $suyo = preg_replace('/\D/', '', (string) $c['numero']);
+    if (strlen($suyo) >= 4) {
+        if (substr($suyo, 0, 4) === $codigo) {
+            return '';
+        }
+        $esperado = banco_por_codigo(substr($suyo, 0, 4));
+        return 'este archivo es de ' . $delArchivo . ' (la cuenta que trae dentro empieza por '
+             . $codigo . ') y se estaba guardando en «' . $c['nombre'] . '», que es la cuenta '
+             . $c['numero'] . ($esperado !== '' ? ' de ' . $esperado : '') . '. No se guardó nada.';
+    }
+
+    if ((string) $c['banco'] === '' || norm((string) $c['banco']) === norm($delArchivo)) {
         return '';
     }
     return 'este archivo es de ' . $delArchivo . ' (la cuenta que trae dentro empieza por '
-         . $a['codigo'] . ') y se estaba guardando en «' . $c['nombre'] . '», que es de '
+         . $codigo . ') y se estaba guardando en «' . $c['nombre'] . '», que es de '
          . $c['banco'] . '. No se guardó nada.';
 }
 
