@@ -14,7 +14,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
 <meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=12">
+<link rel="stylesheet" href="assets/app.css?v=13">
 </head>
 <body>
 <div class="app">
@@ -67,10 +67,19 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <a href="?r=categorias" class="<?= $ruta === 'categorias' ? 'on' : '' ?>">Categorías</a>
       <a href="?r=cuentas"    class="<?= $ruta === 'cuentas' ? 'on' : '' ?>">Cuentas</a>
       <a href="?r=sede"       class="<?= $ruta === 'sede' ? 'on' : '' ?>">Unidades de negocio</a>
+      <?php if (es_maestro()): ?>
+        <a href="?r=usuarios" class="<?= $ruta === 'usuarios' ? 'on' : '' ?>">Usuarios</a>
+      <?php endif ?>
       <a href="?r=ajustes"    class="<?= $ruta === 'ajustes' ? 'on' : '' ?>">Ajustes</a>
       <a href="#" class="guia-abrir" data-guia-abrir>Visita guiada</a>
     </nav>
     <div class="lateral-pie">
+      <?php $yo = usuario_actual(); if ($yo !== null): ?>
+        <a href="?r=perfil" class="quien">
+          <span class="quien-inicial"><?= e(mb_strtoupper(mb_substr((string) $yo['nombre'], 0, 1))) ?></span>
+          <span><b><?= e($yo['nombre']) ?></b><span><?= $yo['maestro'] ? 'Maestro' : 'Mi perfil' ?></span></span>
+        </a>
+      <?php endif ?>
       <a href="?r=salir">Cerrar sesión</a>
       <div class="credito">
         <b><?= e(APP_NOMBRE) ?></b> v<?= e(APP_VERSION) ?><br>

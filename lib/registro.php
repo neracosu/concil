@@ -133,7 +133,7 @@ function pantalla_de_fallo(string $codigo): void
     echo '<!doctype html><html lang="es"><head><meta charset="utf-8">'
        . '<meta name="viewport" content="width=device-width,initial-scale=1">'
        . '<title>Algo falló · ' . e(APP_CREDITO) . '</title>'
-       . '<link rel="stylesheet" href="assets/app.css?v=12"></head>'
+       . '<link rel="stylesheet" href="assets/app.css?v=13"></head>'
        . '<body class="elegir-cuerpo"><div class="elegir-velo"><div class="elegir-carta">'
        . '<div class="elegir-kicker">' . e(APP_NOMBRE) . ' <span>by ' . e(APP_MARCA) . '</span></div>'
        . '<h1 class="elegir-titulo">Algo falló y no pudimos continuar</h1>'

@@ -230,7 +230,49 @@ function migrar(): void
         valor TEXT NOT NULL
     ) $t");
 
+    // Quién entra y qué hace cada uno. Todos pueden hacer todo; el maestro es
+    // el único que además da de alta a los demás.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS usuarios (
+        id            INT AUTO_INCREMENT PRIMARY KEY,
+        nombre        VARCHAR(120) NOT NULL,
+        pin_hash      VARCHAR(255) NOT NULL,
+        pin_busqueda  CHAR(64)     NOT NULL,
+        maestro       TINYINT(1)   NOT NULL DEFAULT 0,
+        activo        TINYINT(1)   NOT NULL DEFAULT 1,
+        creado_en     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ultimo_acceso DATETIME     NULL,
+        UNIQUE KEY uq_usuario_pin (pin_busqueda)
+    ) $t");
+
+    // Dónde está cada quien ahora mismo, para el seguimiento en vivo.
+    columna_si_falta($pdo, 'usuarios', 'visto_en', 'DATETIME NULL');
+    columna_si_falta($pdo, 'usuarios', 'pantalla', "VARCHAR(40) NOT NULL DEFAULT ''");
+
+    // La bitácora pasa a registrar también el autor, no solo la acción.
+    columna_si_falta($pdo, 'bitacora', 'usuario_id', 'INT NULL');
+    if (!indice_existe($pdo, 'bitacora', 'idx_bit_usuario')) {
+        $pdo->exec('ALTER TABLE bitacora ADD KEY idx_bit_usuario (usuario_id)');
+    }
+
     sembrar_comisiones($pdo);
+    sembrar_maestro($pdo);
+}
+
+/**
+ * Sin usuarios no se puede entrar, así que la primera migración convierte el
+ * PIN compartido que había en un usuario maestro. Nadie se queda fuera.
+ */
+function sembrar_maestro(PDO $pdo): void
+{
+    if ((int) $pdo->query('SELECT COUNT(*) FROM usuarios')->fetchColumn() > 0) {
+        return;
+    }
+    $hash = ajuste('pin_hash');
+    if ($hash === null) {
+        return;                 // instalación nueva: el PIN aún no existe
+    }
+    $pdo->prepare('INSERT INTO usuarios (nombre, pin_hash, pin_busqueda, maestro) VALUES (?, ?, ?, 1)')
+        ->execute(['Maestro', $hash, str_repeat('0', 64)]);
 }
 
 /**
@@ -301,6 +343,9 @@ function guardar_ajuste(string $clave, string $valor): void
 
 function bitacora(string $accion, string $detalle = ''): void
 {
-    $s = db()->prepare('INSERT INTO bitacora (accion, detalle, ip) VALUES (?, ?, ?)');
-    $s->execute([$accion, mb_substr($detalle, 0, 500), $_SERVER['REMOTE_ADDR'] ?? 'cli']);
+    // El autor sale de la sesión: así ninguna de las 18 llamadas repartidas por
+    // la aplicación tuvo que cambiar para empezar a dejar rastro con nombre.
+    $uid = (int) ($_SESSION['uid'] ?? 0) ?: null;
+    $s = db()->prepare('INSERT INTO bitacora (accion, detalle, ip, usuario_id) VALUES (?, ?, ?, ?)');
+    $s->execute([$accion, mb_substr($detalle, 0, 500), $_SERVER['REMOTE_ADDR'] ?? 'cli', $uid]);
 }

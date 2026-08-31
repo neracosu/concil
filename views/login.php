@@ -7,15 +7,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Acceso bloqueado. Vuelve a intentar en ' . ceil($espera / 60) . ' minutos.';
     } else {
         $pin = preg_replace('/\D/', '', implode('', (array) ($_POST['d'] ?? [])));
-        if (verificar_pin((string) $pin)) {
-            entrar();
-            redirigir('?r=panel');
+        // La suma se comprueba antes que el PIN: si no, un robot sabría por el
+        // mensaje si acertó el PIN aunque fallara la suma.
+        if (captcha_necesario() && !captcha_correcto((string) ($_POST['suma'] ?? ''))) {
+            $error = 'La suma no es correcta. Inténtalo otra vez.';
+        } else {
+            $usuario = verificar_pin((string) $pin);
+            if ($usuario !== null) {
+                entrar($usuario);
+                redirigir('?r=panel');
+            }
+            bitacora('acceso_fallido', 'PIN incorrecto');
+            $espera = bloqueado();
+            $error = $espera > 0
+                ? 'Demasiados intentos. Acceso bloqueado por ' . ceil($espera / 60) . ' minutos.'
+                : 'PIN incorrecto. Te quedan ' . (MAX_INTENTOS - (int) ajuste('intentos', '0')) . ' intentos.';
         }
-        bitacora('acceso_fallido', 'PIN incorrecto');
-        $espera = bloqueado();
-        $error = $espera > 0
-            ? 'Demasiados intentos. Acceso bloqueado por ' . ceil($espera / 60) . ' minutos.'
-            : 'PIN incorrecto. Te quedan ' . (MAX_INTENTOS - (int) ajuste('intentos', '0')) . ' intentos.';
     }
 }
 ?><!doctype html>
@@ -26,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="robots" content="noindex,nofollow">
 <title>Acceso · <?= e(APP_CREDITO) ?></title>
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=12">
+<link rel="stylesheet" href="assets/app.css?v=13">
 </head>
 <body>
 <div class="acceso">
@@ -48,13 +55,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  <?= $espera > 0 ? 'disabled' : '' ?>>
         <?php endfor ?>
       </div>
+      <?php if (captcha_necesario() && $espera <= 0): [$ca, $cb] = captcha_nuevo(); ?>
+        <div class="acceso-suma">
+          <label for="suma">Para comprobar que no es un programa: ¿cuánto es <b><?= $ca ?> + <?= $cb ?></b>?</label>
+          <input type="text" name="suma" id="suma" inputmode="numeric" pattern="\d*" maxlength="3"
+                 autocomplete="off" required>
+        </div>
+      <?php endif ?>
       <button class="btn btn-oro" style="width:100%;justify-content:center" <?= $espera > 0 ? 'disabled' : '' ?>>Entrar</button>
     </form>
 
     <?php if (ajuste('pin_inicial_pendiente') === '1' && $espera <= 0): ?>
       <div class="aviso aviso-nota" style="margin-top:20px;text-align:left">
         Sigue activo el PIN de instalación. Está en el archivo
-        <b class="num" style="font-size:12px">PIN-INICIAL.txt</b> del servidor. Cámbialo en Ajustes al entrar.
+        <b class="num" style="font-size:12px">PIN-INICIAL.txt</b> del servidor. Cámbialo en Mi perfil al entrar.
       </div>
     <?php endif ?>
 

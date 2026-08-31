@@ -36,15 +36,18 @@ function bloqueado(): int
     return max(0, $hasta - time());
 }
 
-function verificar_pin(string $pin): bool
+/**
+ * Busca a quién pertenece ese PIN. Devuelve el usuario, o null.
+ * El contador de intentos es del sistema, no de la persona: un PIN fallido no
+ * dice de quién era, así que no se le puede achacar a nadie.
+ */
+function verificar_pin(string $pin): ?array
 {
-    if (!preg_match('/^\d{6}$/', $pin)) {
-        return false;
-    }
-    if (password_verify($pin, pin_hash())) {
+    $u = usuario_por_pin($pin);
+    if ($u !== null) {
         guardar_ajuste('intentos', '0');
         guardar_ajuste('bloqueo_hasta', '0');
-        return true;
+        return $u;
     }
     $n = (int) ajuste('intentos', '0') + 1;
     guardar_ajuste('intentos', (string) $n);
@@ -53,24 +56,43 @@ function verificar_pin(string $pin): bool
         guardar_ajuste('intentos', '0');
         bitacora('bloqueo', 'Demasiados intentos fallidos');
     }
-    return false;
+    return null;
 }
 
+/**
+ * A partir del tercer intento fallido se pide una suma sencilla. Es para los
+ * robots que prueban PINs en serie, no para complicarle la vida a quien se
+ * equivocó de tecla: dos intentos son gratis.
+ */
+function captcha_necesario(): bool
+{
+    return (int) ajuste('intentos', '0') >= 3;
+}
+
+/** Prepara la suma y guarda el resultado esperado en la sesión. */
+function captcha_nuevo(): array
+{
+    $a = random_int(2, 9);
+    $b = random_int(2, 9);
+    $_SESSION['captcha'] = $a + $b;
+    return [$a, $b];
+}
+
+function captcha_correcto(string $respuesta): bool
+{
+    $esperado = $_SESSION['captcha'] ?? null;
+    unset($_SESSION['captcha']);        // de un solo uso
+    return $esperado !== null && trim($respuesta) !== '' && (int) $respuesta === (int) $esperado;
+}
+
+/** Cambia el PIN de quien está dentro. Vive en Mi perfil. */
 function cambiar_pin(string $nuevo): ?string
 {
-    if (!preg_match('/^\d{6}$/', $nuevo)) {
-        return 'El PIN debe tener exactamente 6 dígitos.';
+    $id = (int) ($_SESSION['uid'] ?? 0);
+    if ($id <= 0) {
+        return 'No hay sesión activa.';
     }
-    if (preg_match('/^(\d)\1{5}$/', $nuevo)) {
-        return 'No uses un PIN con los 6 dígitos iguales.';
-    }
-    if (in_array($nuevo, ['123456', '654321', '012345', '111111', '000000'], true)) {
-        return 'Ese PIN es demasiado predecible.';
-    }
-    guardar_ajuste('pin_hash', password_hash($nuevo, PASSWORD_DEFAULT));
-    guardar_ajuste('pin_inicial_pendiente', '0');
-    bitacora('pin', 'PIN actualizado');
-    return null;
+    return cambiar_pin_usuario($id, $nuevo);
 }
 
 function autenticado(): bool
@@ -86,16 +108,18 @@ function autenticado(): bool
     return true;
 }
 
-function entrar(): void
+function entrar(array $usuario): void
 {
     session_regenerate_id(true);
     $_SESSION['auth'] = true;
+    $_SESSION['uid'] = (int) $usuario['id'];
+    db()->prepare('UPDATE usuarios SET ultimo_acceso = NOW() WHERE id = ?')->execute([$usuario['id']]);
     // La unidad de negocio se elige en cada inicio de sesión: quien concilia
     // lleva varias y arrastrar la del día anterior invita a equivocarse.
     unset($_SESSION['sede']);
     $_SESSION['visto'] = time();
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
-    bitacora('acceso', 'Ingreso correcto');
+    bitacora('acceso', 'Entró ' . $usuario['nombre']);
 }
 
 function cerrar_sesion(): void

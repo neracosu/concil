@@ -10,6 +10,7 @@ require __DIR__ . '/lib/texto.php';
 require __DIR__ . '/lib/registro.php';
 require __DIR__ . '/lib/db.php';
 require __DIR__ . '/lib/sedes.php';
+require __DIR__ . '/lib/usuarios.php';
 require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/xlsx.php';
 require __DIR__ . '/lib/huella.php';
@@ -86,6 +87,11 @@ if (autenticado() && ($_POST['accion'] ?? '') === 'cambiar_sede') {
 // Lo primero de cada sesión es decir en qué unidad se va a trabajar.
 if (autenticado() && $ruta !== 'salir' && !sede_elegida()) {
     $ruta = 'sede';
+}
+
+// Quién está dónde: una sola escritura por página, para el seguimiento.
+if (autenticado()) {
+    marcar_presencia($ruta);
 }
 
 $vista = __DIR__ . "/views/$ruta.php";

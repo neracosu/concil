@@ -360,6 +360,7 @@ assets/
 
 | Tabla | Contenido |
 |---|---|
+| `usuarios` | Quién puede entrar, su PIN, si es maestro y dónde está ahora |
 | `sedes` | Unidades de negocio del consorcio |
 | `proveedores` | A quién se le paga, con su RIF; comunes a todas las unidades |
 | `facturas` | Número de factura y número de control, por proveedor |
@@ -486,6 +487,39 @@ los argumentos de las funciones en la traza. El archivo se crea con permisos
 
 En **Ajustes** hay una tabla con los últimos fallos y un contador del mes, para
 saber si algo va mal sin tener que entrar al servidor.
+
+## Usuarios y rastro
+
+Se entra solo con **seis dígitos**, y esos dígitos identifican a la persona: no
+hay nombre de usuario que escribir. Todos pueden hacer lo mismo dentro de la
+aplicación; la única diferencia es el **maestro**, que además da de alta a los
+demás y ve la pantalla de Usuarios.
+
+**Dos personas no pueden compartir PIN.** Si lo compartieran, no habría forma de
+saber quién hizo qué, que es justo lo que se quiere saber.
+
+Para no probar el PIN contra cada usuario en cada intento, se guarda una huella
+HMAC del PIN con una sal propia del sistema, que localiza la fila de un salto.
+La comprobación real sigue siendo `password_verify` sobre un hash lento.
+
+**La bitácora firma cada acción con su autor.** El autor sale de la sesión
+dentro de `bitacora()`, así que las llamadas repartidas por la aplicación no
+tuvieron que cambiar para empezar a dejar rastro con nombre.
+
+**Presencia en vivo.** Cada página deja una marca de quién es y en qué pantalla
+está. En Usuarios se ve quién está trabajando ahora y en qué, para saber sobre
+qué está cada quien sin tener que preguntar.
+
+**Mi perfil** es de todos: el nombre con el que se firma y el PIN propio. Nadie
+necesita al maestro para cambiar su clave.
+
+### La suma del acceso
+
+A partir del **tercer** intento fallido, la pantalla pide resolver una suma de
+dos números de un dígito. Es para los robots que prueban PINs en serie, no para
+quien se equivocó de tecla: dos intentos son gratis. La suma se comprueba
+**antes** que el PIN — si fuera al revés, el mensaje delataría cuándo el PIN es
+correcto aunque la suma falle. Al quinto fallo sigue el bloqueo de 15 minutos.
 
 ## Seguridad
 

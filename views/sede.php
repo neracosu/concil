@@ -82,7 +82,7 @@ if ($eligiendo):
 <meta name="robots" content="noindex,nofollow">
 <title>Elegir unidad · <?= e(APP_CREDITO) ?></title>
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=12">
+<link rel="stylesheet" href="assets/app.css?v=13">
 </head>
 <body class="elegir-cuerpo">
 <div class="elegir-velo">

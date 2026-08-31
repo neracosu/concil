@@ -63,6 +63,8 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
 <div class="rejilla rejilla-2" style="align-items:start">
   <div class="tarjeta" data-guia="pin">
     <h2>Cambiar el PIN</h2>
+    <p class="nota" style="margin:0 0 12px">Cambia <b>su</b> PIN, el de <?= e(nombre_usuario()) ?>.
+      Los de las demás personas se cambian en <a href="?r=usuarios">Usuarios</a>.</p>
     <?php if ($pendInicial): ?>
       <div class="aviso aviso-nota">Sigue activo el PIN inicial. Cámbialo ahora.</div>
     <?php endif ?>
