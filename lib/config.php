@@ -6,10 +6,10 @@
  */
 
 // Identidad del producto
-const APP_NOMBRE  = 'CONSIL';
+const APP_NOMBRE  = 'CONCIL';
 const APP_MARCA   = 'VIP Soft';
 const APP_LEMA    = 'Conciliación bancaria';
-const APP_CREDITO = 'CONSIL by VIP Soft';
+const APP_CREDITO = 'CONCIL by VIP Soft';
 const APP_VERSION = '1.0';
 const APP_NAME    = APP_CREDITO;   // usado en los títulos del navegador
 const DATA_DIR    = '/home/mardenli/conciliacion_data';

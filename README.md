@@ -1,6 +1,6 @@
 <div align="center">
 
-# CONSIL
+# CONCIL
 
 **by VIP Soft** · Premium Systems Solutions
 
@@ -45,7 +45,7 @@ cuentas activas se acumulan miles de líneas al mes y la explicación de cada
 salida termina escrita a mano en una hoja de cálculo, sin forma de consultarla
 después.
 
-Consil convierte esos archivos en una base consultable:
+CONCIL convierte esos archivos en una base consultable:
 
 - Reconoce el banco y la cuenta de cada archivo sin intervención.
 - Clasifica automáticamente lo que llega siempre con el mismo texto: comisiones,
@@ -129,7 +129,7 @@ escritor de XLSX están implementados sobre `ZipArchive` y `XMLReader`.
 
 ```bash
 cd /ruta/a/public_html/tu-dominio
-git clone git@github.com:neracosu/consil.git conciliacion
+git clone git@github.com:neracosu/concil.git conciliacion
 ```
 
 **2. Crear el directorio de datos FUERA de `public_html`**
@@ -319,7 +319,7 @@ Si la cuenta no tiene saldo de arranque cargado, la interfaz lo indica con
 Todo el estado está en MySQL. Respaldar es exportar la base:
 
 ```bash
-mysqldump -u USUARIO -p BASE | gzip > consil-$(date +%F).sql.gz
+mysqldump -u USUARIO -p BASE | gzip > concil-$(date +%F).sql.gz
 ```
 
 Restaurar en una instalación limpia: crear la base, importar el volcado y
@@ -395,17 +395,17 @@ banco.
 
 ## Créditos
 
-**CONSIL** es un producto de **VIP Soft** — Premium Systems Solutions.
+**CONCIL** es un producto de **VIP Soft** — Premium Systems Solutions.
 
 La marca aparece en la aplicación, en la visita guiada y en las propiedades de
-todos los archivos que exporta: un XLSX generado por CONSIL se abre en Excel
-mostrando `CONSIL by VIP Soft` como aplicación de origen.
+todos los archivos que exporta: un XLSX generado por CONCIL se abre en Excel
+mostrando `CONCIL by VIP Soft` como aplicación de origen.
 
 ---
 
 <div align="center">
 
-**CONSIL** *by* **VIP Soft**
+**CONCIL** *by* **VIP Soft**
 Premium Systems Solutions · [vipsoft.cloud](https://vipsoft.cloud)
 
 </div>
