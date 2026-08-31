@@ -14,20 +14,35 @@
 /**
  * Los primeros cuatro dígitos de una cuenta venezolana identifican al banco.
  * Cuando el archivo trae el número de cuenta, esto es prueba concluyente.
+ *
+ * Contrastada con dos listados comunitarios independientes que coinciden entre
+ * sí (abr4xas/bancos-json y el gist de xombra). Incluye bancos que ya no operan
+ * —Corp Banca, BOD, Espirito Santo, Citibank— porque siguen apareciendo en
+ * extractos viejos y reconocerlos no cuesta nada.
+ *
+ * Un código de más solo añade detección; un nombre equivocado hace que el
+ * sistema **bloquee una carga correcta**. Al tocar esta tabla, contrastar.
  */
 const CODIGOS_BANCO = [
-    '0102' => 'Banco de Venezuela', '0104' => 'Venezolano de Crédito',
-    '0105' => 'Mercantil',          '0108' => 'Provincial',
-    '0114' => 'Bancaribe',          '0115' => 'Exterior',
-    '0128' => 'Banco Caroní',       '0134' => 'Banesco',
-    '0137' => 'Sofitasa',           '0138' => 'Banco Plaza',
-    '0146' => 'Bangente',           '0151' => 'BFC',
-    '0156' => '100% Banco',         '0157' => 'Del Sur',
-    '0163' => 'Banco del Tesoro',   '0166' => 'Banco Agrícola',
-    '0168' => 'Bancrecer',          '0169' => 'Mi Banco',
-    '0171' => 'Banco Activo',       '0172' => 'Bancamiga',
-    '0174' => 'Banplus',            '0175' => 'Bicentenario',
-    '0177' => 'Banfanb',            '0191' => 'BNC',
+    '0003' => 'Banco Industrial de Venezuela',
+    '0102' => 'Banco de Venezuela',      '0104' => 'Venezolano de Crédito',
+    '0105' => 'Mercantil',               '0108' => 'Provincial',
+    '0114' => 'Bancaribe',               '0115' => 'Exterior',
+    '0116' => 'Banco Occidental de Descuento',
+    '0121' => 'Corp Banca',              '0128' => 'Banco Caroní',
+    '0134' => 'Banesco',                 '0137' => 'Sofitasa',
+    '0138' => 'Banco Plaza',             '0146' => 'Bangente',
+    '0149' => 'Banco del Pueblo Soberano',
+    '0151' => 'Banco Fondo Común',       '0156' => '100% Banco',
+    '0157' => 'DelSur',                  '0163' => 'Banco del Tesoro',
+    '0164' => 'Banco de Desarrollo del Microempresario',
+    '0166' => 'Banco Agrícola',          '0168' => 'Bancrecer',
+    '0169' => 'Mibanco',                 '0171' => 'Banco Activo',
+    '0172' => 'Bancamiga',               '0173' => 'Banco Internacional de Desarrollo',
+    '0174' => 'Banplus',                 '0175' => 'Bicentenario',
+    '0176' => 'Banco Espirito Santo',    '0177' => 'Banfanb',
+    '0190' => 'Citibank',                '0191' => 'BNC',
+    '0196' => 'ABN AMRO Bank',           '0601' => 'Instituto Municipal de Crédito Popular',
 ];
 
 /** Rótulos que cuentan como encabezado al buscar la fila de cabecera. */

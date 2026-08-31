@@ -126,9 +126,17 @@ huella queda guardada en la tabla `formatos`; a partir de ahí se reconoce sola.
 Tres evidencias, todas sacadas del contenido, en orden de fuerza:
 
 1. **El número de cuenta impreso en el archivo.** Sus cuatro primeros dígitos
-   son el código del banco según la norma venezolana (`0172` Bancamiga, `0102`
-   Banco de Venezuela, `0115` Exterior, `0191` BNC). Es lo único que **bloquea**
-   la importación si contradice la cuenta elegida.
+   son el código Sudeban del banco (`0172` Bancamiga, `0102` Banco de Venezuela,
+   `0115` Exterior). Es lo único que **bloquea** la importación si contradice la
+   cuenta elegida, así que la tabla de `lib/huella.php` está contrastada contra
+   dos listados comunitarios independientes que coinciden entre sí.
+
+   No hay validación por dígito verificador: la cuenta venezolana tiene la misma
+   forma que el CCC español —4 de banco, 4 de sucursal, 2 de control, 10 de
+   cuenta— pero el algoritmo módulo 11 del CCC **no valida** ninguna de las
+   cuentas reales de las muestras, así que aplicarlo rechazaría cuentas
+   legítimas. En su lugar, el número solo se acepta si está en la cabecera del
+   extracto o si una celda de veinte dígitos se repite en todas las filas.
 2. **Los totales que el archivo declara en su pie.** Cuadran al céntimo: el
    extracto de Bicentenario dice 2.599 débitos por 167.634.508,43 y eso es
    exactamente lo que entra. Si no cuadran, `importar()` deshace la transacción
