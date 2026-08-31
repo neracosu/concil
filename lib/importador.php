@@ -67,7 +67,7 @@ function analizar(string $ruta, string $ext): array
     // que la fila elegida como encabezado no lo fuera.
     $mapa ??= mapear_por_forma($h['forma']);
 
-    $titulo = $previas[0] ?? '';
+    $titulo = titulo_util($previas);
     $cuentaArch = cuenta_declarada($filas, $filaCab);
     $ficha = titular_declarado($filas, $filaCab);
     $bancoCodigo = banco_por_codigo($cuentaArch['codigo']);
@@ -89,7 +89,10 @@ function analizar(string $ruta, string $ext): array
         'mapa'          => $mapa,
         'titulo'        => $titulo,
         'banco'         => $banco,
-        'cuenta'        => $titulo !== '' ? limpiar($titulo) : $banco,
+        // Nombre propuesto para la cuenta: el banco si se reconoció, y si no
+        // el título impreso. Nunca un metadato: más vale dejarlo en blanco y
+        // que lo escriba una persona.
+        'cuenta'        => $banco !== '' ? $banco : limpiar($titulo),
         'muestra'       => array_slice($filas, $desdeCab, 6),
         'huella'        => $h,
         'conocido'      => $formato !== null,
@@ -101,6 +104,37 @@ function analizar(string $ruta, string $ext): array
         'saldo_inicial' => saldo_arranque(array_slice($filas, 0, max(1, $filaCab))),
         'cadena'        => $mapa !== null ? cadena_saldo($filas, $desdeCab, $mapa) : ['aplica' => false, 'ok' => 0, 'total' => 0],
     ];
+}
+
+/**
+ * Primera línea de la cabecera que sirva como nombre de cuenta.
+ *
+ * Los bancos imprimen arriba cosas como «Fecha / Hora: 46263.44», «Usuario:
+ * Jose Elias» o «Movimientos del 01/07/2026». Tomar la primera sin mirar
+ * bautizaba la cuenta con eso, y el nombre es lo que la distingue.
+ */
+function titulo_util(array $previas): string
+{
+    $descartar = ['FECHA', 'HORA', 'USUARIO', 'CLIENTE', 'GENERAD', 'IMPRES', 'PAGINA',
+                  'MOVIMIENTOS', 'RESUMEN', 'SALDO INICIAL', 'NRO CUENTA', 'TITULAR', 'PERIODO',
+                  'CUENTA', 'ESTADO DE CUENTA', 'DESDE', 'HASTA'];
+    foreach ($previas as $t) {
+        $n = norm($t);
+        if ($n === '' || mb_strlen($n) < 3) {
+            continue;
+        }
+        foreach ($descartar as $d) {
+            if (str_starts_with($n, $d)) {
+                continue 2;
+            }
+        }
+        // Una línea casi toda de dígitos es una fecha o un número, no un nombre.
+        if (preg_replace('/\D/', '', $n) !== '' && mb_strlen(preg_replace('/\D/', '', $n)) > mb_strlen($n) / 2) {
+            continue;
+        }
+        return $t;
+    }
+    return '';
 }
 
 /**

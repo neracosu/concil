@@ -105,11 +105,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
             try {
-                $cid = ($elegidas[$i] ?? '') === 'nueva'
-                    ? cuenta_id((string) ($nuevas[$i] ?? $a['cuenta']), $a['banco'])
-                    : (int) ($elegidas[$i] ?? 0);
-                if ($cid <= 0) {
-                    $cid = cuenta_id($a['cuenta'], $a['banco']);
+                // Lo que se sepa de la ficha: lo escrito en la pantalla y, si
+                // no, lo que el propio extracto declara.
+                $fNum = trim((string) ($_POST['f_numero'][$i]  ?? '')) ?: (string) ($a['numero'] ?? '');
+                $fTit = trim((string) ($_POST['f_titular'][$i] ?? '')) ?: (string) ($a['titular'] ?? '');
+                $fRif = trim((string) ($_POST['f_rif'][$i]     ?? '')) ?: (string) ($a['rif'] ?? '');
+
+                $nueva = ($elegidas[$i] ?? '') === 'nueva' || (int) ($elegidas[$i] ?? 0) <= 0;
+                if ($nueva) {
+                    // La ficha se exige antes de crear nada: si no, una carga
+                    // rechazada dejaba una cuenta vacía y mal llamada.
+                    $falta = ficha_incompleta(['numero' => $fNum, 'titular' => $fTit, 'rif' => $fRif]);
+                    $nombre = trim((string) ($nuevas[$i] ?? '')) ?: $a['cuenta'];
+                    if ($nombre === '') {
+                        $falta[] = 'el nombre de la cuenta';
+                    }
+                    if ($falta !== []) {
+                        throw new RuntimeException('para crear la cuenta hace falta ' . implode(', ', $falta)
+                            . '. Escríbelo arriba y vuelve a intentarlo.');
+                    }
+                    $cid = cuenta_id($nombre, $a['banco']);
+                } else {
+                    $cid = (int) $elegidas[$i];
                 }
                 // El id viene del formulario y podría estar manipulado: sin
                 // esto se podría cargar un extracto en una cuenta de otra
@@ -128,10 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // La ficha se completa con lo que se escribió en la pantalla y,
                 // si aún falta algo, no se carga: dos cuentas del mismo banco
                 // sin número ni titular son indistinguibles.
-                completar_ficha($cid,
-                    (string) ($_POST['f_numero'][$i] ?? ''),
-                    (string) ($_POST['f_titular'][$i] ?? ''),
-                    (string) ($_POST['f_rif'][$i] ?? ''));
+                completar_ficha($cid, $fNum, $fTit, $fRif);
                 $ficha = db()->prepare('SELECT nombre, numero, titular, rif FROM cuentas WHERE id = ?');
                 $ficha->execute([$cid]);
                 $datos = $ficha->fetch() ?: [];
@@ -262,6 +276,14 @@ encabezado_html('Cargar extractos', 'carga',
                       foreach ($cuentasLista as $c) {
                           if (norm($c['nombre']) === norm($a['cuenta'])) { $sug = (int) $c['id']; }
                       }
+                  }
+                  // Y si no, la única cuenta que haya de ese banco. Con dos del
+                  // mismo banco no se propone ninguna: elegir por el usuario
+                  // cuál de las dos es sería adivinar.
+                  if ($sug === null && $a['banco'] !== '') {
+                      $mismas = array_values(array_filter($cuentasLista,
+                          fn($c) => norm((string) $c['banco']) === norm($a['banco'])));
+                      if (count($mismas) === 1) { $sug = (int) $mismas[0]['id']; }
                   }
                   foreach ($cuentasLista as $c): ?>
                     <option value="<?= $c['id'] ?>" <?= $sug === (int) $c['id'] ? 'selected' : '' ?>>
