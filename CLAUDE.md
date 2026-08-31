@@ -73,6 +73,16 @@ directorio esté cerrado.
 - Escape de salida con `e()` siempre. Las excepciones son deliberadas y están
   construidas en el propio código (`$acciones`, `$subtitulo`, `ayuda_pantalla()`).
 
+## Cuando algo falla
+
+`lib/registro.php` engancha avisos, excepciones y errores fatales, y escribe
+JSON por líneas en `DATA_DIR/registro/fallos-AAAA-MM.log`. La persona ve un
+código de seis caracteres; ese código es la forma de encontrar la entrada.
+
+Va a un **archivo y no a una tabla** a propósito: el fallo más grave es que la
+base no responda. No metas el contenido de `$_POST` ni los argumentos de la
+traza: por ahí viaja el PIN.
+
 ## Trampas conocidas
 
 **El formato se reconoce por estructura, nunca por el nombre.** Ni el del

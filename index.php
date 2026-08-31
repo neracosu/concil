@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/texto.php';
+require __DIR__ . '/lib/registro.php';
 require __DIR__ . '/lib/db.php';
 require __DIR__ . '/lib/sedes.php';
 require __DIR__ . '/lib/auth.php';
@@ -25,6 +26,10 @@ header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
 
+// Antes que nada: a partir de aquí, cualquier fallo queda anotado con su
+// código en vez de mostrar una pantalla en blanco.
+vigilar_fallos();
+
 iniciar_sesion();
 
 try {
@@ -33,9 +38,13 @@ try {
         sembrar();
     }
 } catch (Throwable $e) {
+    // La base caída es el fallo más probable, y el único que una tabla de
+    // registro no podría anotar: por eso el registro va a un archivo.
+    $codigo = registrar_fallo('Base de datos', $e->getMessage(), $e->getFile(), $e->getLine(),
+                              registro_traza($e->getTrace()));
     http_response_code(500);
-    exit('<p style="font:15px system-ui;padding:2rem">No hay conexión con la base de datos. Revisa las credenciales en '
-        . e(SECRETS) . '.</p>');
+    exit('<p style="font:15px system-ui;padding:2rem">No hay conexión con la base de datos. '
+        . 'Revisa las credenciales en ' . e(SECRETS) . '.<br>Código del fallo: <b>' . e($codigo) . '</b></p>');
 }
 
 $ruta = preg_replace('/[^a-z_]/', '', (string) ($_GET['r'] ?? 'panel'));

@@ -43,6 +43,7 @@ $stats = $pdo->query("SELECT COUNT(*) movs,
 $peso = $pdo->query("SELECT ROUND(SUM(data_length + index_length)/1048576, 2) mb
                        FROM information_schema.TABLES WHERE table_schema = DATABASE()")->fetchColumn();
 $log = $pdo->query('SELECT * FROM bitacora ORDER BY id DESC LIMIT 25')->fetchAll();
+$fallos = fallos_recientes(25);
 $pendInicial = ajuste('pin_inicial_pendiente') === '1';
 
 encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
@@ -83,11 +84,57 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
   </div>
 
   <div class="tarjeta">
+    <h2>Si algo falla</h2>
+    <?php if ($fallos === []): ?>
+      <p class="nota" style="margin:0">
+        <b>No se ha registrado ningún fallo.</b>
+        Cuando el sistema no pueda continuar, mostrará un código a quien lo esté usando
+        y aquí quedará anotado qué ocurrió, en qué pantalla y en qué punto del programa.
+      </p>
+    <?php else: ?>
+      <p class="nota" style="margin:0 0 12px">
+        <b><?= count($fallos) ?> <?= count($fallos) === 1 ? 'fallo anotado' : 'fallos anotados' ?>.</b>
+        Si alguien le da un código, búsquelo aquí. Los registros se guardan fuera de la web,
+        en <?= e(DATA_DIR) ?>/registro.
+      </p>
+      <div class="tabla-scroll" style="border:1px solid var(--linea);border-radius:var(--r-sm)">
+        <table>
+          <thead><tr><th>Código</th><th>Cuándo</th><th>Qué pasó</th><th>Dónde</th><th>Pantalla</th></tr></thead>
+          <tbody>
+          <?php foreach ($fallos as $f): ?>
+            <tr>
+              <td class="ref"><b><?= e($f['codigo'] ?? '') ?></b></td>
+              <td class="fecha"><?= e(date('d/m/y H:i', strtotime($f['cuando'] ?? 'now'))) ?></td>
+              <td class="concepto">
+                <span class="txt"><?= e($f['tipo'] ?? '') ?></span>
+                <span class="nota"><?= e(mb_strimwidth((string) ($f['mensaje'] ?? ''), 0, 110, '…')) ?></span>
+              </td>
+              <td class="ref" style="font-size:12px"><?= e($f['donde'] ?? '') ?></td>
+              <td style="font-size:12.5px;color:var(--mudo)"><?= e($f['pantalla'] ?? '') ?></td>
+            </tr>
+            <?php if (!empty($f['como'])): ?>
+              <tr><td colspan="5" style="padding-top:0">
+                <span class="nota" style="font-size:11.5px;color:var(--tenue)">Cómo se llegó: <?= e(mb_strimwidth((string) $f['como'], 0, 190, '…')) ?></span>
+              </td></tr>
+            <?php endif ?>
+          <?php endforeach ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif ?>
+  </div>
+
+  <div class="tarjeta">
     <h2>Dónde viven los datos</h2>
     <dl style="margin:0">
       <div class="dato"><dt>Base de datos</dt><dd class="texto"><?= e(secretos()['db_name']) ?></dd></div>
       <div class="dato"><dt>Credenciales</dt><dd class="texto" style="font-size:12px"><?= e(SECRETS) ?></dd></div>
       <div class="dato"><dt>Archivos subidos</dt><dd class="texto" style="font-size:12px"><?= e(UPLOAD_DIR) ?></dd></div>
+      <div class="dato"><dt>Registro de fallos</dt><dd class="texto" style="font-size:12px"><?= e(registro_dir()) ?></dd></div>
+      <div class="dato"><dt>Fallos este mes</dt>
+        <dd><?= fallos_del_mes() === 0
+            ? '<span style="color:var(--entrada)">ninguno</span>'
+            : '<span style="color:var(--pendiente)">' . fallos_del_mes() . '</span>' ?></dd></div>
       <div class="dato"><dt>PHP</dt><dd><?= e(PHP_VERSION) ?></dd></div>
       <div class="dato"><dt>OPcache</dt>
         <dd><?= function_exists('opcache_get_status') && (opcache_get_status(false)['opcache_enabled'] ?? false)

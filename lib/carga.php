@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/texto.php';
+require_once __DIR__ . '/registro.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/sedes.php';
 require_once __DIR__ . '/xlsx.php';

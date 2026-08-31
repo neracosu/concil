@@ -332,6 +332,7 @@ lib/
   seed.php             Categorías y reglas iniciales
   auth.php             Acceso por PIN, sesión, CSRF
   guia.php             Textos de la visita guiada
+  registro.php         Registro de fallos: qué pasó, dónde y cómo
   carga.php            Incluidor de conveniencia para scripts CLI
 
 views/
@@ -462,6 +463,29 @@ muestra: es el que informa el banco. Cuando no la trae, el saldo se calcula como
 
 Si la cuenta no tiene saldo de arranque cargado, la interfaz lo indica con
 **«falta saldo inicial»** en lugar de mostrar una cifra que no puede conocer.
+
+## Registro de fallos
+
+Cuando algo se rompe, quien usa el sistema no sabe explicar qué pasó. En vez de
+una pantalla en blanco, aparece una tarjeta con un **código de seis caracteres**
+que se puede dictar por teléfono, y en `DATA_DIR/registro/fallos-AAAA-MM.log`
+queda una línea con **qué** ocurrió (tipo y mensaje), **dónde** (archivo, línea
+y pantalla) y **cómo** se llegó hasta ahí (la cadena de llamadas).
+
+Se enganchan los tres caminos por los que PHP falla: avisos, excepciones no
+atrapadas y errores fatales. Los avisos no interrumpen nada, pero quedan
+anotados: suelen ser el aviso previo de algo que se romperá del todo después.
+
+**Es un archivo, no una tabla.** El fallo más probable y más grave es que la
+base no responda, y entonces una tabla no serviría de nada. Por eso incluso el
+error de conexión inicial deja su código.
+
+**Nunca se guarda el contenido de los formularios** —por ahí viaja el PIN— ni
+los argumentos de las funciones en la traza. El archivo se crea con permisos
+`0600` fuera de `public_html`.
+
+En **Ajustes** hay una tabla con los últimos fallos y un contador del mes, para
+saber si algo va mal sin tener que entrar al servidor.
 
 ## Seguridad
 
