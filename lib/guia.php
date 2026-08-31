@@ -26,6 +26,14 @@ function guia_pasos(): array
             'nota' => 'La visita dura un minuto. Puede salirse cuando quiera y volver a verla después.',
         ],
         [
+            'ruta' => 'panel', 'sel' => '[data-guia="sede"]', 'lado' => 'derecha',
+            'titulo' => 'Primero, de qué empresa hablamos',
+            'texto' => 'Si el grupo tiene varias empresas o tiendas, cada una lleva sus cuentas y sus pagos '
+                     . '<b>por separado</b>. Aquí elige con cuál está trabajando, y todo lo que vea a la '
+                     . 'derecha será solo de ella.',
+            'nota' => 'Los tipos de gasto sí se comparten, así que lo que enseñe en una le sirve a las demás.',
+        ],
+        [
             'ruta' => 'panel', 'sel' => '.nav', 'lado' => 'derecha',
             'titulo' => 'Todo está en este menú',
             'texto' => 'Arriba, lo del día a día: <b>subir los archivos</b>, <b>explicar los pagos</b> y <b>consultar</b>. '

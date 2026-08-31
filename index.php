@@ -48,10 +48,16 @@ if ($ruta === 'login' && autenticado()) {
     exit;
 }
 
-// Cambiar de unidad de negocio. Se hace por GET y se recuerda en la sesión,
-// así el resto del sistema no tiene que arrastrar el dato por la URL.
-if (autenticado() && isset($_GET['sede'])) {
-    fijar_sede((int) $_GET['sede']);
+// Cambiar de unidad de negocio. Va por POST y con testigo porque descarta la
+// carga pendiente y borra sus archivos: un GET lo dispararía cualquier página
+// ajena con una imagen incrustada.
+if (autenticado() && ($_POST['accion'] ?? '') === 'cambiar_sede') {
+    exigir_csrf();
+    $pedida = (int) ($_POST['sede'] ?? 0);
+    if (!in_array($pedida, array_map('intval', array_column(sedes(), 'id')), true)) {
+        redirigir('?r=' . $ruta);       // id inventado: no se toca nada
+    }
+    fijar_sede($pedida);
 
     // Una carga a medio confirmar quedó analizada contra las cuentas de la
     // unidad anterior: se descarta con sus archivos para no importarla aquí.

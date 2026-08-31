@@ -77,7 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'muestra' => array_slice($info['muestra'], 0, 3),
                 'tam'     => $tam,
                 'numero'  => $info['numero'],
-                'codigo'  => $info['banco_codigo'],
+                'codigo'  => $info['codigo'],
+                'info'    => $info,
                 'cadena'  => $info['cadena'],
                 'conocido'=> $info['conocido'],
                 'arranque'=> $info['saldo_inicial'],
@@ -112,8 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($choque !== '') {
                     throw new RuntimeException($choque);
                 }
-                $r = importar($a['ruta'], $a['ext'], $cid, $a['nombre']);
-                anotar_arranque($cid, $a['arranque'] ?? null);
+                $r = importar($a['ruta'], $a['ext'], $cid, $a['nombre'], $a['info'] ?? null);
                 $r['nombre'] = $a['nombre'];
                 $r['cuenta'] = db()->query('SELECT nombre FROM cuentas WHERE id = ' . $cid)->fetchColumn();
                 $resultados[] = $r;

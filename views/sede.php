@@ -20,7 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('mal', 'Escribe el nombre de la unidad de negocio.');
             redirigir('?r=sede');
         }
-        $id = sede_id($nombre);
+        try {
+            $id = sede_id($nombre);
+        } catch (PDOException $ex) {
+            flash('mal', 'Ya existe una unidad de negocio con ese nombre.');
+            redirigir('?r=sede');
+        }
         fijar_sede($id);
         bitacora('sede_creada', $nombre);
         flash('ok', 'Unidad «' . $nombre . '» creada. Ya estás trabajando en ella: '
@@ -32,9 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int) ($_POST['id'] ?? 0);
         $nombre = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
         if ($id > 0 && $nombre !== '') {
-            $pdo->prepare('UPDATE sedes SET nombre = ? WHERE id = ?')->execute([$nombre, $id]);
-            bitacora('sede_renombrada', "id=$id → $nombre");
-            flash('ok', 'Nombre actualizado.');
+            try {
+                $pdo->prepare('UPDATE sedes SET nombre = ? WHERE id = ?')->execute([$nombre, $id]);
+                flash('ok', 'Nombre actualizado.');
+                bitacora('sede_renombrada', "id=$id → $nombre");
+            } catch (PDOException $ex) {
+                flash('mal', 'Ya hay otra unidad de negocio con ese nombre.');
+            }
         }
         redirigir('?r=sede');
     }

@@ -300,5 +300,11 @@ function formato_archivo(string $ruta): string
     if (preg_match('/<\s*(table|html|tr)\b/i', $cabeza)) {
         return 'html';
     }
+    // Excel 97-2003 de verdad (OLE2). No se sabe leer, pero hay que decirlo:
+    // tratarlo como CSV produciría un error incomprensible sobre columnas.
+    if (str_starts_with($cabeza, "\xD0\xCF\x11\xE0")) {
+        throw new RuntimeException('Este archivo es un Excel antiguo (.xls de Excel 97-2003). '
+            . 'Ábrelo en Excel y guárdalo como «Libro de Excel (.xlsx)», o vuelve a descargarlo del banco en ese formato.');
+    }
     return 'csv';
 }

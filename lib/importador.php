@@ -61,20 +61,24 @@ function analizar(string $ruta, string $ext): array
     $formato = formato_por_clave($h['clave']);
     $mapa = $formato['mapa'] ?? null;
     if ($mapa === null) {
-        $mapa = $cabecera !== null
-            ? mapear_columnas($cabecera, $h['forma'])
-            : mapear_por_forma($h['forma']);
+        $mapa = $cabecera !== null ? mapear_columnas($cabecera, $h['forma']) : null;
     }
+    // Si los rótulos no alcanzaron, se intenta por la forma de los datos: puede
+    // que la fila elegida como encabezado no lo fuera.
+    $mapa ??= mapear_por_forma($h['forma']);
 
     $titulo = $previas[0] ?? '';
-    $cuentaArch = cuenta_declarada($filas);
+    $cuentaArch = cuenta_declarada($filas, $filaCab);
     $bancoCodigo = banco_por_codigo($cuentaArch['codigo']);
 
-    // Orden de confianza: lo que el catálogo aprendió, luego el número de
-    // cuenta (que lo pone el banco), y por último el título impreso dentro.
-    $banco = $formato['banco'] ?? '';
+    // Orden de confianza: el número de cuenta impreso en el archivo primero,
+    // porque lo escribe el banco; luego lo que el catálogo aprendió; y por
+    // último el título. La huella es solo estructura, así que dos bancos con
+    // el mismo diseño de columnas comparten entrada de catálogo: dejar que esa
+    // entrada mande sobre el número de cuenta etiquetaría mal el archivo.
+    $banco = $bancoCodigo;
     if ($banco === '') {
-        $banco = $bancoCodigo !== '' ? $bancoCodigo : detectar_banco($titulo, $cabecera);
+        $banco = ($formato['banco'] ?? '') ?: detectar_banco($titulo, $cabecera);
     }
 
     $desdeCab = $filaCab + 1;
@@ -89,6 +93,7 @@ function analizar(string $ruta, string $ext): array
         'huella'        => $h,
         'conocido'      => $formato !== null,
         'numero'        => $cuentaArch['numero'],
+        'codigo'        => $cuentaArch['codigo'],
         'banco_codigo'  => $bancoCodigo,
         'saldo_inicial' => saldo_arranque(array_slice($filas, 0, max(1, $filaCab))),
         'cadena'        => $mapa !== null ? cadena_saldo($filas, $desdeCab, $mapa) : ['aplica' => false, 'ok' => 0, 'total' => 0],
@@ -246,9 +251,13 @@ function celda(array $fila, ?int $idx): string
  * Al terminar compara lo importado con los totales que el propio archivo
  * declara en su pie. Si no cuadran, deshace todo: significa que se leyó mal.
  */
-function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombre): array
+function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombre, ?array $info = null): array
 {
-    $info = analizar($ruta, $ext);
+    // Se importa con el mismo análisis que se mostró al confirmar. Volver a
+    // analizar aquí podría dar otro mapeo: si en el mismo lote se acaba de
+    // aprender este formato, la segunda vez saldría del catálogo y no de los
+    // rótulos que el usuario vio en la muestra.
+    $info ??= analizar($ruta, $ext);
     if ($info['mapa'] === null) {
         throw new RuntimeException('No se reconoció el formato: falta la columna de fecha o la de montos.');
     }
@@ -297,6 +306,7 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     $sumaC = 0.0;
     $nD = 0;
     $nC = 0;
+    $fechaMin = null;
 
     $pdo->beginTransaction();
     foreach (leer_filas($ruta, $ext) as $fila) {
@@ -337,6 +347,7 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
         }
         if ($debito > 0) { $nD++; $sumaD += $debito; }
         if ($credito > 0) { $nC++; $sumaC += $credito; }
+        if ($fechaMin === null || $fecha < $fechaMin) { $fechaMin = $fecha; }
 
         $referencia = limpiar(celda($fila, $m['referencia']));
         if (preg_match('/^\d+(\.\d+)?[eE]\+?\d+$/', $referencia)) {
@@ -409,6 +420,7 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
 
     // El catálogo aprende: el mes que viene este formato ya se reconoce solo.
     recordar_formato($info['huella']['clave'], $info['banco'], $info['huella'], $m);
+    anotar_arranque($cuentaId, $info['saldo_inicial'] ?? null, $fechaMin);
 
     $duplicados = $filas - $insertados;
     $automaticos = min($automaticos, $insertados);
@@ -464,14 +476,14 @@ function comparar_totales(array $dec, float $sumaD, float $sumaC, int $nD, int $
  */
 function choque_de_banco(int $cuentaId, array $a): string
 {
-    if (($a['codigo'] ?? '') === '') {
+    $delArchivo = banco_por_codigo((string) ($a['codigo'] ?? ''));
+    if ($delArchivo === '') {
         return '';
     }
-    $delArchivo = banco_por_codigo($a['codigo']);
     $s = db()->prepare('SELECT nombre, banco FROM cuentas WHERE id = ?');
     $s->execute([$cuentaId]);
     $c = $s->fetch();
-    if ($c === false || $delArchivo === '' || (string) $c['banco'] === '') {
+    if ($c === false || (string) $c['banco'] === '') {
         return '';
     }
     if (norm((string) $c['banco']) === norm($delArchivo)) {
@@ -487,13 +499,17 @@ function choque_de_banco(int $cuentaId, array $a): string
  * lo tenía. Bancamiga y Bicentenario lo imprimen en la cabecera, así que deja
  * de hacer falta escribirlo a mano.
  */
-function anotar_arranque(int $cuentaId, ?float $saldo): void
+function anotar_arranque(int $cuentaId, ?float $saldo, ?string $desde): void
 {
-    if ($saldo === null) {
+    if ($saldo === null || $desde === null) {
         return;
     }
-    db()->prepare('UPDATE cuentas SET saldo_inicial = ? WHERE id = ? AND saldo_inicial = 0')
-        ->execute([$saldo, $cuentaId]);
+    // Los dos campos van juntos o el saldo sale mal: saldo_cuenta() suma los
+    // movimientos desde saldo_fecha, y sin ella sumaría el historial entero
+    // sobre un arranque que corresponde solo a este extracto.
+    db()->prepare('UPDATE cuentas SET saldo_inicial = ?, saldo_fecha = ?
+                    WHERE id = ? AND saldo_inicial = 0 AND saldo_fecha IS NULL')
+        ->execute([$saldo, $desde, $cuentaId]);
 }
 
 /**
@@ -503,16 +519,23 @@ function anotar_arranque(int $cuentaId, ?float $saldo): void
 function comprobaciones(array $a): array
 {
     $r = [];
-    if (($a['codigo'] ?? '') !== '' && banco_por_codigo($a['codigo']) !== '') {
-        $r[] = ['bien', 'El archivo trae por dentro una cuenta de ' . banco_por_codigo($a['codigo'])
+    $delArchivo = banco_por_codigo((string) ($a['codigo'] ?? ''));
+    if ($delArchivo !== '') {
+        $r[] = ['bien', 'El archivo trae por dentro una cuenta de ' . $delArchivo
                       . ', así que el banco es seguro.'];
     }
     $c = $a['cadena'] ?? ['aplica' => false];
     if (!empty($c['aplica']) && $c['total'] > 0) {
         $pct = (int) round(100 * $c['ok'] / $c['total']);
+        // Cuando no encadena puede ser que el banco no ordene las filas, o que
+        // las columnas se hayan leído mal. Aquí no se sabe cuál de las dos es,
+        // así que no se afirma ninguna: se dice que no se pudo confirmar y se
+        // pide mirar la muestra, que es lo único honesto.
         $r[] = $pct >= 90
             ? ['bien', "Los saldos del archivo encadenan fila por fila ($c[ok] de $c[total]): las columnas se leyeron bien."]
-            : ['aviso', 'Este banco no entrega las filas en orden de saldo, así que esa comprobación no aplica.'];
+            : ['aviso', "Con los saldos de este archivo no se pudo confirmar la lectura ($c[ok] de $c[total] encajan). "
+                      . 'Algunos bancos no entregan las filas en orden. Revise abajo que la muestra se vea bien '
+                      . 'antes de guardar.'];
     }
     if (!empty($a['conocido'])) {
         $r[] = ['bien', 'Este formato ya se había cargado antes y se reconoció solo.'];
@@ -532,16 +555,22 @@ function cuenta_id(string $nombre, string $banco = ''): int
     if ($nombre === '') {
         $nombre = $banco !== '' ? $banco : 'Sin nombre';
     }
+    $sede = sede_actual();
+    if ($sede === null) {
+        // Sin unidad activa no se sabe de quién sería la cuenta, y sede_id = 0
+        // dejaría la cuenta huérfana para que la migración la adopte al azar.
+        throw new RuntimeException('No hay una unidad de negocio activa: elige una antes de cargar.');
+    }
     $pdo = db();
     // El nombre solo tiene que ser único dentro de la sede: dos unidades de
     // negocio pueden tener cada una su cuenta "BANESCO".
     $s = $pdo->prepare('SELECT id FROM cuentas WHERE nombre = ? AND sede_id = ?');
-    $s->execute([$nombre, (int) sede_actual()]);
+    $s->execute([$nombre, $sede]);
     $id = $s->fetchColumn();
     if ($id !== false) {
         return (int) $id;
     }
     $pdo->prepare('INSERT INTO cuentas (nombre, banco, sede_id) VALUES (?, ?, ?)')
-        ->execute([$nombre, $banco, (int) sede_actual()]);
+        ->execute([$nombre, $banco, $sede]);
     return (int) $pdo->lastInsertId();
 }

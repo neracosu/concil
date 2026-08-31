@@ -56,8 +56,11 @@ function migrar(): void
     // solo toca las que aún tienen sede_id = 0.
     if ((int) $pdo->query('SELECT COUNT(*) FROM cuentas WHERE sede_id = 0')->fetchColumn() > 0) {
         $pdo->exec("INSERT IGNORE INTO sedes (nombre) VALUES ('ARMOR MARKET')");
-        $primera = (int) $pdo->query("SELECT id FROM sedes ORDER BY id LIMIT 1")->fetchColumn();
-        $pdo->prepare('UPDATE cuentas SET sede_id = ? WHERE sede_id = 0')->execute([$primera]);
+        // La de ARMOR MARKET por nombre, no la de menor id: si ya existían
+        // otras unidades, INSERT IGNORE le da un id mayor y las cuentas
+        // huérfanas acabarían dentro de una unidad que no es la suya.
+        $destino = (int) $pdo->query("SELECT id FROM sedes WHERE nombre = 'ARMOR MARKET'")->fetchColumn();
+        $pdo->prepare('UPDATE cuentas SET sede_id = ? WHERE sede_id = 0')->execute([$destino]);
     }
 
     // El nombre de cuenta era único en toda la base; ahora solo dentro de su

@@ -32,11 +32,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($accion === 'borrar') {
         $id = (int) $_POST['id'];
-        $n = (int) $pdo->query("SELECT COUNT(*) FROM movimientos m WHERE m.categoria_id = $id
-                                 AND " . filtro_sede())->fetchColumn();
+        // Las categorías son comunes a todas las unidades de negocio, así que
+        // el conteo tiene que serlo también: si no, el aviso diría «3
+        // movimientos» mientras se desclasifican 900 en otra unidad.
+        $n = (int) $pdo->query("SELECT COUNT(*) FROM movimientos WHERE categoria_id = $id")->fetchColumn();
+        $aqui = (int) $pdo->query("SELECT COUNT(*) FROM movimientos m WHERE m.categoria_id = $id
+                                    AND " . filtro_sede())->fetchColumn();
         $pdo->prepare('DELETE FROM categorias WHERE id = ?')->execute([$id]);
         flash('ok', $n > 0
-            ? "Categoría eliminada. $n movimiento(s) volvieron a quedar sin clasificar."
+            ? "Categoría eliminada. $n movimiento(s) volvieron a quedar sin clasificar"
+              . ($n > $aqui ? ", $aqui en esta unidad de negocio y el resto en las demás." : '.')
             : 'Categoría eliminada.');
         redirigir('?r=categorias');
     }

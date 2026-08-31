@@ -155,21 +155,61 @@ function forma_columnas(array $filas, int $desde, int $ancho): string
  * primeros cuatro dígitos. Es la evidencia más fuerte que hay, porque el dato
  * viene del banco y no de cómo alguien haya llamado al archivo.
  */
-function cuenta_declarada(array $filas): array
+function cuenta_declarada(array $filas, int $filaCab): array
 {
-    foreach (array_slice($filas, 0, 10) as $f) {
-        $txt = implode(' ', array_map('strval', $f));
-        if (preg_match('/\b(\d{20})\b/', $txt, $m)) {
-            return ['numero' => $m[1], 'codigo' => substr($m[1], 0, 4)];
+    // Primero, la cabecera que imprime el banco: ahí el número es un dato del
+    // documento, no de una transacción.
+    $cabeceraFin = $filaCab >= 0 ? $filaCab : min(count($filas), 3);
+    for ($i = 0; $i < $cabeceraFin; $i++) {
+        $r = numero_en_fila($filas[$i]);
+        if ($r !== null) {
+            return $r;
         }
-        if (preg_match('/(\d{4})\*{4,}(\d{3,4})/', $txt, $m)) {
-            return ['numero' => $m[1] . str_repeat('*', 12) . $m[2], 'codigo' => $m[1]];
+    }
+
+    // Si no, una columna que repita el mismo número en todas las filas: eso es
+    // la cuenta del extracto (Venezuela la trae así). Una referencia cambia en
+    // cada fila, así que nunca pasa este filtro.
+    $desde = $filaCab + 1;
+    $porColumna = [];
+    $n = 0;
+    for ($i = $desde; $i < min(count($filas), $desde + 12); $i++) {
+        $n++;
+        foreach ($filas[$i] as $c => $v) {
+            $v = trim((string) $v);
+            if (preg_match('/^\d{20}$/', $v)) {
+                $porColumna[$c][$v] = ($porColumna[$c][$v] ?? 0) + 1;
+            }
         }
-        if (preg_match('/CUENTA\D{0,12}(\d{4})[\d\s-]{10,}/i', $txt, $m)) {
-            return ['numero' => trim($m[0]), 'codigo' => $m[1]];
+    }
+    foreach ($porColumna as $valores) {
+        arsort($valores);
+        $numero = (string) array_key_first($valores);
+        // El mismo número en todas las filas de la muestra, sin una sola
+        // excepción. Con un criterio más flojo se colaría la cuenta de la
+        // contraparte: en el extracto del BNC hay cinco filas seguidas con la
+        // cuenta del Tesoro, que es a quien se le transfirió.
+        if ($n >= 5 && $valores[$numero] === $n) {
+            return ['numero' => $numero, 'codigo' => substr($numero, 0, 4)];
         }
     }
     return ['numero' => '', 'codigo' => ''];
+}
+
+/** Busca en una fila un número de cuenta, entero o enmascarado. */
+function numero_en_fila(array $fila): ?array
+{
+    $txt = implode(' ', array_map('strval', $fila));
+    if (preg_match('/\b(\d{20})\b/', $txt, $m)) {
+        return ['numero' => $m[1], 'codigo' => substr($m[1], 0, 4)];
+    }
+    if (preg_match('/(\d{4})\*{4,}(\d{3,4})/', $txt, $m)) {
+        return ['numero' => $m[1] . str_repeat('*', 12) . $m[2], 'codigo' => $m[1]];
+    }
+    if (preg_match('/CUENTA\D{0,12}(\d{4})[\d\s-]{10,}/i', $txt, $m)) {
+        return ['numero' => trim($m[0]), 'codigo' => $m[1]];
+    }
+    return null;
 }
 
 /** Nombre del banco a partir del código de cuenta, si se reconoce. */
@@ -197,7 +237,10 @@ function cadena_saldo(array $filas, int $desde, array $mapa): array
     $mejor = ['aplica' => false, 'ok' => 0, 'total' => 0];
     foreach ([$filas, array_reverse($filas)] as $orden) {
         $r = encadena($orden, $mapa);
-        if ($r['ok'] > $mejor['ok']) {
+        // Se queda con el mejor de los dos sentidos, pero conserva 'aplica'
+        // aunque no encadene ninguna: que la comprobación falle es justamente
+        // lo que hay que contar, no algo que deba pasar en silencio.
+        if ($r['ok'] > $mejor['ok'] || (!$mejor['aplica'] && $r['aplica'])) {
             $mejor = $r;
         }
     }
@@ -262,6 +305,12 @@ function totales_declarados(array $pie, array $mapa): array
                 continue;
             }
             $n = norm($v);
+            // El rótulo tiene que hablar de totales. Sin esto, el pie de un
+            // extracto que dijera «BANCO NACIONAL DE CREDITO» se leería como
+            // un total de créditos y tumbaría una importación correcta.
+            if (!str_contains($n, 'TOTAL')) {
+                continue;
+            }
             $esDeb = str_contains($n, 'DEBITO') || str_contains($n, 'DEBE');
             $esCre = str_contains($n, 'CREDITO') || str_contains($n, 'HABER');
             if ($esDeb || $esCre) {

@@ -23,15 +23,23 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <b><?= e(APP_NOMBRE) ?></b><span>by <?= e(APP_MARCA) ?></span>
     </div>
     <?php $lasSedes = sedes(); if (count($lasSedes) > 0): ?>
-      <div class="sede-caja">
+      <div class="sede-caja" data-guia="sede">
         <span class="sede-rotulo">Unidad de negocio</span>
         <?php if (count($lasSedes) > 1): ?>
-          <select onchange="location.href='?r=<?= e($ruta) ?>&sede=' + this.value" aria-label="Cambiar de unidad">
-            <?php foreach ($lasSedes as $sd): ?>
-              <option value="<?= (int) $sd['id'] ?>" <?= (int) $sd['id'] === sede_actual() ? 'selected' : '' ?>>
-                <?= e($sd['nombre']) ?></option>
-            <?php endforeach ?>
-          </select>
+          <?php /* Por POST y con testigo: cambiar de unidad descarta una carga
+                    a medio confirmar, así que no puede dispararlo una imagen
+                    incrustada en otra página. */ ?>
+          <form method="post" action="?r=<?= e($ruta) ?>">
+            <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+            <input type="hidden" name="accion" value="cambiar_sede">
+            <select name="sede" onchange="this.form.requestSubmit()" aria-label="Cambiar de unidad">
+              <?php foreach ($lasSedes as $sd): ?>
+                <option value="<?= (int) $sd['id'] ?>" <?= (int) $sd['id'] === sede_actual() ? 'selected' : '' ?>>
+                  <?= e($sd['nombre']) ?></option>
+              <?php endforeach ?>
+            </select>
+            <noscript><button class="btn btn-sm" style="margin-top:6px">Cambiar</button></noscript>
+          </form>
         <?php else: ?>
           <b class="sede-unica"><?= e(sede_nombre()) ?></b>
         <?php endif ?>

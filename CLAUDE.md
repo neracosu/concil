@@ -79,6 +79,14 @@ título que el banco imprime *dentro* del archivo sí vale, porque es contenido.
 Si añades un banco, no toques `detectar_banco()` esperando que resuelva: lo
 normal es que el catálogo `formatos` lo aprenda solo al confirmar la carga.
 
+**El número de cuenta del archivo no es el de la contraparte.** En el extracto
+del BNC hay cinco filas seguidas con la cuenta del Tesoro (a quien se transfirió)
+y una con la suya propia. `cuenta_declarada()` solo acepta el número si está en
+la cabecera, antes del encabezado, o si una celda con exactamente 20 dígitos se
+repite en **todas** las filas de la muestra (así se detecta Venezuela, que trae
+`numeroCuenta` por fila). Aflojar ese criterio hace que el sistema bloquee
+importaciones correctas.
+
 **Solo bloquea lo concluyente.** El código de banco del número de cuenta
 (primeros 4 dígitos) y los totales del pie del archivo detienen la importación;
 la cadena del saldo solo confirma. Banplus no entrega las filas en orden de

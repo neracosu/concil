@@ -18,6 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('mal', 'La cuenta necesita un nombre.');
             redirigir('?r=cuentas');
         }
+        if (sede_actual() === null) {
+            flash('mal', 'Elige primero una unidad de negocio.');
+            redirigir('?r=sede');
+        }
         try {
             if ($id > 0) {
                 // El sede_id del WHERE evita editar una cuenta de otra unidad
