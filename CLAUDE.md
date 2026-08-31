@@ -87,6 +87,11 @@ repite en **todas** las filas de la muestra (así se detecta Venezuela, que trae
 `numeroCuenta` por fila). Aflojar ese criterio hace que el sistema bloquee
 importaciones correctas.
 
+**La ficha de la cuenta se advierte, no se exige.** Fue al revés durante unas
+horas del 31/08/2026 y el usuario lo cambió: bloquear dejaba las cinco cuentas
+existentes sin poder cargar nada. Lo único imprescindible al crear una cuenta es
+el nombre.
+
 **El bloqueo compara número contra número, no nombres.** Los cuatro primeros
 dígitos de la cuenta del archivo contra los de `cuentas.numero`. Comparar por el
 nombre del banco dejaba pasar los archivos cuando la cuenta se creó sin él —el

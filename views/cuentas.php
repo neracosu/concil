@@ -92,6 +92,16 @@ $lista = $pdo->query("SELECT c.*, COUNT(m.id) movs,
 encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
 ?>
 <div class="rejilla" style="grid-template-columns:minmax(0,1fr) 320px;align-items:start">
+  <?php $sinFicha = array_values(array_filter($lista, fn($c) => ficha_incompleta($c) !== []));
+  if ($sinFicha !== []): ?>
+    <div class="aviso aviso-nota" style="border-left-color:var(--pendiente)">
+      <b><?= count($sinFicha) ?> <?= count($sinFicha) === 1 ? 'cuenta está' : 'cuentas están' ?> sin identificar.</b>
+      Puede seguir cargando extractos igual. Pero mientras les falte el número de cuenta, el titular
+      y el RIF, el sistema no puede avisarle si un archivo se guarda en la cuenta equivocada, que es
+      el error más caro de arreglar. Se rellenan una vez, aquí abajo.
+    </div>
+  <?php endif ?>
+
   <div class="marco-tabla" data-guia="lista">
     <div class="tabla-scroll">
       <table>
@@ -103,7 +113,7 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
             <td><b><?= e($c['nombre']) ?></b>
               <span class="origen" style="display:block"><?= e($c['banco']) ?><?= $c['numero'] ? ' · ' . e($c['numero']) : '' ?><?= $c['titular'] ? ' · ' . e($c['titular']) : '' ?></span>
               <?php $falta = ficha_incompleta($c); if ($falta !== []): ?>
-                <span class="etq vacia" style="margin-top:4px;display:inline-block">Falta <?= e(implode(', ', $falta)) ?> — no admite cargas</span>
+                <span class="etq vacia" style="margin-top:4px;display:inline-block">Sin identificar: falta <?= e(implode(', ', $falta)) ?></span>
               <?php endif ?></td>
             <td class="fecha"><?= $c['f1'] ? e(date('d/m/Y', strtotime($c['f1'])) . ' → ' . date('d/m/Y', strtotime($c['f2']))) : '—' ?></td>
             <td class="der num" style="color:var(--entrada)"><?= bs((float) $c['cre'], 0) ?></td>

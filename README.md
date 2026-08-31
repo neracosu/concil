@@ -122,19 +122,26 @@ quiénes son: no traen número de cuenta ni título, y Provincial no menciona
 ningún banco en todo el archivo. La primera vez se elige la cuenta a mano y la
 huella queda guardada en la tabla `formatos`; a partir de ahí se reconoce sola.
 
-### La ficha de la cuenta es obligatoria
+### La ficha de la cuenta
 
-Una cuenta sin **número, titular y RIF** no admite cargas. El nombre no basta
-para distinguirla: sale del título que el banco imprime dentro del archivo, y
-ese título cambia de un mes a otro — así fue como una misma cuenta del Banco de
-Venezuela acabó registrada dos veces, con la protección contra duplicados
-inservible entre ambas porque la firma incluye el id de la cuenta.
+Conviene que cada cuenta tenga **número, titular y RIF**, pero no se exigen: una
+cuenta sin ellos carga igual y solo se advierte, en la pantalla de Cuentas y en
+el resultado de cada importación.
+
+El motivo de pedirlos: el nombre no basta para distinguir una cuenta. Sale del
+título que el banco imprime dentro del archivo, y ese título cambia de un mes a
+otro — así fue como una misma cuenta del Banco de Venezuela acabó registrada dos
+veces, con la protección contra duplicados inservible entre ambas porque la
+firma incluye el id de la cuenta.
+
+Lo que se pierde sin ellos es concreto: **el aviso de banco equivocado compara
+el número del archivo contra el de la cuenta**, así que sin número esa
+protección cae a comparar nombres de banco, que es más débil y no funciona en
+las cuentas creadas sin banco reconocido.
 
 Los tres datos se piden **una vez por cuenta**, no en cada carga, y aparecen ya
 escritos cuando el extracto los trae: el número lo declaran Bancamiga,
-Venezuela y Exterior; el RIF, Venezuela; el titular, BNC. Cuando el archivo no
-los trae, se escriben a mano en la confirmación de la primera carga o desde
-Cuentas.
+Venezuela y Exterior; el RIF, Venezuela; el titular, BNC.
 
 Si dos cuentas resultan ser la misma, **Cuentas → Unir dos cuentas en una**
 traslada los movimientos y recalcula sus firmas con el id de destino, que si no

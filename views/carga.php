@@ -113,16 +113,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $nueva = ($elegidas[$i] ?? '') === 'nueva' || (int) ($elegidas[$i] ?? 0) <= 0;
                 if ($nueva) {
-                    // La ficha se exige antes de crear nada: si no, una carga
-                    // rechazada dejaba una cuenta vacía y mal llamada.
-                    $falta = ficha_incompleta(['numero' => $fNum, 'titular' => $fTit, 'rif' => $fRif]);
                     $nombre = trim((string) ($nuevas[$i] ?? '')) ?: $a['cuenta'];
                     if ($nombre === '') {
-                        $falta[] = 'el nombre de la cuenta';
-                    }
-                    if ($falta !== []) {
-                        throw new RuntimeException('para crear la cuenta hace falta ' . implode(', ', $falta)
-                            . '. Escríbelo arriba y vuelve a intentarlo.');
+                        // Lo único imprescindible es cómo se va a llamar: una
+                        // cuenta sin nombre no se puede ni elegir después.
+                        throw new RuntimeException('escribe un nombre para la cuenta y vuelve a intentarlo.');
                     }
                     $cid = cuenta_id($nombre, $a['banco']);
                 } else {
@@ -142,19 +137,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new RuntimeException($choque);
                 }
 
-                // La ficha se completa con lo que se escribió en la pantalla y,
-                // si aún falta algo, no se carga: dos cuentas del mismo banco
-                // sin número ni titular son indistinguibles.
+                // La ficha se completa con lo que se escribió en la pantalla.
+                // Si aún falta algo la carga sigue: solo se avisa, porque sin
+                // esos datos el sistema protege peor, no deja de funcionar.
                 completar_ficha($cid, $fNum, $fTit, $fRif);
                 $ficha = db()->prepare('SELECT nombre, numero, titular, rif FROM cuentas WHERE id = ?');
                 $ficha->execute([$cid]);
                 $datos = $ficha->fetch() ?: [];
-                $falta = ficha_incompleta($datos);
-                if ($falta !== []) {
-                    throw new RuntimeException('a la cuenta «' . ($datos['nombre'] ?? '') . '» le falta '
-                        . implode(', ', $falta) . '. Complétala en Cuentas y vuelve a subir el archivo.');
-                }
+                $incompleta = ficha_incompleta($datos);
                 $r = importar($a['ruta'], $a['ext'], $cid, $a['nombre'], $a['info'] ?? null);
+                $r['aviso'] = $incompleta === [] ? '' : 'A esta cuenta le falta ' . implode(', ', $incompleta)
+                    . '. Complétala en Cuentas: sin esos datos no se puede avisar si un archivo va a la cuenta equivocada.';
                 $r['nombre'] = $a['nombre'];
                 $r['cuenta'] = db()->query('SELECT nombre FROM cuentas WHERE id = ' . $cid)->fetchColumn();
                 $resultados[] = $r;
@@ -313,8 +306,9 @@ encabezado_html('Cargar extractos', 'carga',
             $faltan = $ctaSug ? ficha_incompleta($ctaSug) : ['el número de cuenta', 'el titular', 'el RIF'];
             if ($faltan !== []): ?>
               <div class="aviso aviso-nota" style="margin-top:14px">
-                <b>Faltan datos de esta cuenta.</b>
-                Se piden una sola vez, para no volver a registrar dos veces la misma cuenta.
+                <b>Esta cuenta aún no está identificada.</b>
+                Puede cargar igual, pero si los rellena —una sola vez— el sistema podrá avisarle
+                cuando un archivo vaya a la cuenta equivocada.
               </div>
               <div class="par" style="margin-top:10px">
                 <div>
@@ -375,8 +369,13 @@ encabezado_html('Cargar extractos', 'carga',
           <tr>
             <td><?= e($r['nombre']) ?><?php if (isset($r['error'])): ?>
               <span class="nota" style="color:var(--salida);display:block;font-size:12px"><?= e($r['error']) ?></span>
-              <?php elseif (!empty($r['cuadre']['detalle'])): ?>
-              <span class="nota" style="color:var(--entrada);display:block;font-size:12px">Cuadra con el resumen del banco · <?= e(implode(' · ', $r['cuadre']['detalle'])) ?></span>
+              <?php else: ?>
+                <?php if (!empty($r['cuadre']['detalle'])): ?>
+                  <span class="nota" style="color:var(--entrada);display:block;font-size:12px">Cuadra con el resumen del banco · <?= e(implode(' · ', $r['cuadre']['detalle'])) ?></span>
+                <?php endif ?>
+                <?php if (!empty($r['aviso'])): ?>
+                  <span class="nota" style="color:var(--pendiente);display:block;font-size:12px"><?= e($r['aviso']) ?></span>
+                <?php endif ?>
               <?php endif ?></td>
             <td><?= e($r['cuenta'] ?? '—') ?></td>
             <td class="der num"><?= number_format((int) ($r['filas'] ?? 0), 0, ',', '.') ?></td>
