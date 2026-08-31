@@ -6,7 +6,7 @@ el código.
 
 ## Qué es
 
-**CONCIL by VIP Soft**: sistema de conciliación bancaria en PHP 8.2 + MySQL, **sin dependencias**: ni
+**CONCIL by VIP Soft**: sistema de conciliación bancaria en PHP 8.3 + MySQL, **sin dependencias**: ni
 Composer ni Node. El lector y el escritor de XLSX están implementados a mano
 sobre `ZipArchive` y `XMLReader`. No introduzcas librerías externas: el destino
 es hosting cPanel compartido y esa restricción es deliberada.
@@ -22,8 +22,12 @@ es hosting cPanel compartido y esa restricción es deliberada.
   (`secrets.php`, `uploads/`, `PIN-INICIAL.txt`), fuera de `public_html`.
 - SAPI **fpm-fcgi**: los `php_value` del `.htaccess` se ignoran. Los límites de
   subida se cambian en `.user.ini`, con hasta 300 s de retardo.
-- **OPcache no está instalado** para ea-php82 y no se puede habilitar desde la
-  cuenta; requiere WHM.
+- **OPcache está activo** desde el 31/08/2026, cuando el usuario actualizó el
+  servidor desde WHM (tiene acceso; no hay que mandarlo al proveedor). Ojo:
+  `opcache.enable_cli` está en Off, así que `php -m` en la shell no lo lista
+  aunque esté cargado en el SAPI web.
+- El dominio corre **ea-php83**, fijado en el `.htaccess` de
+  `public_html/vipsoft.cloud`, no en el de la aplicación.
 - Hay claves SSH por proyecto en `~/.ssh/config` con `IdentitiesOnly`. Son user
   keys de la cuenta `neracosu`, no deploy keys.
 

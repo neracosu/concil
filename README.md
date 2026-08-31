@@ -59,8 +59,9 @@ CONCIL convierte esos archivos en una base consultable:
 - Exporta a Excel cualquier corte: por categoría, beneficiario, banco, mes o
   rango de fechas.
 
-En una instalación con cuatro bancos y ~6.500 movimientos mensuales, las reglas
-iniciales clasifican el **71 % de los débitos** sin intervención.
+En una instalación con once bancos y ~13.000 movimientos cargados, las reglas
+clasifican por sí solas la mayoría de los débitos; lo que queda es lo que solo
+sabe quien hizo el gasto.
 
 ## Cómo funciona
 
@@ -497,7 +498,7 @@ ya están dentro.
 
 ## Rendimiento
 
-Medido sobre 6.496 movimientos de cuatro bancos:
+Medido sobre 6.496 movimientos, en PHP 8.3 con OPcache activo:
 
 | Operación | Tiempo |
 |---|---|
@@ -520,7 +521,7 @@ un tercio.
 
 ## Visita guiada
 
-La aplicación incluye un recorrido de 21 pasos que **navega solo entre las nueve
+La aplicación incluye un recorrido de 22 pasos que **navega solo entre las diez
 secciones**, señalando con un foco qué hace cada una. Está escrito para personas
 que no trabajan con sistemas: sin jerga técnica y explicando qué gana quien lo
 usa, no qué hace el programa.
@@ -554,13 +555,23 @@ banco.
 
 ## Limitaciones conocidas
 
-- Los importes se tratan en una sola moneda; no hay conversión ni multimoneda.
-- La conciliación es contra el extracto, no contra facturas o documentos: no hay
-  adjuntos por movimiento.
-- No hay reversión de una importación completa; se corrige movimiento a
-  movimiento o borrando la cuenta.
-- La agrupación de pendientes usa `REGEXP_REPLACE`, disponible en MySQL 8 y
-  MariaDB 10.0.5+.
+- **No es conciliación en el sentido contable.** Clasifica y justifica cada
+  salida de dinero, pero no cruza el extracto contra los libros de la empresa.
+  Anotar proveedor y factura es el primer paso hacia eso, no la meta.
+- **Cinco bancos no dicen por dentro de qué cuenta son** —Bancrecer, Banesco,
+  Banplus, BNC y Provincial—, así que la primera vez hay que elegir la cuenta a
+  mano. Después el catálogo recuerda la estructura y no vuelve a preguntar.
+- **Sin el número de cuenta en la ficha**, el aviso de banco equivocado cae a
+  comparar nombres de banco, que es más débil.
+- **Los créditos se guardan pero no se clasifican.** Se consultan con el filtro
+  de tipo. Activarlos es quitar el filtro `tipo = 'D'`, sin volver a importar.
+- **Un solo PIN, sin usuarios.** La bitácora registra acciones, no autores.
+- **Borrar una unidad de negocio no arrastra sus cuentas**: `cuentas.sede_id` no
+  tiene clave foránea. Hoy no se pueden borrar desde la interfaz; si algún día
+  se añade ese botón, hay que resolverlo antes.
+- **Los XLS de Excel 97-2003 no se leen.** Se avisa y se pide guardarlos como
+  `.xlsx`. Sí se leen las tablas HTML con extensión `.xls`, que es lo que
+  entrega el Banco del Tesoro.
 
 ## Créditos
 
