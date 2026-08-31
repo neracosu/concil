@@ -52,7 +52,19 @@ if ($ruta === 'login' && autenticado()) {
 // así el resto del sistema no tiene que arrastrar el dato por la URL.
 if (autenticado() && isset($_GET['sede'])) {
     fijar_sede((int) $_GET['sede']);
-    redirigir('?r=' . $ruta);
+
+    // Una carga a medio confirmar quedó analizada contra las cuentas de la
+    // unidad anterior: se descarta con sus archivos para no importarla aquí.
+    foreach ($_SESSION['lote'] ?? [] as $a) {
+        if (!empty($a['ruta']) && is_file($a['ruta'])) {
+            @unlink($a['ruta']);
+        }
+    }
+    unset($_SESSION['lote']);
+
+    // El detalle de un movimiento no existe en la unidad a la que se entra,
+    // así que se cae al listado en vez de dar «ese movimiento ya no existe».
+    redirigir('?r=' . ($ruta === 'movimiento' ? 'movimientos' : $ruta));
 }
 
 // Con más de una sede y ninguna elegida, lo primero es elegirla.
