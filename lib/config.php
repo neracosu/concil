@@ -16,6 +16,20 @@ const DATA_DIR    = '/home/mardenli/conciliacion_data';
 const UPLOAD_DIR  = DATA_DIR . '/uploads';
 const SECRETS     = DATA_DIR . '/secrets.php';
 
+/**
+ * Todo el sistema funciona en hora de Venezuela: las fechas que se ven, las que
+ * se guardan y las del registro de fallos. El servidor está en otra zona, y sin
+ * fijarla las horas de la base y las de PHP no coincidían — así salían cosas
+ * como «visto hace 420 minutos» para alguien que acababa de entrar.
+ *
+ * Venezuela no cambia la hora en verano, así que el desfase es siempre -04:00 y
+ * la conexión con la base puede fijarse con ese número.
+ */
+const ZONA_HORARIA = 'America/Caracas';
+const ZONA_OFFSET  = '-04:00';
+
+date_default_timezone_set(ZONA_HORARIA);
+
 // El PIN de la primera instalación no se escribe en el código. Si no viene en
 // secrets.php, se genera uno al azar y se deja en DATA_DIR/PIN-INICIAL.txt.
 

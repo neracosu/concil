@@ -249,6 +249,21 @@ mismo proveedor. Reportes ofrece un corte por proveedor.
 El campo `beneficiario` se conserva: lo rellenan las reglas con etiquetas
 gruesas («Banco», «SENIAT») y responde a otra pregunta.
 
+## Hora
+
+Todo el sistema funciona en **hora de Venezuela** (`America/Caracas`): lo que se
+ve en pantalla, lo que se guarda en la base y las marcas del registro de fallos.
+
+El servidor está en otra zona horaria, así que se fija en dos sitios que tienen
+que ir de acuerdo: `date_default_timezone_set()` al cargar la configuración, y
+`SET time_zone` en cada conexión con la base. Sin lo segundo, `NOW()` y `date()`
+daban horas distintas y cualquier resta entre ambas salía mal — así apareció un
+«visto hace 420 minutos» para alguien que acababa de entrar.
+
+Venezuela no adelanta la hora en verano, de modo que el desfase es siempre
+`-04:00` y la conexión puede fijarse con ese número en vez de con reglas de
+horario de verano.
+
 ## Requisitos
 
 - PHP **8.2** o superior, con `pdo_mysql`, `zip`, `xml`, `mbstring`

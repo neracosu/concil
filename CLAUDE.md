@@ -85,6 +85,13 @@ traza: por ahí viaja el PIN.
 
 ## Trampas conocidas
 
+**Todo va en hora de Venezuela.** `ZONA_HORARIA` en `lib/config.php` la fija
+para PHP, y `db()` hace `SET time_zone = '-04:00'` en cada conexión. Las dos
+cosas tienen que ir de acuerdo: el servidor está en otra zona, y mezclar
+`time()` de PHP con un `DATETIME` de la base da diferencias de horas. Si
+necesitas «hace cuánto», calcúlalo en SQL con `TIMESTAMPDIFF`, no restando en
+PHP.
+
 **El formato se reconoce por estructura, nunca por el nombre.** Ni el del
 archivo ni el de la hoja: contabilidad los renombra. `huella()` en
 `lib/huella.php` combina rótulos con su columna, fila del encabezado, ancho y la

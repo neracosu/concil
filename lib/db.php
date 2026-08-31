@@ -18,6 +18,9 @@ function db(): PDO
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]
     );
+    // La base habla en la misma hora que PHP. Sin esto, NOW() y date() daban
+    // horas distintas y cualquier resta entre ambas salía mal.
+    $pdo->exec("SET time_zone = '" . ZONA_OFFSET . "'");
     return $pdo;
 }
 
