@@ -20,9 +20,12 @@
 /** Todos los proveedores, con lo que se les lleva pagado. */
 function proveedores(): array
 {
+    // Los proveedores son comunes, pero las cifras son de la unidad activa:
+    // todo lo demás en la aplicación se lee así.
     return db()->query("SELECT p.*, COUNT(m.id) movs, COALESCE(SUM(m.debito),0) total
                           FROM proveedores p
                      LEFT JOIN movimientos m ON m.proveedor_id = p.id AND m.tipo = 'D'
+                                            AND " . filtro_sede() . "
                       GROUP BY p.id ORDER BY p.nombre")->fetchAll();
 }
 
@@ -97,7 +100,9 @@ function anotar_proveedor(int $movimientoId, string $proveedor, string $factura,
     if ($provId === null) {
         return null;
     }
-    db()->prepare('UPDATE movimientos SET proveedor_id = ? WHERE id = ?')
+    // Con el filtro de sede: el id del movimiento llega del formulario y sin
+    // esto se podría etiquetar un pago de otra unidad de negocio.
+    db()->prepare('UPDATE movimientos m SET m.proveedor_id = ? WHERE m.id = ? AND ' . filtro_sede())
         ->execute([$provId, $movimientoId]);
 
     $facId = factura_id($provId, $factura);

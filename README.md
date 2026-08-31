@@ -198,6 +198,11 @@ pueden comparar. Solo se separan las cuentas y los movimientos.
 El acceso sigue siendo un **único PIN** que ve todas las unidades y cambia entre
 ellas con el selector. No hay usuarios ni permisos por sede.
 
+El aislamiento se aplica también a lo que llega por formulario: la cuenta
+elegida al cargar un extracto y el movimiento al que se anota un proveedor se
+comprueban contra la unidad activa antes de tocarlos, porque sus identificadores
+viajan en el POST y podrían venir manipulados.
+
 Al actualizar una instalación que ya tenía datos, la migración crea la sede
 `ARMOR MARKET` y le adjudica todas las cuentas existentes, de modo que nada
 queda huérfano. El nombre de una cuenta solo tiene que ser único **dentro de su

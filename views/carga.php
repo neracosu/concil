@@ -111,6 +111,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($cid <= 0) {
                     $cid = cuenta_id($a['cuenta'], $a['banco']);
                 }
+                // El id viene del formulario y podría estar manipulado: sin
+                // esto se podría cargar un extracto en una cuenta de otra
+                // unidad de negocio.
+                $suya = db()->prepare('SELECT COUNT(*) FROM cuentas WHERE id = ? AND sede_id = ?');
+                $suya->execute([$cid, (int) sede_actual()]);
+                if ((int) $suya->fetchColumn() === 0) {
+                    throw new RuntimeException('esa cuenta no es de esta unidad de negocio.');
+                }
+
                 $choque = choque_de_banco($cid, $a);
                 if ($choque !== '') {
                     throw new RuntimeException($choque);

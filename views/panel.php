@@ -18,9 +18,14 @@ $justificado = $totalDeb - (float) ($res['pend_bs'] ?? 0);
 $pctJust = $totalDeb > 0 ? $justificado / $totalDeb * 100 : 0;
 
 $cuentasLista = cuentas();
-$ultimas = db()->query('SELECT i.*, c.nombre cuenta FROM importaciones i
-                        LEFT JOIN cuentas c ON c.id = i.cuenta_id
-                        ORDER BY i.id DESC LIMIT 6')->fetchAll();
+/* Solo las cargas de esta unidad de negocio, y solo las que dejaron
+   movimientos vivos: si después se borró la cuenta y se recargó, la fila vieja
+   sigue en el historial y mostrarla hace creer que algo entró dos veces. */
+$ultimas = db()->query("SELECT i.*, c.nombre cuenta FROM importaciones i
+                          JOIN cuentas c ON c.id = i.cuenta_id
+                         WHERE c.sede_id = " . (int) sede_actual() . "
+                           AND EXISTS (SELECT 1 FROM movimientos m WHERE m.importacion_id = i.id)
+                      ORDER BY i.id DESC LIMIT 6")->fetchAll();
 
 $acciones = '<a class="btn btn-oro" href="?r=carga">Cargar extractos</a>'
     . ($pend > 0 ? '<a class="btn" href="?r=pendientes">Justificar ' . $pend . '</a>' : '');
