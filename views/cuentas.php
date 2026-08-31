@@ -11,7 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id     = (int) ($_POST['id'] ?? 0);
         $nombre = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
         $banco  = mb_substr(limpiar((string) ($_POST['banco'] ?? '')), 0, 120);
-        $numero = mb_substr(limpiar((string) ($_POST['numero'] ?? '')), 0, 60);
+        $numero  = mb_substr(limpiar((string) ($_POST['numero'] ?? '')), 0, 60);
+        $titular = mb_substr(limpiar((string) ($_POST['titular'] ?? '')), 0, 160);
+        $rif     = mb_substr(limpiar((string) ($_POST['rif'] ?? '')), 0, 20);
         $sIni   = a_monto((string) ($_POST['saldo_inicial'] ?? '0'));
         $sFecha = a_fecha((string) ($_POST['saldo_fecha'] ?? ''));
         if ($nombre === '') {
@@ -26,14 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($id > 0) {
                 // El sede_id del WHERE evita editar una cuenta de otra unidad
                 // manipulando el id en el formulario.
-                $pdo->prepare('UPDATE cuentas SET nombre=?, banco=?, numero=?, saldo_inicial=?, saldo_fecha=?
+                $pdo->prepare('UPDATE cuentas SET nombre=?, banco=?, numero=?, titular=?, rif=?,
+                                      saldo_inicial=?, saldo_fecha=?
                                 WHERE id=? AND sede_id=?')
-                    ->execute([$nombre, $banco, $numero, $sIni, $sFecha, $id, (int) sede_actual()]);
+                    ->execute([$nombre, $banco, $numero, $titular, $rif, $sIni, $sFecha, $id, (int) sede_actual()]);
                 flash('ok', 'Cuenta actualizada.');
             } else {
-                $pdo->prepare('INSERT INTO cuentas (nombre, banco, numero, saldo_inicial, saldo_fecha, sede_id)
-                               VALUES (?,?,?,?,?,?)')
-                    ->execute([$nombre, $banco, $numero, $sIni, $sFecha, (int) sede_actual()]);
+                $pdo->prepare('INSERT INTO cuentas (nombre, banco, numero, titular, rif, saldo_inicial, saldo_fecha, sede_id)
+                               VALUES (?,?,?,?,?,?,?,?)')
+                    ->execute([$nombre, $banco, $numero, $titular, $rif, $sIni, $sFecha, (int) sede_actual()]);
                 flash('ok', 'Cuenta creada.');
             }
         } catch (PDOException $ex) {
@@ -98,7 +101,10 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
         <?php foreach ($lista as $c): ?>
           <tr>
             <td><b><?= e($c['nombre']) ?></b>
-              <span class="origen" style="display:block"><?= e($c['banco']) ?><?= $c['numero'] ? ' · ' . e($c['numero']) : '' ?></span></td>
+              <span class="origen" style="display:block"><?= e($c['banco']) ?><?= $c['numero'] ? ' · ' . e($c['numero']) : '' ?><?= $c['titular'] ? ' · ' . e($c['titular']) : '' ?></span>
+              <?php $falta = ficha_incompleta($c); if ($falta !== []): ?>
+                <span class="etq vacia" style="margin-top:4px;display:inline-block">Falta <?= e(implode(', ', $falta)) ?> — no admite cargas</span>
+              <?php endif ?></td>
             <td class="fecha"><?= $c['f1'] ? e(date('d/m/Y', strtotime($c['f1'])) . ' → ' . date('d/m/Y', strtotime($c['f2']))) : '—' ?></td>
             <td class="der num" style="color:var(--entrada)"><?= bs((float) $c['cre'], 0) ?></td>
             <td class="der num" style="color:var(--salida)"><?= bs((float) $c['deb'], 0) ?></td>
@@ -180,8 +186,15 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
                placeholder="Ej.: VENEZUELA ARMORMARKET"></div>
       <div><label>Banco</label>
         <input type="text" name="banco" maxlength="120" value="<?= e($editar['banco'] ?? '') ?>" placeholder="Banco de Venezuela"></div>
-      <div><label>Número de cuenta</label>
-        <input type="text" name="numero" maxlength="60" value="<?= e($editar['numero'] ?? '') ?>" placeholder="0102-…"></div>
+      <div class="par">
+        <div><label>Número de cuenta</label>
+          <input type="text" name="numero" maxlength="60" value="<?= e($editar['numero'] ?? '') ?>" placeholder="20 dígitos"></div>
+        <div><label>RIF</label>
+          <input type="text" name="rif" maxlength="20" value="<?= e($editar['rif'] ?? '') ?>" placeholder="J-12345678-9"></div>
+      </div>
+      <div><label>Titular</label>
+        <input type="text" name="titular" maxlength="160" value="<?= e($editar['titular'] ?? '') ?>"
+               placeholder="Nombre de la empresa dueña de la cuenta"></div>
       <div class="par" data-guia="saldoinicial">
         <div><label>Saldo de arranque</label>
           <input type="text" name="saldo_inicial" inputmode="decimal"

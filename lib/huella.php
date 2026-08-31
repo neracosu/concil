@@ -227,6 +227,71 @@ function numero_en_fila(array $fila): ?array
     return null;
 }
 
+/**
+ * RIF y titular de la cuenta, si el extracto los imprime.
+ *
+ * Mismo cuidado que con el número de cuenta: en los conceptos aparecen los RIF
+ * de quien transfiere, y tomarlos por el titular sería confundir a un tercero
+ * con el dueño de la cuenta. Solo cuenta lo que está en la cabecera, o un RIF
+ * que se repita idéntico en todas las filas de la muestra —que es como lo trae
+ * Venezuela, en una columna propia—.
+ */
+function titular_declarado(array $filas, int $filaCab): array
+{
+    $rif = '';
+    $titular = '';
+    // Sin encabezado, solo la fila 0 es cabecera: de la 1 en adelante ya son
+    // movimientos, y ahí los RIF que aparecen son de quien transfiere.
+    $fin = $filaCab >= 0 ? $filaCab : min(count($filas), 1);
+
+    for ($i = 0; $i < $fin; $i++) {
+        foreach ($filas[$i] as $c => $v) {
+            $v = trim((string) $v);
+            if ($v === '') {
+                continue;
+            }
+            if ($rif === '' && preg_match('/\b([VEJPG])-?(\d{8,9})-?(\d)\b/i', $v, $m)) {
+                $rif = strtoupper($m[1]) . '-' . $m[2] . '-' . $m[3];
+            }
+            // «Cliente: X» en una celda, o el rótulo en una y el valor en la
+            // siguiente, que es como lo parte el BNC.
+            if ($titular === '' && preg_match('/^(CLIENTE|TITULAR|RAZON SOCIAL)\s*:?\s*(.*)$/i', $v, $m)) {
+                $titular = trim($m[2]);
+                if ($titular === '') {
+                    for ($k = $c + 1; $k <= max(array_keys($filas[$i])); $k++) {
+                        $x = trim((string) ($filas[$i][$k] ?? ''));
+                        if ($x !== '') { $titular = $x; break; }
+                    }
+                }
+            }
+        }
+    }
+
+    // El RIF también puede venir como columna repetida en cada movimiento.
+    if ($rif === '') {
+        $desde = $filaCab + 1;
+        $porColumna = [];
+        $n = 0;
+        for ($i = $desde; $i < min(count($filas), $desde + 12); $i++) {
+            $n++;
+            foreach ($filas[$i] as $c => $v) {
+                $v = trim((string) $v);
+                if (preg_match('/^([VEJPG])-?(\d{8,9})-?(\d)$/i', $v, $m)) {
+                    $clave = strtoupper($m[1]) . '-' . $m[2] . '-' . $m[3];
+                    $porColumna[$c][$clave] = ($porColumna[$c][$clave] ?? 0) + 1;
+                }
+            }
+        }
+        foreach ($porColumna as $valores) {
+            arsort($valores);
+            $cand = (string) array_key_first($valores);
+            if ($n >= 5 && $valores[$cand] === $n) { $rif = $cand; break; }
+        }
+    }
+
+    return ['rif' => $rif, 'titular' => mb_substr(limpiar($titular), 0, 160)];
+}
+
 /** Nombre del banco a partir del código de cuenta, si se reconoce. */
 function banco_por_codigo(string $codigo): string
 {

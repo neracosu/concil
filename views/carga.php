@@ -77,6 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'muestra' => array_slice($info['muestra'], 0, 3),
                 'tam'     => $tam,
                 'numero'  => $info['numero'],
+                'rif'     => $info['rif'],
+                'titular' => $info['titular'],
                 'codigo'  => $info['codigo'],
                 'info'    => $info,
                 'cadena'  => $info['cadena'],
@@ -112,6 +114,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $choque = choque_de_banco($cid, $a);
                 if ($choque !== '') {
                     throw new RuntimeException($choque);
+                }
+
+                // La ficha se completa con lo que se escribió en la pantalla y,
+                // si aún falta algo, no se carga: dos cuentas del mismo banco
+                // sin número ni titular son indistinguibles.
+                completar_ficha($cid,
+                    (string) ($_POST['f_numero'][$i] ?? ''),
+                    (string) ($_POST['f_titular'][$i] ?? ''),
+                    (string) ($_POST['f_rif'][$i] ?? ''));
+                $ficha = db()->prepare('SELECT nombre, numero, titular, rif FROM cuentas WHERE id = ?');
+                $ficha->execute([$cid]);
+                $datos = $ficha->fetch() ?: [];
+                $falta = ficha_incompleta($datos);
+                if ($falta !== []) {
+                    throw new RuntimeException('a la cuenta «' . ($datos['nombre'] ?? '') . '» le falta '
+                        . implode(', ', $falta) . '. Complétala en Cuentas y vuelve a subir el archivo.');
                 }
                 $r = importar($a['ruta'], $a['ext'], $cid, $a['nombre'], $a['info'] ?? null);
                 $r['nombre'] = $a['nombre'];
@@ -254,6 +272,39 @@ encabezado_html('Cargar extractos', 'carga',
                   <li class="<?= e($c[0]) ?>"><?= e($c[1]) ?></li>
                 <?php endforeach ?>
               </ul>
+            <?php endif ?>
+            <?php
+            /* Datos de la ficha que falten en la cuenta propuesta. Se piden una
+               vez por cuenta, no en cada carga, y vienen escritos cuando el
+               extracto los trae. */
+            $ctaSug = null;
+            foreach ($cuentasLista as $c) { if ((int) $c['id'] === $sug) { $ctaSug = $c; } }
+            $faltan = $ctaSug ? ficha_incompleta($ctaSug) : ['el número de cuenta', 'el titular', 'el RIF'];
+            if ($faltan !== []): ?>
+              <div class="aviso aviso-nota" style="margin-top:14px">
+                <b>Faltan datos de esta cuenta.</b>
+                Se piden una sola vez, para no volver a registrar dos veces la misma cuenta.
+              </div>
+              <div class="par" style="margin-top:10px">
+                <div>
+                  <label>Nº de cuenta</label>
+                  <input type="text" name="f_numero[<?= $i ?>]" maxlength="60"
+                         value="<?= e($a['numero'] ?? '') ?>" placeholder="20 dígitos"
+                         <?= ($ctaSug && trim((string) $ctaSug['numero']) !== '') ? 'readonly' : '' ?>>
+                </div>
+                <div>
+                  <label>Titular</label>
+                  <input type="text" name="f_titular[<?= $i ?>]" maxlength="160"
+                         value="<?= e($a['titular'] ?? '') ?>" placeholder="Nombre de la empresa"
+                         <?= ($ctaSug && trim((string) $ctaSug['titular']) !== '') ? 'readonly' : '' ?>>
+                </div>
+              </div>
+              <div style="margin-top:10px;max-width:260px">
+                <label>RIF</label>
+                <input type="text" name="f_rif[<?= $i ?>]" maxlength="20"
+                       value="<?= e($a['rif'] ?? '') ?>" placeholder="J-12345678-9"
+                       <?= ($ctaSug && trim((string) $ctaSug['rif']) !== '') ? 'readonly' : '' ?>>
+              </div>
             <?php endif ?>
             <div class="tabla-scroll" style="margin-top:14px;border:1px solid var(--linea);border-radius:var(--r-sm)">
               <table>

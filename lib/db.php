@@ -50,6 +50,10 @@ function migrar(): void
     columna_si_falta($pdo, 'cuentas', 'saldo_inicial', 'DECIMAL(18,2) NOT NULL DEFAULT 0');
     columna_si_falta($pdo, 'cuentas', 'saldo_fecha', 'DATE NULL');
     columna_si_falta($pdo, 'cuentas', 'sede_id', 'INT NOT NULL DEFAULT 0');
+    // Identifican la cuenta más allá del nombre, que el banco escribe distinto
+    // en cada archivo. Sin los tres no se admiten cargas.
+    columna_si_falta($pdo, 'cuentas', 'titular', "VARCHAR(160) NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'cuentas', 'rif', "VARCHAR(20) NOT NULL DEFAULT ''");
 
     // Todo lo cargado antes de existir las sedes es de ARMOR MARKET: se crea
     // esa sede y se le adjudican las cuentas huérfanas. Es idempotente porque

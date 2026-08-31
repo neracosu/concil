@@ -122,6 +122,24 @@ quiénes son: no traen número de cuenta ni título, y Provincial no menciona
 ningún banco en todo el archivo. La primera vez se elige la cuenta a mano y la
 huella queda guardada en la tabla `formatos`; a partir de ahí se reconoce sola.
 
+### La ficha de la cuenta es obligatoria
+
+Una cuenta sin **número, titular y RIF** no admite cargas. El nombre no basta
+para distinguirla: sale del título que el banco imprime dentro del archivo, y
+ese título cambia de un mes a otro — así fue como una misma cuenta del Banco de
+Venezuela acabó registrada dos veces, con la protección contra duplicados
+inservible entre ambas porque la firma incluye el id de la cuenta.
+
+Los tres datos se piden **una vez por cuenta**, no en cada carga, y aparecen ya
+escritos cuando el extracto los trae: el número lo declaran Bancamiga,
+Venezuela y Exterior; el RIF, Venezuela; el titular, BNC. Cuando el archivo no
+los trae, se escriben a mano en la confirmación de la primera carga o desde
+Cuentas.
+
+Si dos cuentas resultan ser la misma, **Cuentas → Unir dos cuentas en una**
+traslada los movimientos y recalcula sus firmas con el id de destino, que si no
+dejaría rota la detección de duplicados justo después de unirlas.
+
 ### Comprobaciones antes de guardar
 
 Tres evidencias, todas sacadas del contenido, en orden de fuerza:
@@ -326,7 +344,7 @@ assets/
 | `proveedores` | A quién se le paga, con su RIF; comunes a todas las unidades |
 | `facturas` | Número de factura y número de control, por proveedor |
 | `pagos_factura` | Qué movimiento pagó qué factura, y por cuánto |
-| `cuentas` | Cuentas bancarias, banco, número, saldo de arranque y su sede |
+| `cuentas` | Cuentas bancarias: banco, número, titular, RIF, saldo de arranque y su sede |
 | `formatos` | Huellas de formato aprendidas, con su mapeo de columnas |
 | `categorias` | Tipos de gasto, agrupados y con color |
 | `reglas` | Patrones que asignan categoría y beneficiario automáticamente |

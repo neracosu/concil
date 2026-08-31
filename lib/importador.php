@@ -69,6 +69,7 @@ function analizar(string $ruta, string $ext): array
 
     $titulo = $previas[0] ?? '';
     $cuentaArch = cuenta_declarada($filas, $filaCab);
+    $ficha = titular_declarado($filas, $filaCab);
     $bancoCodigo = banco_por_codigo($cuentaArch['codigo']);
 
     // Orden de confianza: el número de cuenta impreso en el archivo primero,
@@ -94,6 +95,8 @@ function analizar(string $ruta, string $ext): array
         'conocido'      => $formato !== null,
         'numero'        => $cuentaArch['numero'],
         'codigo'        => $cuentaArch['codigo'],
+        'rif'           => $ficha['rif'],
+        'titular'       => $ficha['titular'],
         'banco_codigo'  => $bancoCodigo,
         'saldo_inicial' => saldo_arranque(array_slice($filas, 0, max(1, $filaCab))),
         'cadena'        => $mapa !== null ? cadena_saldo($filas, $desdeCab, $mapa) : ['aplica' => false, 'ok' => 0, 'total' => 0],
@@ -629,6 +632,36 @@ function fusionar_cuentas(int $origen, int $destino): array
     $pdo->commit();
 
     return ['movidos' => $movidos, 'repetidos' => $repetidos];
+}
+
+/**
+ * Qué le falta a la ficha de una cuenta para poder cargarle extractos.
+ *
+ * Sin número, titular y RIF, dos cuentas del mismo banco solo se distinguen por
+ * un nombre que sale del título del archivo — y ese título cambia de un mes a
+ * otro, que es como acabaron existiendo dos «Venezuela» distintas.
+ */
+function ficha_incompleta(array $cuenta): array
+{
+    $falta = [];
+    if (trim((string) ($cuenta['numero'] ?? '')) === '')  { $falta[] = 'el número de cuenta'; }
+    if (trim((string) ($cuenta['titular'] ?? '')) === '') { $falta[] = 'el titular'; }
+    if (trim((string) ($cuenta['rif'] ?? '')) === '')     { $falta[] = 'el RIF'; }
+    return $falta;
+}
+
+/** Completa los datos que falten en la ficha, sin pisar los que ya estén. */
+function completar_ficha(int $cuentaId, string $numero, string $titular, string $rif): void
+{
+    $pdo = db();
+    foreach (['numero' => $numero, 'titular' => $titular, 'rif' => $rif] as $col => $val) {
+        $val = trim($val);
+        if ($val === '') {
+            continue;
+        }
+        $pdo->prepare("UPDATE cuentas SET `$col` = ? WHERE id = ? AND `$col` = ''")
+            ->execute([mb_substr(limpiar($val), 0, 160), $cuentaId]);
+    }
 }
 
 /** Busca la cuenta por nombre o la crea. */
