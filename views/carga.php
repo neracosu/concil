@@ -222,9 +222,19 @@ encabezado_html('Cargar extractos', 'carga',
                 <label>Cuenta destino</label>
                 <select name="cuenta[<?= $i ?>]">
                   <?php
+                  // El número de cuenta manda sobre el nombre: el título que
+                  // imprime el banco cambia de un archivo a otro y por eso una
+                  // misma cuenta acababa registrada dos veces.
                   $sug = null;
-                  foreach ($cuentasLista as $c) {
-                      if (norm($c['nombre']) === norm($a['cuenta'])) { $sug = (int) $c['id']; }
+                  if (($a['numero'] ?? '') !== '' && !str_contains($a['numero'], '*')) {
+                      foreach ($cuentasLista as $c) {
+                          if ($c['numero'] !== '' && $c['numero'] === $a['numero']) { $sug = (int) $c['id']; }
+                      }
+                  }
+                  if ($sug === null) {
+                      foreach ($cuentasLista as $c) {
+                          if (norm($c['nombre']) === norm($a['cuenta'])) { $sug = (int) $c['id']; }
+                      }
                   }
                   foreach ($cuentasLista as $c): ?>
                     <option value="<?= $c['id'] ?>" <?= $sug === (int) $c['id'] ? 'selected' : '' ?>>

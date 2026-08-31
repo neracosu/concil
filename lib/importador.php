@@ -423,6 +423,7 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     // El catálogo aprende: el mes que viene este formato ya se reconoce solo.
     recordar_formato($info['huella']['clave'], $info['banco'], $info['huella'], $m);
     anotar_arranque($cuentaId, $info['saldo_inicial'] ?? null, $fechaMin);
+    anotar_numero($cuentaId, (string) ($info['numero'] ?? ''));
 
     $duplicados = $filas - $insertados;
     $automaticos = min($automaticos, $insertados);
@@ -501,6 +502,20 @@ function choque_de_banco(int $cuentaId, array $a): string
  * lo tenía. Bancamiga y Bicentenario lo imprimen en la cabecera, así que deja
  * de hacer falta escribirlo a mano.
  */
+/**
+ * Guarda en la ficha el número de cuenta que venía impreso en el extracto, si
+ * la cuenta aún no lo tenía. Es lo que después permite reconocer la cuenta sin
+ * depender del título, que cambia de un archivo a otro.
+ */
+function anotar_numero(int $cuentaId, string $numero): void
+{
+    if ($numero === '' || str_contains($numero, '*')) {
+        return;                     // enmascarado: no identifica nada
+    }
+    db()->prepare("UPDATE cuentas SET numero = ? WHERE id = ? AND numero = ''")
+        ->execute([$numero, $cuentaId]);
+}
+
 function anotar_arranque(int $cuentaId, ?float $saldo, ?string $desde): void
 {
     if ($saldo === null || $desde === null) {
@@ -526,6 +541,9 @@ function comprobaciones(array $a): array
         $r[] = ['bien', 'El archivo trae por dentro una cuenta de ' . $delArchivo
                       . ', así que el banco es seguro.'];
     }
+    if (($a['numero'] ?? '') !== '') {
+        $r[] = ['bien', 'Número de cuenta del extracto: ' . $a['numero'] . '.'];
+    }
     $c = $a['cadena'] ?? ['aplica' => false];
     if (!empty($c['aplica']) && $c['total'] > 0) {
         $pct = (int) round(100 * $c['ok'] / $c['total']);
@@ -548,6 +566,69 @@ function comprobaciones(array $a): array
         $r[] = ['bien', 'Trae el saldo con el que arranca el mes: ' . bs((float) $a['arranque']) . '.'];
     }
     return $r;
+}
+
+/**
+ * Pasa todos los movimientos de una cuenta a otra y borra la vacía.
+ *
+ * Hay que recalcular la firma de cada movimiento porque lleva dentro el id de
+ * la cuenta: si no, dos cargas del mismo extracto en la cuenta ya fusionada no
+ * se reconocerían como repetidas. Y como al mudarlos pueden chocar con
+ * movimientos que el destino ya tenía, los que resulten idénticos se descartan
+ * en vez de duplicarse.
+ *
+ * Devuelve cuántos se mudaron y cuántos se descartaron por estar repetidos.
+ */
+function fusionar_cuentas(int $origen, int $destino): array
+{
+    if ($origen === $destino) {
+        throw new RuntimeException('Son la misma cuenta.');
+    }
+    $pdo = db();
+    $sede = (int) sede_actual();
+    $s = $pdo->prepare('SELECT COUNT(*) FROM cuentas WHERE id IN (?, ?) AND sede_id = ?');
+    $s->execute([$origen, $destino, $sede]);
+    if ((int) $s->fetchColumn() !== 2) {
+        throw new RuntimeException('Alguna de las dos cuentas no es de esta unidad de negocio.');
+    }
+
+    // Las firmas que el destino ya tiene, para no volver a meterlas.
+    $ya = [];
+    foreach ($pdo->query("SELECT firma, MAX(ocurrencia) o FROM movimientos
+                           WHERE cuenta_id = $destino GROUP BY firma") as $r) {
+        $ya[$r['firma']] = (int) $r['o'];
+    }
+
+    $filas = $pdo->query("SELECT id, fecha, referencia, concepto, debito, credito
+                            FROM movimientos WHERE cuenta_id = $origen ORDER BY id")->fetchAll();
+
+    $mover = $pdo->prepare('UPDATE movimientos SET cuenta_id = ?, firma = ?, ocurrencia = ? WHERE id = ?');
+    $borrar = $pdo->prepare('DELETE FROM movimientos WHERE id = ?');
+    $movidos = 0;
+    $repetidos = 0;
+
+    $pdo->beginTransaction();
+    foreach ($filas as $f) {
+        $firma = sha1(implode('|', [
+            $destino, $f['fecha'], norm((string) $f['referencia']), norm((string) $f['concepto']),
+            number_format((float) $f['debito'], 2, '.', ''),
+            number_format((float) $f['credito'], 2, '.', ''),
+        ]));
+        // Si el destino ya tenía esta misma línea, es el mismo movimiento
+        // cargado dos veces: se descarta en lugar de duplicarlo.
+        if (isset($ya[$firma])) {
+            $borrar->execute([$f['id']]);
+            $repetidos++;
+            continue;
+        }
+        $ya[$firma] = 1;
+        $mover->execute([$destino, $firma, 1, $f['id']]);
+        $movidos++;
+    }
+    $pdo->prepare('DELETE FROM cuentas WHERE id = ?')->execute([$origen]);
+    $pdo->commit();
+
+    return ['movidos' => $movidos, 'repetidos' => $repetidos];
 }
 
 /** Busca la cuenta por nombre o la crea. */

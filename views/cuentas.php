@@ -42,6 +42,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirigir('?r=cuentas');
     }
 
+    if ($accion === 'fusionar') {
+        $origen  = (int) ($_POST['origen'] ?? 0);
+        $destino = (int) ($_POST['destino'] ?? 0);
+        try {
+            $r = fusionar_cuentas($origen, $destino);
+            bitacora('cuentas_fusionadas', "#$origen → #$destino: {$r['movidos']} movidos, {$r['repetidos']} repetidos");
+            flash('ok', "Cuentas unidas. Se pasaron {$r['movidos']} movimientos"
+                . ($r['repetidos'] > 0
+                    ? " y se descartaron {$r['repetidos']} que ya estaban en la cuenta de destino."
+                    : '.'));
+        } catch (Throwable $ex) {
+            flash('mal', 'No se pudieron unir: ' . $ex->getMessage());
+        }
+        redirigir('?r=cuentas');
+    }
+
     if ($accion === 'borrar') {
         $id = (int) $_POST['id'];
         $n = (int) $pdo->query("SELECT COUNT(*) FROM movimientos m WHERE m.cuenta_id = $id
@@ -111,6 +127,47 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
       </table>
     </div>
   </div>
+
+  <?php /* Solo tiene sentido ofrecerlo si hay al menos dos del mismo banco. */
+  $porBanco = [];
+  foreach ($lista as $c) { if ($c['banco'] !== '') { $porBanco[$c['banco']][] = $c; } }
+  $repetidos = array_filter($porBanco, fn($g) => count($g) > 1);
+  if ($repetidos !== []): ?>
+  <div class="tarjeta">
+    <h2>Unir dos cuentas en una</h2>
+    <p class="nota" style="margin:0 0 12px">
+      Tiene <b><?= count(reset($repetidos)) ?> cuentas del mismo banco</b>. Si en realidad son la misma
+      —pasa cuando el banco escribe un título distinto en cada archivo— únalas aquí: los movimientos
+      se pasan a la que elija y la otra desaparece. Lo que ya estuviera repetido no se duplica.
+    </p>
+    <form method="post" class="par" style="align-items:end">
+      <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+      <input type="hidden" name="accion" value="fusionar">
+      <div>
+        <label>Pasar los movimientos de</label>
+        <select name="origen" required>
+          <?php foreach ($lista as $c): ?>
+            <option value="<?= (int) $c['id'] ?>"><?= e($c['nombre']) ?> — <?= (int) $c['movs'] ?> movimientos</option>
+          <?php endforeach ?>
+        </select>
+      </div>
+      <div>
+        <label>A esta cuenta</label>
+        <select name="destino" required>
+          <?php foreach ($lista as $c): ?>
+            <option value="<?= (int) $c['id'] ?>"><?= e($c['nombre']) ?> — <?= (int) $c['movs'] ?> movimientos</option>
+          <?php endforeach ?>
+        </select>
+      </div>
+      <div>
+        <button class="btn btn-peligro"
+                data-confirmar="Los movimientos pasarán a la cuenta de destino y la de origen se eliminará. Esto no se puede deshacer. ¿Continuar?">
+          Unir
+        </button>
+      </div>
+    </form>
+  </div>
+  <?php endif ?>
 
   <div class="tarjeta">
     <h2><?= $editar ? 'Editar cuenta' : 'Nueva cuenta' ?></h2>
