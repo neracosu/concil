@@ -14,7 +14,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
 <meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=11">
+<link rel="stylesheet" href="assets/app.css?v=12">
 </head>
 <body>
 <div class="app">
@@ -41,8 +41,12 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
             <noscript><button class="btn btn-sm" style="margin-top:6px">Cambiar</button></noscript>
           </form>
         <?php else: ?>
-          <b class="sede-unica"><?= e(sede_nombre()) ?></b>
+          <?php /* Con una sola unidad no hay nada que desplegar, pero la caja
+                    tiene que llevar a algún sitio: es donde la gente busca
+                    crear la siguiente. */ ?>
+          <a class="sede-unica" href="?r=sede"><?= e(sede_nombre()) ?></a>
         <?php endif ?>
+        <a class="sede-gestion" href="?r=sede"><?= count($lasSedes) > 1 ? 'Ver y crear unidades' : 'Añadir otra unidad' ?></a>
       </div>
     <?php endif ?>
     <nav class="nav">
