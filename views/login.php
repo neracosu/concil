@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="robots" content="noindex,nofollow">
 <title>Acceso · <?= e(APP_CREDITO) ?></title>
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=9">
+<link rel="stylesheet" href="assets/app.css?v=12">
 </head>
 <body>
 <div class="acceso">

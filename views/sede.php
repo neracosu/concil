@@ -68,13 +68,85 @@ $lista = $pdo->query("SELECT s.id, s.nombre,
 $activa = sede_elegida() ? sede_actual() : null;
 $eligiendo = !sede_elegida();
 
-encabezado_html(
-    $eligiendo ? '¿Con cuál vas a trabajar?' : 'Unidades de negocio',
-    'sede',
-    $eligiendo
-        ? 'Cada unidad lleva sus propias cuentas y sus propios movimientos, por separado.'
-        : count($lista) . ' unidades · las categorías y las reglas son las mismas para todas'
-);
+/* ------------------------------------------------------------------ */
+/* Al entrar: carta centrada sobre un velo, con el mismo lenguaje que  */
+/* la visita guiada. No lleva menú porque no hay a dónde ir todavía.   */
+/* ------------------------------------------------------------------ */
+if ($eligiendo):
+    $flash = $mensaje['texto'] ?? '';
+?><!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Elegir unidad · <?= e(APP_CREDITO) ?></title>
+<link rel="icon" type="image/png" href="/icon.png">
+<link rel="stylesheet" href="assets/app.css?v=12">
+</head>
+<body class="elegir-cuerpo">
+<div class="elegir-velo">
+  <div class="elegir-carta">
+    <div class="elegir-kicker"><?= e(APP_NOMBRE) ?> <span>by <?= e(APP_MARCA) ?></span></div>
+    <h1 class="elegir-titulo">¿Con cuál vas a trabajar?</h1>
+    <p class="elegir-texto">
+      Cada empresa o tienda del grupo lleva <b>sus propias cuentas y sus propios pagos</b>.
+      Elija una y verá solo lo suyo.
+    </p>
+
+    <?php if ($flash !== ''): ?>
+      <div class="elegir-aviso"><?= e($flash) ?></div>
+    <?php endif ?>
+
+    <div class="elegir-lista">
+      <?php foreach ($lista as $s): ?>
+        <form method="post">
+          <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+          <input type="hidden" name="accion" value="elegir">
+          <input type="hidden" name="id" value="<?= (int) $s['id'] ?>">
+          <button class="elegir-opcion">
+            <span class="elegir-opcion__nombre"><?= e($s['nombre']) ?></span>
+            <span class="elegir-opcion__dato">
+              <?php if ((int) $s['movs'] > 0): ?>
+                <?= number_format((int) $s['cuentas'], 0, ',', '.') ?> cuenta<?= $s['cuentas'] == 1 ? '' : 's' ?> ·
+                <?= number_format((int) $s['movs'], 0, ',', '.') ?> pagos ·
+                hasta el <?= e(date('d/m/Y', strtotime((string) $s['ultima']))) ?>
+              <?php else: ?>
+                Todavía sin pagos cargados
+              <?php endif ?>
+            </span>
+            <span class="elegir-opcion__flecha" aria-hidden="true">→</span>
+          </button>
+        </form>
+      <?php endforeach ?>
+    </div>
+
+    <details class="elegir-nueva"<?= $lista === [] ? ' open' : '' ?>>
+      <summary>Añadir otra empresa o tienda</summary>
+      <p class="elegir-nota">
+        Sus cuentas y sus pagos quedan aparte. Los tipos de gasto se comparten,
+        así que lo que el sistema ya aprendió le sirve también a la nueva.
+      </p>
+      <form method="post" class="elegir-form">
+        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+        <input type="hidden" name="accion" value="crear">
+        <input type="text" name="nombre" maxlength="120" required
+               placeholder="Ej.: DISTRIBUIDORA CENTRO" aria-label="Nombre de la unidad">
+        <button class="btn btn-oro">Crear y entrar</button>
+      </form>
+    </details>
+
+    <a class="elegir-salir" href="?r=salir">Cerrar sesión</a>
+  </div>
+</div>
+</body>
+</html>
+<?php
+    return;
+endif;
+
+encabezado_html('Unidades de negocio', 'sede',
+    count($lista) . ' unidades · las categorías y las reglas son las mismas para todas');
 ?>
 
 <div class="pila">
