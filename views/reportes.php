@@ -8,6 +8,7 @@ exigir_login();
 $cortes = [
     'categoria'    => ['Categoría',    'COALESCE(cat.nombre, "Sin clasificar")', 'COALESCE(cat.color, "#ffd166")', 'COALESCE(cat.id, 0)'],
     'beneficiario' => ['Beneficiario', 'NULLIF(m.beneficiario, "")',             '"#8fa6e0"',                      'NULL'],
+    'proveedor'    => ['Proveedor',    'prov.nombre',                            '"#c39bd3"',                      'prov.id'],
     'cuenta'       => ['Cuenta',       'c.nombre',                               '"#6b82c4"',                      'c.id'],
     'mes'          => ['Mes',          'DATE_FORMAT(m.fecha, "%Y-%m")',          '"#d4a857"',                      'NULL'],
     'grupo'        => ['Grupo',        'COALESCE(cat.grupo, "Sin clasificar")',  '"#c83bff"',                      'NULL'],
@@ -24,6 +25,7 @@ $sql = "SELECT COALESCE($exprSel, '— sin indicar —') clave, $exprColor color
           FROM movimientos m
           JOIN cuentas c ON c.id = m.cuenta_id
      LEFT JOIN categorias cat ON cat.id = m.categoria_id
+     LEFT JOIN proveedores prov ON prov.id = m.proveedor_id
          WHERE $w
       GROUP BY clave
       ORDER BY " . ($corte === 'mes' ? 'clave ASC' : 'total DESC');

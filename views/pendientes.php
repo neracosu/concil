@@ -23,7 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exigir_csrf();
     $accion  = $_POST['accion'] ?? '';
     $catId   = (int) ($_POST['categoria_id'] ?? 0);
-    $benef   = mb_substr(limpiar((string) ($_POST['beneficiario'] ?? '')), 0, 160);
+    $prov    = mb_substr(limpiar((string) ($_POST['proveedor'] ?? '')), 0, 160);
+    $factura = mb_substr(limpiar((string) ($_POST['factura'] ?? '')), 0, 60);
+    $benef   = $prov;
     $justif  = mb_substr(limpiar((string) ($_POST['justificacion'] ?? '')), 0, 1000);
 
     if ($catId <= 0) {
@@ -57,21 +59,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $n = 0;
+    // Qué movimientos se tocan. Se resuelve antes del UPDATE porque después el
+    // filtro «sin categoría» ya no los encontraría, y hacen falta para anotarles
+    // el proveedor.
+    $afectados = [];
     if ($accion === 'grupo') {
         $grupo = (string) ($_POST['grupo'] ?? '');
-        $s = $pdo->prepare("UPDATE movimientos m SET $set
+        $s = $pdo->prepare("SELECT m.id FROM movimientos m
                              WHERE m.tipo='D' AND m.categoria_id IS NULL
                                AND " . filtro_sede() . ' AND ' . GRUPO_SQL . ' = ?');
-        $s->execute([...$base, $grupo]);
-        $n = $s->rowCount();
+        $s->execute([$grupo]);
+        $afectados = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
     } elseif ($accion === 'seleccion') {
         $ids = array_values(array_filter(array_map('intval', (array) ($_POST['ids'] ?? []))));
         if ($ids !== []) {
             $marcas = implode(',', array_fill(0, count($ids), '?'));
-            $s = $pdo->prepare("UPDATE movimientos m SET $set
+            $s = $pdo->prepare("SELECT m.id FROM movimientos m
                                  WHERE m.id IN ($marcas) AND " . filtro_sede());
-            $s->execute([...$base, ...$ids]);
-            $n = $s->rowCount();
+            $s->execute($ids);
+            $afectados = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
+        }
+    }
+
+    if ($afectados !== []) {
+        $marcas = implode(',', array_fill(0, count($afectados), '?'));
+        $s = $pdo->prepare("UPDATE movimientos m SET $set WHERE m.id IN ($marcas)");
+        $s->execute([...$base, ...$afectados]);
+        $n = $s->rowCount();
+    }
+
+    // El proveedor se anota en cada movimiento alcanzado; la factura solo
+    // cuando fue uno solo, que es cuando el formulario la pide.
+    if ($prov !== '' && $afectados !== []) {
+        $provId = proveedor_id($prov);
+        if ($provId !== null) {
+            $marcas = implode(',', array_fill(0, count($afectados), '?'));
+            $pdo->prepare("UPDATE movimientos SET proveedor_id = ? WHERE id IN ($marcas)")
+                ->execute([$provId, ...$afectados]);
+            if ($factura !== '' && count($afectados) === 1) {
+                $movId = (int) $afectados[0];
+                $monto = (float) $pdo->query("SELECT debito FROM movimientos WHERE id = $movId")->fetchColumn();
+                $facId = factura_id($provId, $factura);
+                if ($facId !== null) {
+                    vincular_pago($facId, $movId, $monto);
+                }
+            }
         }
     }
 
@@ -99,12 +131,19 @@ encabezado_html('Por justificar', 'pendientes',
         : 'Todo al día.',
     $acciones);
 
+/* Sugerencias de proveedor: escribir uno que ya existe no crea un duplicado. */
+$sugProv = nombres_proveedor();
+
 if ($total === 0) {
     echo '<div class="marco-tabla"><div class="vacio"><b>No queda nada por justificar</b>'
        . 'Cuando cargues el próximo extracto, aquí aparecerá lo que las reglas no reconozcan.</div></div>';
     pie_html();
     return;
 }
+
+echo '<datalist id="listaProveedores">';
+foreach ($sugProv as $sp) { echo '<option value="' . e($sp) . '">'; }
+echo '</datalist>';
 
 /**
  * Formulario de clasificación reutilizable.
@@ -116,6 +155,10 @@ if ($total === 0) {
 function form_clasificar(array $cats, string $accion, array $ocultos, string $patronSugerido, string $idForm, bool $suelto = false): void
 {
     $att = $suelto ? ' form="' . e($idForm) . '"' : '';
+    // El número de factura solo se pide cuando se está justificando un único
+    // movimiento: ponerle la misma factura a un grupo de cincuenta no
+    // significaría nada. El proveedor sí se puede aplicar a todo el grupo.
+    $unico = $suelto;
     if (!$suelto): ?>
     <form method="post" class="pila" id="<?= e($idForm) ?>">
     <?php else: ?>
@@ -139,9 +182,16 @@ function form_clasificar(array $cats, string $accion, array $ocultos, string $pa
         </div>
         <div>
           <label>A quién se le pagó <span style="text-transform:none;letter-spacing:0">(opcional)</span></label>
-          <input type="text" name="beneficiario" maxlength="160" placeholder="Proveedor, empleado, organismo…"<?= $att ?>>
+          <input type="text" name="proveedor" maxlength="160" list="listaProveedores"
+                 placeholder="Proveedor, empleado, organismo…"<?= $att ?>>
         </div>
       </div>
+      <?php if ($unico): ?>
+        <div>
+          <label>Nº de factura <span style="text-transform:none;letter-spacing:0">(opcional)</span></label>
+          <input type="text" name="factura" maxlength="60" placeholder="El número que aparece en la factura"<?= $att ?>>
+        </div>
+      <?php endif ?>
       <div>
         <label>Justificación <span style="text-transform:none;letter-spacing:0">(para qué se usó el dinero)</span></label>
         <textarea name="justificacion" maxlength="1000" rows="2" placeholder="Ej.: pago de la factura de agosto del servicio de internet de la sede Boleíta."<?= $att ?>></textarea>

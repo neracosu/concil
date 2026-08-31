@@ -23,6 +23,7 @@ banco no explica.
 - [Cómo funciona](#cómo-funciona)
 - [Formatos de extracto soportados](#formatos-de-extracto-soportados)
 - [Unidades de negocio](#unidades-de-negocio)
+- [Proveedores y facturas](#proveedores-y-facturas)
 - [Requisitos](#requisitos)
 - [Instalación](#instalación)
 - [Estructura del proyecto](#estructura-del-proyecto)
@@ -184,6 +185,33 @@ Al actualizar una instalación que ya tenía datos, la migración crea la sede
 queda huérfano. El nombre de una cuenta solo tiene que ser único **dentro de su
 sede**, porque dos unidades pueden tener cada una su cuenta «BANESCO».
 
+## Proveedores y facturas
+
+Al justificar un pago se puede anotar **a quién se le pagó** y **el número de
+factura**. El proveedor se guarda en el propio movimiento, porque todo pago
+tiene destinatario haya factura o no; las facturas van en su tabla y se enlazan
+al pago a través de `pagos_factura`.
+
+Esa separación es deliberada. En la práctica una factura se paga en varias
+partes, o un solo pago cubre varias facturas: con el número de factura metido en
+una columna del movimiento, ninguno de los dos casos cabría. Hoy la pantalla
+solo deja anotar una factura por movimiento —y solo cuando se justifica de uno
+en uno, porque ponerle la misma factura a un grupo de cincuenta movimientos no
+significa nada—, pero el dato no habrá que rehacerlo.
+
+En Venezuela una factura lleva **dos** números: el suyo y el «número de control»
+pre-impreso que exige la Providencia Administrativa 00071 del SENIAT, que nunca
+se reinicia durante la vida del contribuyente. La tabla guarda los dos, junto
+con el RIF del proveedor, aunque al justificar solo se pida el número de
+factura: lo demás se completa después sin frenar el trabajo diario.
+
+Los proveedores son **comunes a todas las unidades de negocio**, igual que las
+categorías, de modo que se puede preguntar cuánto le pagó el grupo entero a un
+mismo proveedor. Reportes ofrece un corte por proveedor.
+
+El campo `beneficiario` se conserva: lo rellenan las reglas con etiquetas
+gruesas («Banco», «SENIAT») y responde a otra pregunta.
+
 ## Requisitos
 
 - PHP **8.2** o superior, con `pdo_mysql`, `zip`, `xml`, `mbstring`
@@ -295,6 +323,9 @@ assets/
 | Tabla | Contenido |
 |---|---|
 | `sedes` | Unidades de negocio del consorcio |
+| `proveedores` | A quién se le paga, con su RIF; comunes a todas las unidades |
+| `facturas` | Número de factura y número de control, por proveedor |
+| `pagos_factura` | Qué movimiento pagó qué factura, y por cuánto |
 | `cuentas` | Cuentas bancarias, banco, número, saldo de arranque y su sede |
 | `formatos` | Huellas de formato aprendidas, con su mapeo de columnas |
 | `categorias` | Tipos de gasto, agrupados y con color |

@@ -144,6 +144,14 @@ function migrar(): void
         CONSTRAINT fk_mov_regla  FOREIGN KEY (regla_id)       REFERENCES reglas(id)        ON DELETE SET NULL
     ) $t");
 
+    // A quién se le pagó, ya como registro y no como texto suelto. El campo
+    // beneficiario se queda: lo llenan las reglas con etiquetas gruesas y sirve
+    // para otra cosa.
+    columna_si_falta($pdo, 'movimientos', 'proveedor_id', 'INT NULL');
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_prov')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_prov (proveedor_id)');
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS bitacora (
         id        BIGINT AUTO_INCREMENT PRIMARY KEY,
         accion    VARCHAR(60) NOT NULL,
@@ -169,6 +177,48 @@ function migrar(): void
         creado_en DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         visto_en  DATETIME     NULL,
         UNIQUE KEY uq_formato (clave)
+    ) $t");
+
+    // Proveedores y facturas. El proveedor cuelga del movimiento porque todo
+    // pago tiene destinatario; las facturas van aparte para que quepan los
+    // casos reales: una factura pagada en partes, o un pago que cubre varias.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS proveedores (
+        id        INT AUTO_INCREMENT PRIMARY KEY,
+        nombre    VARCHAR(160) NOT NULL,
+        clave     VARCHAR(160) NOT NULL,
+        rif       VARCHAR(20)  NOT NULL DEFAULT '',
+        nota      VARCHAR(255) NOT NULL DEFAULT '',
+        creado_en DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_proveedor (clave)
+    ) $t");
+
+    // numero es el de la factura; numero_control, el pre-impreso que exige la
+    // Providencia 00071 del SENIAT y que nunca se reinicia. Se pide después.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS facturas (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        proveedor_id   INT          NOT NULL,
+        numero         VARCHAR(60)  NOT NULL,
+        numero_control VARCHAR(40)  NOT NULL DEFAULT '',
+        fecha          DATE         NULL,
+        monto          DECIMAL(18,2) NOT NULL DEFAULT 0,
+        creado_en      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_factura (proveedor_id, numero),
+        CONSTRAINT fk_factura_prov FOREIGN KEY (proveedor_id)
+            REFERENCES proveedores (id) ON DELETE CASCADE
+    ) $t");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pagos_factura (
+        id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+        factura_id    INT    NOT NULL,
+        movimiento_id BIGINT NOT NULL,
+        monto         DECIMAL(18,2) NOT NULL DEFAULT 0,
+        creado_en     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_pago (factura_id, movimiento_id),
+        KEY idx_pago_mov (movimiento_id),
+        CONSTRAINT fk_pago_factura FOREIGN KEY (factura_id)
+            REFERENCES facturas (id) ON DELETE CASCADE,
+        CONSTRAINT fk_pago_mov FOREIGN KEY (movimiento_id)
+            REFERENCES movimientos (id) ON DELETE CASCADE
     ) $t");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS ajustes (

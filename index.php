@@ -12,6 +12,7 @@ require __DIR__ . '/lib/sedes.php';
 require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/xlsx.php';
 require __DIR__ . '/lib/huella.php';
+require __DIR__ . '/lib/proveedores.php';
 require __DIR__ . '/lib/reglas.php';
 require __DIR__ . '/lib/importador.php';
 require __DIR__ . '/lib/consultas.php';
