@@ -10,7 +10,7 @@ const APP_NOMBRE  = 'CONCIL';
 const APP_MARCA   = 'VIP Soft';
 const APP_LEMA    = 'Conciliación bancaria';
 const APP_CREDITO = 'CONCIL by VIP Soft';
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 const APP_NAME    = APP_CREDITO;   // usado en los títulos del navegador
 const DATA_DIR    = '/home/mardenli/conciliacion_data';
 const UPLOAD_DIR  = DATA_DIR . '/uploads';
@@ -26,7 +26,7 @@ const SESION_SEGS  = 28800;  // 8 horas de sesión
 
 // Carga de archivos
 const MAX_UPLOAD_MB  = 25;
-const EXT_PERMITIDAS = ['xlsx', 'csv'];
+const EXT_PERMITIDAS = ['xlsx', 'xls', 'csv'];
 
 /**
  * PIN de arranque de una instalación nueva.

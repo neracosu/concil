@@ -14,7 +14,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
 <meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=9">
+<link rel="stylesheet" href="assets/app.css?v=11">
 </head>
 <body>
 <div class="app">
@@ -22,6 +22,21 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
     <div class="marca">
       <b><?= e(APP_NOMBRE) ?></b><span>by <?= e(APP_MARCA) ?></span>
     </div>
+    <?php $lasSedes = sedes(); if (count($lasSedes) > 0): ?>
+      <div class="sede-caja">
+        <span class="sede-rotulo">Unidad de negocio</span>
+        <?php if (count($lasSedes) > 1): ?>
+          <select onchange="location.href='?r=<?= e($ruta) ?>&sede=' + this.value" aria-label="Cambiar de unidad">
+            <?php foreach ($lasSedes as $sd): ?>
+              <option value="<?= (int) $sd['id'] ?>" <?= (int) $sd['id'] === sede_actual() ? 'selected' : '' ?>>
+                <?= e($sd['nombre']) ?></option>
+            <?php endforeach ?>
+          </select>
+        <?php else: ?>
+          <b class="sede-unica"><?= e(sede_nombre()) ?></b>
+        <?php endif ?>
+      </div>
+    <?php endif ?>
     <nav class="nav">
       <div class="nav-titulo">Trabajo diario</div>
       <a href="?r=panel"       class="<?= $ruta === 'panel' ? 'on' : '' ?>">Panel</a>
@@ -34,6 +49,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <a href="?r=reglas"     class="<?= $ruta === 'reglas' ? 'on' : '' ?>">Reglas de mapeo</a>
       <a href="?r=categorias" class="<?= $ruta === 'categorias' ? 'on' : '' ?>">Categorías</a>
       <a href="?r=cuentas"    class="<?= $ruta === 'cuentas' ? 'on' : '' ?>">Cuentas</a>
+      <a href="?r=sede"       class="<?= $ruta === 'sede' ? 'on' : '' ?>">Unidades de negocio</a>
       <a href="?r=ajustes"    class="<?= $ruta === 'ajustes' ? 'on' : '' ?>">Ajustes</a>
       <a href="#" class="guia-abrir" data-guia-abrir>Visita guiada</a>
     </nav>
@@ -78,8 +94,8 @@ window.GUIA = <?= json_encode([
     'pasos' => guia_pasos(),
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
-<script src="assets/app.js?v=9"></script>
-<script src="assets/guia.js?v=9"></script>
+<script src="assets/app.js?v=11"></script>
+<script src="assets/guia.js?v=11"></script>
 </body>
 </html>
 <?php

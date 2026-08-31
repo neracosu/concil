@@ -240,3 +240,65 @@ function csv_filas(string $ruta): Generator
     }
     fclose($fh);
 }
+
+/**
+ * Varios bancos exportan una tabla HTML y le ponen extensión .xls. El Tesoro
+ * lo hace. No es un XLS de verdad, así que ZipArchive no lo abre y hay que
+ * leer la tabla directamente.
+ */
+function html_filas(string $ruta): Generator
+{
+    $html = file_get_contents($ruta);
+    if ($html === false) {
+        throw new RuntimeException('No se pudo leer el archivo.');
+    }
+    $doc = new DOMDocument();
+    $previo = libxml_use_internal_errors(true);
+    $doc->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NONET);
+    libxml_clear_errors();
+    libxml_use_internal_errors($previo);
+
+    foreach ($doc->getElementsByTagName('tr') as $tr) {
+        $fila = [];
+        $col = 0;
+        foreach ($tr->childNodes as $celda) {
+            $etq = strtolower($celda->nodeName);
+            if ($etq !== 'td' && $etq !== 'th') {
+                continue;
+            }
+            $v = trim((string) $celda->textContent);
+            if ($v !== '') {
+                $fila[$col] = $v;
+            }
+            // colspan corre las columnas siguientes, o el mapeo se desalinea
+            $span = (int) ($celda->attributes?->getNamedItem('colspan')?->nodeValue ?? 1);
+            $col += max(1, $span);
+        }
+        if ($fila !== []) {
+            yield $fila;
+        }
+    }
+}
+
+/**
+ * Decide cómo leer el archivo por su contenido y no por la extensión, que es
+ * justo lo que viene mal puesto. Un ZIP empieza por "PK"; una tabla HTML trae
+ * <table> en los primeros kilobytes.
+ */
+function formato_archivo(string $ruta): string
+{
+    $fh = fopen($ruta, 'rb');
+    if (!$fh) {
+        throw new RuntimeException('No se pudo abrir el archivo.');
+    }
+    $cabeza = (string) fread($fh, 4096);
+    fclose($fh);
+
+    if (str_starts_with($cabeza, "PK\x03\x04")) {
+        return 'xlsx';
+    }
+    if (preg_match('/<\s*(table|html|tr)\b/i', $cabeza)) {
+        return 'html';
+    }
+    return 'csv';
+}

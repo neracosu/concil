@@ -27,6 +27,15 @@ function migrar(): void
     $pdo = db();
     $t = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
 
+    // Unidades de negocio del consorcio. Cada cuenta pertenece a una.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS sedes (
+        id        INT AUTO_INCREMENT PRIMARY KEY,
+        nombre    VARCHAR(120) NOT NULL,
+        activa    TINYINT(1)   NOT NULL DEFAULT 1,
+        creado_en DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_sede_nombre (nombre)
+    ) $t");
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS cuentas (
         id        INT AUTO_INCREMENT PRIMARY KEY,
         nombre    VARCHAR(120) NOT NULL,
@@ -40,6 +49,23 @@ function migrar(): void
     // Saldo de arranque, para las cuentas cuyo extracto no trae columna de saldo.
     columna_si_falta($pdo, 'cuentas', 'saldo_inicial', 'DECIMAL(18,2) NOT NULL DEFAULT 0');
     columna_si_falta($pdo, 'cuentas', 'saldo_fecha', 'DATE NULL');
+    columna_si_falta($pdo, 'cuentas', 'sede_id', 'INT NOT NULL DEFAULT 0');
+
+    // Todo lo cargado antes de existir las sedes es de ARMOR MARKET: se crea
+    // esa sede y se le adjudican las cuentas huérfanas. Es idempotente porque
+    // solo toca las que aún tienen sede_id = 0.
+    if ((int) $pdo->query('SELECT COUNT(*) FROM cuentas WHERE sede_id = 0')->fetchColumn() > 0) {
+        $pdo->exec("INSERT IGNORE INTO sedes (nombre) VALUES ('ARMOR MARKET')");
+        $primera = (int) $pdo->query("SELECT id FROM sedes ORDER BY id LIMIT 1")->fetchColumn();
+        $pdo->prepare('UPDATE cuentas SET sede_id = ? WHERE sede_id = 0')->execute([$primera]);
+    }
+
+    // El nombre de cuenta era único en toda la base; ahora solo dentro de su
+    // sede, porque dos unidades de negocio pueden tener cada una su «BANESCO».
+    if (indice_existe($pdo, 'cuentas', 'uq_cuenta_nombre')) {
+        $pdo->exec('ALTER TABLE cuentas DROP INDEX uq_cuenta_nombre,
+                                        ADD UNIQUE KEY uq_cuenta_sede (sede_id, nombre)');
+    }
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS categorias (
         id        INT AUTO_INCREMENT PRIMARY KEY,
@@ -124,10 +150,37 @@ function migrar(): void
         KEY idx_bit_fecha (creado_en)
     ) $t");
 
+    // Catálogo de formatos de banco reconocidos por su estructura. Se llena
+    // solo: cada importación confirmada deja aquí su huella, así que el mes
+    // siguiente ese mismo formato ya no hay que deducirlo.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS formatos (
+        id        INT AUTO_INCREMENT PRIMARY KEY,
+        clave     CHAR(32)     NOT NULL,
+        banco     VARCHAR(120) NOT NULL DEFAULT '',
+        fila_cab  SMALLINT     NOT NULL DEFAULT 0,
+        mapa      TEXT         NOT NULL,
+        rotulos   VARCHAR(500) NOT NULL DEFAULT '',
+        forma     VARCHAR(64)  NOT NULL DEFAULT '',
+        ancho     SMALLINT     NOT NULL DEFAULT 0,
+        veces     INT          NOT NULL DEFAULT 0,
+        creado_en DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        visto_en  DATETIME     NULL,
+        UNIQUE KEY uq_formato (clave)
+    ) $t");
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS ajustes (
         clave VARCHAR(60) PRIMARY KEY,
         valor TEXT NOT NULL
     ) $t");
+}
+
+/** ¿Existe ese índice? Se usa para migrar claves sin repetir el ALTER. */
+function indice_existe(PDO $pdo, string $tabla, string $indice): bool
+{
+    $s = $pdo->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS
+                         WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?');
+    $s->execute([$tabla, $indice]);
+    return (int) $s->fetchColumn() > 0;
 }
 
 /** Añade una columna solo si todavía no existe (migración idempotente). */

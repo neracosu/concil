@@ -22,6 +22,7 @@ banco no explica.
 - [Qué problema resuelve](#qué-problema-resuelve)
 - [Cómo funciona](#cómo-funciona)
 - [Formatos de extracto soportados](#formatos-de-extracto-soportados)
+- [Unidades de negocio](#unidades-de-negocio)
 - [Requisitos](#requisitos)
 - [Instalación](#instalación)
 - [Estructura del proyecto](#estructura-del-proyecto)
@@ -89,30 +90,91 @@ Extracto del banco (.xlsx / .csv)
 
 ## Formatos de extracto soportados
 
-Las columnas se localizan **por su nombre, no por su posición**, así que otros
-bancos funcionan sin cambios de código mientras el encabezado sea reconocible.
+El formato se reconoce **por la estructura del archivo**, nunca por su nombre ni
+por el de la hoja: contabilidad los renombra y no prueban nada. La huella
+(`lib/huella.php`) combina qué rótulos trae el encabezado y en qué columna cae
+cada uno, en qué fila está, el ancho de los datos y la **forma de cada columna**
+leída de los propios datos: `F` fecha · `N` número · `T` texto · `S` signo `+/-`
+· `V` vacía.
 
-| Banco | Se identifica por | Columnas |
+Sobre 16 extractos reales dio 14 huellas únicas, y las dos repetidas eran de
+verdad el mismo formato — entre ellas el Banco del Tesoro entregado en XLSX y en
+HTML, reconocidos como uno solo.
+
+| Banco | Encabezado | Particularidad |
 |---|---|---|
-| Bancamiga | Sin título y con columna `Saldo` | `Fecha · Referencia · Concepto · DESCRIP · Débito · Crédito · Saldo` |
-| Banco del Tesoro | Título `TESORO` | `Fecha · Referencia · Concepto · DESCRIPCION · Débito · Crédito` |
-| Banco de Venezuela | Título con `VENEZUELA` | `Fecha · Referencia · Descripción · CONCEPTO · Débito · Crédito` |
-| Banesco | Título `BANESCO` | `Fecha · Referencia · Descripción · (nota sin encabezado) · Monto con signo` |
+| Bancamiga | `Nro · Fecha · Referencia · Concepto · Débito · Crédito · Saldo` | Trae número de cuenta y saldo inicial en la cabecera |
+| Banco del Tesoro | `Nro · Fecha · Referencia · Código · Concepto · Débito · Crédito` | También se exporta como tabla HTML con extensión `.xls` |
+| Bicentenario | Igual que Tesoro más `Saldo` | Pie con totales; saldo inicial en la cabecera |
+| Banco de Venezuela | `fecha · referencia · concepto · saldo · monto · tipoMovimiento · rif · numeroCuenta` | Primera fila es `SALDO INICIAL`, no un movimiento |
+| Banesco | `(sin rótulo) · Referencia · Descripción · Monto · Balance` | **La columna de fecha no tiene rótulo**: se deduce de los datos |
+| Exterior | *ninguno* | Posicional, con el signo `+/-` en columna aparte |
+| BNC | Encabezado en la fila 7 y con huecos | Trae número de cuenta y pie de totales |
+| Banplus | `Fecha · Referencia · Cod_Transacc · Transaccion · Cod_Motivo · Motivo · Débito · Crédito · Saldo` | No entrega las filas en orden de saldo |
+| Bancrecer | `FECHA · REFERENCIA · DESCRIPCION · DEBITOS · CREDITOS · SALDO` | Montos en formato `1.234,56` |
+| Provincial | `Fecha · Referencia · Descripción · Importe · Saldo` | Orden cronológico invertido |
 
-Detalles que el lector resuelve:
+### Catálogo que aprende solo
 
-- **Fechas** en serial de Excel (base 1899-12-30) o como texto.
+Cuatro bancos —Bancrecer, Banesco, Banplus y Provincial— no dicen por dentro
+quiénes son: no traen número de cuenta ni título, y Provincial no menciona
+ningún banco en todo el archivo. La primera vez se elige la cuenta a mano y la
+huella queda guardada en la tabla `formatos`; a partir de ahí se reconoce sola.
+
+### Comprobaciones antes de guardar
+
+Tres evidencias, todas sacadas del contenido, en orden de fuerza:
+
+1. **El número de cuenta impreso en el archivo.** Sus cuatro primeros dígitos
+   son el código del banco según la norma venezolana (`0172` Bancamiga, `0102`
+   Banco de Venezuela, `0115` Exterior, `0191` BNC). Es lo único que **bloquea**
+   la importación si contradice la cuenta elegida.
+2. **Los totales que el archivo declara en su pie.** Cuadran al céntimo: el
+   extracto de Bicentenario dice 2.599 débitos por 167.634.508,43 y eso es
+   exactamente lo que entra. Si no cuadran, `importar()` deshace la transacción
+   completa y no guarda nada.
+3. **La cadena del saldo** (`saldo anterior − débito + crédito`). Con el mapeo
+   correcto encadena el 100 % de las filas; con las columnas cruzadas, ninguna.
+   Solo sirve como confirmación: Banplus no viene en orden de saldo y Provincial
+   viene al revés, así que un resultado bajo nunca rechaza el archivo.
+
+### Otros detalles que el lector resuelve
+
+- **El tipo de archivo se decide olfateando el contenido**, no la extensión: un
+  ZIP empieza por `PK`, una tabla HTML trae `<table>`. Por eso el `.xls` del
+  Tesoro, que en realidad es HTML, se lee sin problemas.
+- **Fechas** en serial de Excel (base 1899-12-30), `d/m/Y` o `d/m/y`.
 - **Montos** en notación científica (`1.436003383E9`), con coma o punto decimal,
   entre paréntesis o con signo.
-- **Columna única de monto**: el signo negativo se interpreta como débito.
-- **Columnas sin encabezado**: la que queda entre la descripción y el monto se
-  toma como nota manual (caso Banesco).
+- **Saldo de arranque** tomado de la cabecera cuando el banco lo imprime.
 - **Texto corrupto**: los archivos que llegan con acentos rotos se comparan con
   una clave normalizada sin acentos ni puntuación.
 
-Para añadir un banco basta con agregar su nombre a `detectar_banco()` en
-`lib/importador.php`, o con nada en absoluto si sus encabezados ya coinciden con
-las listas `CAB_*`.
+## Unidades de negocio
+
+Un mismo CONCIL sirve a varias empresas o tiendas del consorcio. Cada **unidad
+de negocio** («sede») lleva sus propias cuentas bancarias y sus propios
+movimientos; el selector de la esquina superior izquierda decide con cuál se
+está trabajando y todas las pantallas responden a esa elección.
+
+El aislamiento es por cuenta: cada cuenta pertenece a una sede y los movimientos
+heredan la suya de la cuenta, así que no hace falta repetir el dato en cada
+movimiento. `filtro_sede()` (`lib/sedes.php`) devuelve el trozo de SQL que
+restringe cualquier consulta, y `where_filtros()` lo aplica de forma automática
+a todo lo que pasa por los filtros comunes.
+
+**Las categorías y las reglas son comunes a todas las unidades.** Es una
+decisión de producto: así una regla aprendida en una tienda clasifica sola en
+las demás, y los informes de distintas unidades hablan el mismo idioma y se
+pueden comparar. Solo se separan las cuentas y los movimientos.
+
+El acceso sigue siendo un **único PIN** que ve todas las unidades y cambia entre
+ellas con el selector. No hay usuarios ni permisos por sede.
+
+Al actualizar una instalación que ya tenía datos, la migración crea la sede
+`ARMOR MARKET` y le adjudica todas las cuentas existentes, de modo que nada
+queda huérfano. El nombre de una cuenta solo tiene que ser único **dentro de su
+sede**, porque dos unidades pueden tener cada una su cuenta «BANESCO».
 
 ## Requisitos
 
@@ -187,7 +249,9 @@ lib/
   config.php           Constantes, rutas, credenciales, límites reales
   db.php               Conexión PDO y esquema (migración idempotente)
   texto.php            Normalización de texto, fechas y montos
-  xlsx.php             Lector XLSX en streaming y lector CSV
+  xlsx.php             Lector XLSX en streaming, lector CSV y lector de tablas HTML
+  huella.php           Reconocimiento de formatos por estructura y comprobaciones
+  sedes.php            Unidades de negocio y filtrado de todas las consultas
   importador.php       Detección de formato, mapeo de columnas, importación
   reglas.php           Motor de mapeo automático
   consultas.php        Filtros, paginación, agregados, saldos
@@ -209,6 +273,7 @@ views/
   reglas.php           Alta y mantenimiento de reglas, sugerencias automáticas
   categorias.php       Catálogo de tipos de gasto
   cuentas.php          Cuentas bancarias y saldo de arranque
+  sede.php             Elegir, crear y renombrar unidades de negocio
   ajustes.php          PIN, estado del sistema, bitácora
 
 assets/
@@ -221,7 +286,9 @@ assets/
 
 | Tabla | Contenido |
 |---|---|
-| `cuentas` | Cuentas bancarias, banco, número y saldo de arranque |
+| `sedes` | Unidades de negocio del consorcio |
+| `cuentas` | Cuentas bancarias, banco, número, saldo de arranque y su sede |
+| `formatos` | Huellas de formato aprendidas, con su mapeo de columnas |
 | `categorias` | Tipos de gasto, agrupados y con color |
 | `reglas` | Patrones que asignan categoría y beneficiario automáticamente |
 | `importaciones` | Historial de cargas con conteos de nuevos y repetidos |

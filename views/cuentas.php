@@ -20,24 +20,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         try {
             if ($id > 0) {
-                $pdo->prepare('UPDATE cuentas SET nombre=?, banco=?, numero=?, saldo_inicial=?, saldo_fecha=? WHERE id=?')
-                    ->execute([$nombre, $banco, $numero, $sIni, $sFecha, $id]);
+                // El sede_id del WHERE evita editar una cuenta de otra unidad
+                // manipulando el id en el formulario.
+                $pdo->prepare('UPDATE cuentas SET nombre=?, banco=?, numero=?, saldo_inicial=?, saldo_fecha=?
+                                WHERE id=? AND sede_id=?')
+                    ->execute([$nombre, $banco, $numero, $sIni, $sFecha, $id, (int) sede_actual()]);
                 flash('ok', 'Cuenta actualizada.');
             } else {
-                $pdo->prepare('INSERT INTO cuentas (nombre, banco, numero, saldo_inicial, saldo_fecha) VALUES (?,?,?,?,?)')
-                    ->execute([$nombre, $banco, $numero, $sIni, $sFecha]);
+                $pdo->prepare('INSERT INTO cuentas (nombre, banco, numero, saldo_inicial, saldo_fecha, sede_id)
+                               VALUES (?,?,?,?,?,?)')
+                    ->execute([$nombre, $banco, $numero, $sIni, $sFecha, (int) sede_actual()]);
                 flash('ok', 'Cuenta creada.');
             }
         } catch (PDOException $ex) {
-            flash('mal', 'Ya existe una cuenta con ese nombre.');
+            flash('mal', 'Ya existe una cuenta con ese nombre en esta unidad de negocio.');
         }
         redirigir('?r=cuentas');
     }
 
     if ($accion === 'borrar') {
         $id = (int) $_POST['id'];
-        $n = (int) $pdo->query('SELECT COUNT(*) FROM movimientos WHERE cuenta_id = ' . $id)->fetchColumn();
-        $pdo->prepare('DELETE FROM cuentas WHERE id = ?')->execute([$id]);
+        $n = (int) $pdo->query("SELECT COUNT(*) FROM movimientos m WHERE m.cuenta_id = $id
+                                 AND " . filtro_sede())->fetchColumn();
+        $pdo->prepare('DELETE FROM cuentas WHERE id = ? AND sede_id = ?')
+            ->execute([$id, (int) sede_actual()]);
         bitacora('cuenta_borrada', "id=$id con $n movimientos");
         flash('ok', "Cuenta eliminada junto con sus $n movimientos.");
         redirigir('?r=cuentas');
@@ -46,8 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $editar = null;
 if (($id = (int) ($_GET['editar'] ?? 0)) > 0) {
-    $s = $pdo->prepare('SELECT * FROM cuentas WHERE id = ?');
-    $s->execute([$id]);
+    $s = $pdo->prepare('SELECT * FROM cuentas WHERE id = ? AND sede_id = ?');
+    $s->execute([$id, (int) sede_actual()]);
     $editar = $s->fetch() ?: null;
 }
 
@@ -57,6 +63,7 @@ $lista = $pdo->query("SELECT c.*, COUNT(m.id) movs,
                              SUM(m.tipo='D' AND m.categoria_id IS NULL) pend
                         FROM cuentas c
                    LEFT JOIN movimientos m ON m.cuenta_id = c.id
+                       WHERE c.sede_id = " . (int) sede_actual() . "
                     GROUP BY c.id ORDER BY c.nombre")->fetchAll();
 
 encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');

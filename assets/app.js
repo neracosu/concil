@@ -82,6 +82,41 @@
     el.addEventListener('change', function () { el.form.requestSubmit(); });
   });
 
+  /* --- Justificar en la propia fila, sin bajar hasta el final --- */
+  function cerrarFilas(salvo) {
+    document.querySelectorAll('.fila-justificar').forEach(function (fila) {
+      if (fila === salvo) return;
+      fila.hidden = true;
+      var b = document.querySelector('[data-abrir="' + fila.id + '"]');
+      if (b) { b.setAttribute('aria-expanded', 'false'); b.textContent = 'Justificar'; }
+    });
+  }
+
+  document.querySelectorAll('[data-abrir]').forEach(function (boton) {
+    boton.addEventListener('click', function () {
+      var fila = document.getElementById(boton.getAttribute('data-abrir'));
+      if (!fila) return;
+      var abrir = fila.hidden;
+      cerrarFilas(abrir ? fila : null);
+      fila.hidden = !abrir;
+      boton.setAttribute('aria-expanded', String(abrir));
+      boton.textContent = abrir ? 'Cerrar' : 'Justificar';
+      if (abrir) {
+        var primero = fila.querySelector('select, input, textarea');
+        if (primero) primero.focus({ preventScroll: true });
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-cerrar]').forEach(function (boton) {
+    boton.addEventListener('click', function () {
+      var fila = document.getElementById(boton.getAttribute('data-cerrar'));
+      if (fila) fila.hidden = true;
+      var abre = document.querySelector('[data-abrir="' + boton.getAttribute('data-cerrar') + '"]');
+      if (abre) { abre.setAttribute('aria-expanded', 'false'); abre.textContent = 'Justificar'; abre.focus(); }
+    });
+  });
+
   /* --- Marcar todo en la bandeja de pendientes --- */
   var todos = document.getElementById('marcarTodos');
   if (todos) {

@@ -45,10 +45,14 @@ curl -s -b cookies.txt "http://127.0.0.1:8787/index.php?r=panel" | grep -c "Fata
 `lib/carga.php` es un incluidor de conveniencia: `require` ese único archivo y
 tienes todo el núcleo disponible para un script CLI.
 
-Los extractos reales de prueba están en `../assets/AGOSTO 2026*.xlsx` (fuera del
-repositorio). Cubren los cuatro formatos y contienen los casos raros: notación
-científica en las referencias, texto con acentos corruptos, columna sin
-encabezado y columna única de monto con signo.
+Los extractos reales de prueba están en `/home/mardenli/conciliacion_data/muestras/`
+(fuera de `public_html`, permisos 600). Son 16 y cubren los once bancos con sus
+casos raros: notación científica en las referencias, acentos corruptos, la
+columna de fecha sin rótulo de Banesco, el Exterior sin encabezado alguno y el
+Tesoro entregado como tabla HTML con extensión `.xls`.
+
+No los dejes dentro de `public_html`: se sirven por HTTP aunque el listado de
+directorio esté cerrado.
 
 ## Convenciones del código
 
@@ -66,6 +70,26 @@ encabezado y columna única de monto con signo.
   construidas en el propio código (`$acciones`, `$subtitulo`, `ayuda_pantalla()`).
 
 ## Trampas conocidas
+
+**El formato se reconoce por estructura, nunca por el nombre.** Ni el del
+archivo ni el de la hoja: contabilidad los renombra. `huella()` en
+`lib/huella.php` combina rótulos con su columna, fila del encabezado, ancho y la
+forma de cada columna (`F` fecha `N` número `T` texto `S` signo `V` vacía). El
+título que el banco imprime *dentro* del archivo sí vale, porque es contenido.
+Si añades un banco, no toques `detectar_banco()` esperando que resuelva: lo
+normal es que el catálogo `formatos` lo aprenda solo al confirmar la carga.
+
+**Solo bloquea lo concluyente.** El código de banco del número de cuenta
+(primeros 4 dígitos) y los totales del pie del archivo detienen la importación;
+la cadena del saldo solo confirma. Banplus no entrega las filas en orden de
+saldo y Provincial las entrega al revés, así que **nunca** conviertas esa
+comprobación en un rechazo.
+
+**Todo se filtra por sede.** `filtro_sede()` de `lib/sedes.php` ya va dentro de
+`where_filtros()`, así que cualquier consulta que pase por ahí queda cubierta.
+Si escribes una consulta cruda contra `movimientos`, añádelo a mano o estarás
+mostrando datos de otra unidad de negocio. Devuelve `'0'` cuando la sede no
+tiene cuentas, para no generar un `IN ()` vacío que no es SQL válido.
 
 **La normalización manda.** `norm()` pasa a mayúsculas, quita acentos y sustituye
 todo lo que no sea alfanumérico por un espacio. Los patrones de las reglas se

@@ -32,12 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$sedeId = (int) sede_actual();
 $stats = $pdo->query("SELECT COUNT(*) movs,
-        (SELECT COUNT(*) FROM cuentas) cuentas,
+        (SELECT COUNT(*) FROM cuentas WHERE sede_id = $sedeId) cuentas,
         (SELECT COUNT(*) FROM categorias) cats,
         (SELECT COUNT(*) FROM reglas WHERE activa=1) reglas,
         (SELECT COUNT(*) FROM importaciones) imports,
-        MIN(fecha) f1, MAX(fecha) f2 FROM movimientos")->fetch();
+        MIN(m.fecha) f1, MAX(m.fecha) f2 FROM movimientos m WHERE " . filtro_sede())->fetch();
 $peso = $pdo->query("SELECT ROUND(SUM(data_length + index_length)/1048576, 2) mb
                        FROM information_schema.TABLES WHERE table_schema = DATABASE()")->fetchColumn();
 $log = $pdo->query('SELECT * FROM bitacora ORDER BY id DESC LIMIT 25')->fetchAll();

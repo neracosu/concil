@@ -24,7 +24,7 @@ function filtros(): array
 /** Traduce los filtros a SQL. */
 function where_filtros(array $f): array
 {
-    $w = ['1=1'];
+    $w = ['1=1', filtro_sede()];      // nunca se sale de la sede activa
     $p = [];
     if ($f['desde'] !== '')            { $w[] = 'm.fecha >= ?';        $p[] = $f['desde']; }
     if ($f['hasta'] !== '')            { $w[] = 'm.fecha <= ?';        $p[] = $f['hasta']; }
@@ -121,7 +121,13 @@ function por_categoria(array $f, int $limite = 40): array
 
 function cuentas(): array
 {
-    return db()->query('SELECT * FROM cuentas ORDER BY nombre')->fetchAll();
+    $id = sede_actual();
+    if ($id === null) {
+        return [];
+    }
+    $s = db()->prepare('SELECT * FROM cuentas WHERE sede_id = ? ORDER BY nombre');
+    $s->execute([$id]);
+    return $s->fetchAll();
 }
 
 function categorias(): array
@@ -131,7 +137,8 @@ function categorias(): array
 
 function pendientes_total(): int
 {
-    return (int) db()->query("SELECT COUNT(*) FROM movimientos WHERE tipo='D' AND categoria_id IS NULL")->fetchColumn();
+    return (int) db()->query("SELECT COUNT(*) FROM movimientos m
+                              WHERE m.tipo='D' AND m.categoria_id IS NULL AND " . filtro_sede())->fetchColumn();
 }
 
 /** Reconstruye la URL actual cambiando algunos parámetros. */
@@ -191,6 +198,7 @@ function saldos_por_cuenta(array $f): array
                                COUNT(m.id) movs, MAX(m.fecha) ultima
                           FROM cuentas c
                      LEFT JOIN movimientos m ON m.cuenta_id = c.id AND $w
+                         WHERE c.sede_id = " . (int) sede_actual() . "
                       GROUP BY c.id ORDER BY c.nombre");
     $s->execute($p);
     $filas = $s->fetchAll();

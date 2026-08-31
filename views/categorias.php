@@ -32,7 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($accion === 'borrar') {
         $id = (int) $_POST['id'];
-        $n = (int) $pdo->query('SELECT COUNT(*) FROM movimientos WHERE categoria_id = ' . $id)->fetchColumn();
+        $n = (int) $pdo->query("SELECT COUNT(*) FROM movimientos m WHERE m.categoria_id = $id
+                                 AND " . filtro_sede())->fetchColumn();
         $pdo->prepare('DELETE FROM categorias WHERE id = ?')->execute([$id]);
         flash('ok', $n > 0
             ? "Categoría eliminada. $n movimiento(s) volvieron a quedar sin clasificar."
@@ -51,6 +52,7 @@ if (($id = (int) ($_GET['editar'] ?? 0)) > 0) {
 $lista = $pdo->query("SELECT c.*, COUNT(m.id) usos, COALESCE(SUM(m.debito),0) total
                         FROM categorias c
                    LEFT JOIN movimientos m ON m.categoria_id = c.id AND m.tipo = 'D'
+                                          AND " . filtro_sede() . "
                     GROUP BY c.id
                     ORDER BY c.grupo, c.nombre")->fetchAll();
 

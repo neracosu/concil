@@ -10,8 +10,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
     if ($accion === 'quitar') {
-        $pdo->prepare("UPDATE movimientos SET categoria_id = NULL, beneficiario = '', estado = 'pendiente',
-                              origen = '', regla_id = NULL, actualizado_en = NOW() WHERE id = ?")->execute([$id]);
+        $pdo->prepare("UPDATE movimientos m SET m.categoria_id = NULL, m.beneficiario = '', m.estado = 'pendiente',
+                              m.origen = '', m.regla_id = NULL, m.actualizado_en = NOW()
+                        WHERE m.id = ? AND " . filtro_sede())->execute([$id]);
         flash('ok', 'El movimiento volvió a la bandeja de pendientes.');
         redirigir('?r=movimiento&id=' . $id);
     }
@@ -20,10 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cat    = (int) ($_POST['categoria_id'] ?? 0) ?: null;
         $benef  = mb_substr(limpiar((string) ($_POST['beneficiario'] ?? '')), 0, 160);
         $justif = mb_substr(limpiar((string) ($_POST['justificacion'] ?? '')), 0, 1000);
-        $pdo->prepare("UPDATE movimientos
-                          SET categoria_id = ?, beneficiario = ?, justificacion = ?,
-                              estado = ?, origen = 'manual', regla_id = NULL, actualizado_en = NOW()
-                        WHERE id = ?")
+        $pdo->prepare("UPDATE movimientos m
+                          SET m.categoria_id = ?, m.beneficiario = ?, m.justificacion = ?,
+                              m.estado = ?, m.origen = 'manual', m.regla_id = NULL, m.actualizado_en = NOW()
+                        WHERE m.id = ? AND " . filtro_sede())
             ->execute([$cat, $benef, $justif, $cat ? 'conciliado' : 'pendiente', $id]);
         bitacora('correccion', "movimiento $id");
         flash('ok', 'Movimiento actualizado.');
@@ -31,14 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$s = $pdo->prepare('SELECT m.*, c.nombre cuenta, c.banco, cat.nombre categoria, cat.color,
+$s = $pdo->prepare("SELECT m.*, c.nombre cuenta, c.banco, cat.nombre categoria, cat.color,
                            r.nombre regla, i.archivo, i.creado_en cargado
                       FROM movimientos m
                       JOIN cuentas c ON c.id = m.cuenta_id
                  LEFT JOIN categorias cat ON cat.id = m.categoria_id
                  LEFT JOIN reglas r ON r.id = m.regla_id
                  LEFT JOIN importaciones i ON i.id = m.importacion_id
-                     WHERE m.id = ?');
+                     WHERE m.id = ? AND " . filtro_sede());
 $s->execute([$id]);
 $m = $s->fetch();
 
@@ -51,9 +52,10 @@ if (!$m) {
 }
 
 /* Otros movimientos con el mismo concepto: sirven para decidir con contexto. */
-$sim = $pdo->prepare("SELECT COUNT(*) n, SUM(debito) t FROM movimientos
-                       WHERE tipo='D' AND UPPER(REGEXP_REPLACE(concepto,'[0-9]+','#')) =
-                             UPPER(REGEXP_REPLACE(?,'[0-9]+','#')) AND id <> ?");
+$sim = $pdo->prepare("SELECT COUNT(*) n, SUM(m.debito) t FROM movimientos m
+                       WHERE m.tipo='D' AND UPPER(REGEXP_REPLACE(m.concepto,'[0-9]+','#')) =
+                             UPPER(REGEXP_REPLACE(?,'[0-9]+','#')) AND m.id <> ?
+                         AND " . filtro_sede());
 $sim->execute([$m['concepto'], $id]);
 $parecidos = $sim->fetch();
 

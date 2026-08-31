@@ -76,6 +76,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'cab'     => $info['cabecera'] ? array_map('limpiar', $info['cabecera']) : [],
                 'muestra' => array_slice($info['muestra'], 0, 3),
                 'tam'     => $tam,
+                'numero'  => $info['numero'],
+                'codigo'  => $info['banco_codigo'],
+                'cadena'  => $info['cadena'],
+                'conocido'=> $info['conocido'],
+                'arranque'=> $info['saldo_inicial'],
             ];
         }
         $_SESSION['lote'] = $lote;
@@ -103,7 +108,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($cid <= 0) {
                     $cid = cuenta_id($a['cuenta'], $a['banco']);
                 }
+                $choque = choque_de_banco($cid, $a);
+                if ($choque !== '') {
+                    throw new RuntimeException($choque);
+                }
                 $r = importar($a['ruta'], $a['ext'], $cid, $a['nombre']);
+                anotar_arranque($cid, $a['arranque'] ?? null);
                 $r['nombre'] = $a['nombre'];
                 $r['cuenta'] = db()->query('SELECT nombre FROM cuentas WHERE id = ' . $cid)->fetchColumn();
                 $resultados[] = $r;
@@ -156,7 +166,7 @@ encabezado_html('Cargar extractos', 'carga',
     <div class="soltar" id="zonaSoltar" data-guia="soltar">
       <b>Los archivos del banco van aquí</b>
       <span>Arrástralos hasta este recuadro, o pulsa el botón para buscarlos en tu computadora.</span>
-      <input type="file" name="archivos[]" id="archivos" multiple accept=".xlsx,.csv" hidden>
+      <input type="file" name="archivos[]" id="archivos" multiple accept=".xlsx,.xls,.csv" hidden>
       <label for="archivos" class="btn btn-oro" style="margin-top:18px;display:inline-flex">Elegir archivos</label>
       <span style="display:block;margin-top:12px;font-size:12.5px;color:var(--tenue)">
         Excel (.xlsx) o CSV · hasta <?= $limite ?> MB por archivo · puedes elegir varios a la vez
@@ -183,7 +193,8 @@ encabezado_html('Cargar extractos', 'carga',
       </table>
     </div>
     <p style="color:var(--mudo);font-size:13px;margin:12px 0 0">
-      Otros bancos también funcionan: las columnas se buscan por su nombre, no por su posición.
+      Otros bancos también funcionan: el archivo se reconoce por cómo está armado por dentro, así que
+      da igual con qué nombre se lo guarden. Antes de guardar avisa si algo no encaja.
       Si el archivo trae el nombre de la cuenta arriba, se propone automáticamente.
     </p>
   </div>
@@ -227,6 +238,13 @@ encabezado_html('Cargar extractos', 'carga',
                 <input type="text" name="cuenta_nueva[<?= $i ?>]" value="<?= e($a['cuenta']) ?>" maxlength="120">
               </div>
             </div>
+            <?php $chequeos = comprobaciones($a); if ($chequeos !== []): ?>
+              <ul class="comprobaciones">
+                <?php foreach ($chequeos as $c): ?>
+                  <li class="<?= e($c[0]) ?>"><?= e($c[1]) ?></li>
+                <?php endforeach ?>
+              </ul>
+            <?php endif ?>
             <div class="tabla-scroll" style="margin-top:14px;border:1px solid var(--linea);border-radius:var(--r-sm)">
               <table>
                 <thead><tr><?php foreach ($a['cab'] as $h): ?><th><?= e($h ?: '·') ?></th><?php endforeach ?></tr></thead>
@@ -264,7 +282,10 @@ encabezado_html('Cargar extractos', 'carga',
         <?php foreach ($resultados as $r): ?>
           <tr>
             <td><?= e($r['nombre']) ?><?php if (isset($r['error'])): ?>
-              <span class="nota" style="color:var(--salida);display:block;font-size:12px"><?= e($r['error']) ?></span><?php endif ?></td>
+              <span class="nota" style="color:var(--salida);display:block;font-size:12px"><?= e($r['error']) ?></span>
+              <?php elseif (!empty($r['cuadre']['detalle'])): ?>
+              <span class="nota" style="color:var(--entrada);display:block;font-size:12px">Cuadra con el resumen del banco · <?= e(implode(' · ', $r['cuadre']['detalle'])) ?></span>
+              <?php endif ?></td>
             <td><?= e($r['cuenta'] ?? '—') ?></td>
             <td class="der num"><?= number_format((int) ($r['filas'] ?? 0), 0, ',', '.') ?></td>
             <td class="der num" style="color:var(--entrada)"><?= number_format((int) ($r['insertados'] ?? 0), 0, ',', '.') ?></td>

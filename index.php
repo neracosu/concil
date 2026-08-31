@@ -8,8 +8,10 @@ declare(strict_types=1);
 require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/texto.php';
 require __DIR__ . '/lib/db.php';
+require __DIR__ . '/lib/sedes.php';
 require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/xlsx.php';
+require __DIR__ . '/lib/huella.php';
 require __DIR__ . '/lib/reglas.php';
 require __DIR__ . '/lib/importador.php';
 require __DIR__ . '/lib/consultas.php';
@@ -44,6 +46,18 @@ if (!in_array($ruta, $rutasPublicas, true) && !autenticado()) {
 if ($ruta === 'login' && autenticado()) {
     header('Location: ?r=panel');
     exit;
+}
+
+// Cambiar de unidad de negocio. Se hace por GET y se recuerda en la sesión,
+// así el resto del sistema no tiene que arrastrar el dato por la URL.
+if (autenticado() && isset($_GET['sede'])) {
+    fijar_sede((int) $_GET['sede']);
+    redirigir('?r=' . $ruta);
+}
+
+// Con más de una sede y ninguna elegida, lo primero es elegirla.
+if (autenticado() && $ruta !== 'salir' && sede_actual() === null) {
+    $ruta = 'sede';
 }
 
 $vista = __DIR__ . "/views/$ruta.php";

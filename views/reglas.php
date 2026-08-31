@@ -88,6 +88,7 @@ if (($id = (int) ($_GET['editar'] ?? 0)) > 0) {
 $sugerencias = $pdo->query("SELECT m.nota_banco nota, COUNT(*) n, SUM(m.debito) total
                               FROM movimientos m
                              WHERE m.tipo = 'D' AND m.categoria_id IS NULL AND m.nota_banco <> ''
+                               AND " . filtro_sede() . "
                           GROUP BY m.nota_banco
                           ORDER BY total DESC
                              LIMIT 12")->fetchAll();

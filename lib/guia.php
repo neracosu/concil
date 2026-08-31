@@ -63,7 +63,8 @@ function guia_pasos(): array
         [
             'ruta' => 'carga', 'sel' => '[data-guia="formatos"]',
             'titulo' => 'Sabe solo de qué banco es cada archivo',
-            'texto' => 'Usted no tiene que decirle nada. Reconoce estos cuatro bancos y a qué cuenta pertenece cada archivo. '
+            'texto' => 'Usted no tiene que decirle nada. Mira el archivo por dentro y sabe de qué banco es, '
+                     . 'aunque le hayan cambiado el nombre. Si el archivo no coincide con la cuenta elegida, avisa. '
                      . 'Antes de guardar nada, le muestra lo que entendió para que usted confirme.',
         ],
 
@@ -178,6 +179,9 @@ function ayuda_pantalla(string $ruta): string
         'reglas'      => 'Aquí está <b>todo lo que el sistema ya aprendió</b>. Lo que usted explica una vez queda guardado y se aplica solo de ahora en adelante.',
         'categorias'  => 'Los <b>tipos de gasto</b> con los que se explica cada salida de dinero.',
         'cuentas'     => 'Sus cuentas de banco y <b>cuánto tiene en cada una</b>.',
+        'sede'        => 'Cada empresa o tienda del grupo lleva sus cuentas y sus movimientos <b>por separado</b>. '
+                       . 'Arriba a la izquierda elige con cuál está trabajando. Las categorías y las reglas '
+                       . 'son las mismas para todas, así lo aprendido en una sirve en las demás.',
         'ajustes'     => 'Su clave de entrada y el estado del sistema.',
     ][$ruta] ?? '';
 }

@@ -3,7 +3,8 @@
 
 $hoy = date('Y-m-d');
 if (!isset($_GET['desde']) && !isset($_GET['hasta'])) {
-    $r = db()->query("SELECT MIN(fecha) a, MAX(fecha) b FROM movimientos WHERE tipo='D'")->fetch();
+    $r = db()->query("SELECT MIN(m.fecha) a, MAX(m.fecha) b FROM movimientos m
+                       WHERE m.tipo='D' AND " . filtro_sede())->fetch();
     $_GET['desde'] = $r['b'] ? date('Y-m-01', strtotime($r['b'])) : date('Y-m-01');
     $_GET['hasta'] = $r['b'] ?: $hoy;
 }

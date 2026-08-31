@@ -60,14 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'grupo') {
         $grupo = (string) ($_POST['grupo'] ?? '');
         $s = $pdo->prepare("UPDATE movimientos m SET $set
-                             WHERE m.tipo='D' AND m.categoria_id IS NULL AND " . GRUPO_SQL . ' = ?');
+                             WHERE m.tipo='D' AND m.categoria_id IS NULL
+                               AND " . filtro_sede() . ' AND ' . GRUPO_SQL . ' = ?');
         $s->execute([...$base, $grupo]);
         $n = $s->rowCount();
     } elseif ($accion === 'seleccion') {
         $ids = array_values(array_filter(array_map('intval', (array) ($_POST['ids'] ?? []))));
         if ($ids !== []) {
             $marcas = implode(',', array_fill(0, count($ids), '?'));
-            $s = $pdo->prepare("UPDATE movimientos m SET $set WHERE m.id IN ($marcas)");
+            $s = $pdo->prepare("UPDATE movimientos m SET $set
+                                 WHERE m.id IN ($marcas) AND " . filtro_sede());
             $s->execute([...$base, ...$ids]);
             $n = $s->rowCount();
         }
@@ -84,7 +86,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $cats = categorias();
 $total = pendientes_total();
-$totalBs = (float) $pdo->query("SELECT COALESCE(SUM(debito),0) FROM movimientos WHERE tipo='D' AND categoria_id IS NULL")->fetchColumn();
+$totalBs = (float) $pdo->query("SELECT COALESCE(SUM(m.debito),0) FROM movimientos m
+                                 WHERE m.tipo='D' AND m.categoria_id IS NULL
+                                   AND " . filtro_sede())->fetchColumn();
 
 $acciones = '<span data-guia="modo"><a class="btn' . ($modo === 'grupos' ? ' btn-oro' : '') . '" href="' . e(url(['modo' => 'grupos', 'p' => 1])) . '">Por patrón</a>'
           . '<a class="btn' . ($modo === 'lista' ? ' btn-oro' : '') . '" href="' . e(url(['modo' => 'lista', 'p' => 1])) . '">Uno por uno</a></span>';
@@ -102,20 +106,30 @@ if ($total === 0) {
     return;
 }
 
-/** Formulario de clasificación reutilizable. */
-function form_clasificar(array $cats, string $accion, array $ocultos, string $patronSugerido, string $idForm): void
+/**
+ * Formulario de clasificación reutilizable.
+ *
+ * En la lista, cada fila lleva su propia copia desplegable. Como no se pueden
+ * anidar formularios dentro de la tabla, los campos se atan al suyo con el
+ * atributo form="…" y la etiqueta <form> se emite aparte, fuera de la tabla.
+ */
+function form_clasificar(array $cats, string $accion, array $ocultos, string $patronSugerido, string $idForm, bool $suelto = false): void
 {
-    ?>
+    $att = $suelto ? ' form="' . e($idForm) . '"' : '';
+    if (!$suelto): ?>
     <form method="post" class="pila" id="<?= e($idForm) ?>">
-      <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
-      <input type="hidden" name="accion" value="<?= e($accion) ?>">
+    <?php else: ?>
+    <div class="pila">
+    <?php endif ?>
+      <input type="hidden" name="csrf" value="<?= e(csrf()) ?>"<?= $att ?>>
+      <input type="hidden" name="accion" value="<?= e($accion) ?>"<?= $att ?>>
       <?php foreach ($ocultos as $k => $v): ?>
-        <input type="hidden" name="<?= e($k) ?>" value="<?= e($v) ?>">
+        <input type="hidden" name="<?= e($k) ?>" value="<?= e($v) ?>"<?= $att ?>>
       <?php endforeach ?>
       <div class="par">
         <div>
           <label>Categoría</label>
-          <select name="categoria_id" required>
+          <select name="categoria_id" required<?= $att ?>>
             <option value="">Elegir…</option>
             <?php $g = ''; foreach ($cats as $c):
               if ($c['grupo'] !== $g) { if ($g !== '') echo '</optgroup>'; $g = $c['grupo']; echo '<optgroup label="' . e($g) . '">'; } ?>
@@ -125,26 +139,26 @@ function form_clasificar(array $cats, string $accion, array $ocultos, string $pa
         </div>
         <div>
           <label>A quién se le pagó <span style="text-transform:none;letter-spacing:0">(opcional)</span></label>
-          <input type="text" name="beneficiario" maxlength="160" placeholder="Proveedor, empleado, organismo…">
+          <input type="text" name="beneficiario" maxlength="160" placeholder="Proveedor, empleado, organismo…"<?= $att ?>>
         </div>
       </div>
       <div>
         <label>Justificación <span style="text-transform:none;letter-spacing:0">(para qué se usó el dinero)</span></label>
-        <textarea name="justificacion" maxlength="1000" rows="2" placeholder="Ej.: pago de la factura de agosto del servicio de internet de la sede Boleíta."></textarea>
+        <textarea name="justificacion" maxlength="1000" rows="2" placeholder="Ej.: pago de la factura de agosto del servicio de internet de la sede Boleíta."<?= $att ?>></textarea>
       </div>
       <div style="border-top:1px solid var(--linea);padding-top:12px" <?= $idForm === 'g0' ? 'data-guia="regla"' : '' ?>>
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--texto);margin-bottom:10px">
-          <input type="checkbox" name="crear_regla" value="1" style="width:auto" checked>
+          <input type="checkbox" name="crear_regla" value="1" style="width:auto"<?= $att ?> <?= $suelto ? '' : 'checked' ?>>
           Guardar como regla para que se clasifique solo de aquí en adelante
         </label>
         <div class="par">
           <div>
             <label>Patrón a reconocer</label>
-            <input type="text" name="patron" value="<?= e($patronSugerido) ?>" maxlength="255">
+            <input type="text" name="patron" value="<?= e($patronSugerido) ?>" maxlength="255"<?= $att ?>>
           </div>
           <div>
             <label>Coincidencia</label>
-            <select name="tipo_regla">
+            <select name="tipo_regla"<?= $att ?>>
               <option value="contiene">El concepto contiene el patrón</option>
               <option value="empieza">El concepto empieza con el patrón</option>
               <option value="igual">El concepto es exactamente el patrón</option>
@@ -153,7 +167,11 @@ function form_clasificar(array $cats, string $accion, array $ocultos, string $pa
           </div>
         </div>
       </div>
+    <?php if (!$suelto): ?>
     </form>
+    <?php else: ?>
+    </div>
+    <?php endif ?>
     <?php
 }
 
@@ -163,7 +181,8 @@ $off = ($pagina - 1) * $porPagina;
 
 if ($modo === 'grupos'):
     $nGrupos = (int) $pdo->query("SELECT COUNT(*) FROM (SELECT 1 FROM movimientos m
-        WHERE m.tipo='D' AND m.categoria_id IS NULL GROUP BY " . GRUPO_SQL . ') x')->fetchColumn();
+        WHERE m.tipo='D' AND m.categoria_id IS NULL AND " . filtro_sede()
+        . ' GROUP BY ' . GRUPO_SQL . ') x')->fetchColumn();
     $paginas = max(1, (int) ceil($nGrupos / $porPagina));
 
     $grupos = $pdo->query("SELECT " . GRUPO_SQL . " grupo, COUNT(*) n, SUM(m.debito) total,
@@ -172,7 +191,7 @@ if ($modo === 'grupos'):
                                   SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT NULLIF(m.nota_banco,'') SEPARATOR '§'), '§', 1) nota,
                                   GROUP_CONCAT(DISTINCT c.nombre SEPARATOR ', ') cuentas
                              FROM movimientos m JOIN cuentas c ON c.id = m.cuenta_id
-                            WHERE m.tipo='D' AND m.categoria_id IS NULL
+                            WHERE m.tipo='D' AND m.categoria_id IS NULL AND " . filtro_sede() . "
                          GROUP BY grupo
                          ORDER BY total DESC
                             LIMIT $porPagina OFFSET $off")->fetchAll();
@@ -236,12 +255,15 @@ if ($modo === 'grupos'):
     <form method="post" id="fSel">
       <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
       <input type="hidden" name="accion" value="seleccion">
-      <div class="marco-tabla">
+    </form>
+
+    <div class="marco-tabla">
         <div class="tabla-scroll">
           <table>
             <thead><tr>
               <th style="width:34px"><input type="checkbox" id="marcarTodos" style="width:auto" aria-label="Marcar todos"></th>
               <th>Fecha</th><th>Cuenta</th><th>Concepto</th><th>Referencia</th><th class="der">Débito Bs</th>
+              <th style="width:120px"></th>
             </tr></thead>
             <tbody>
             <?php foreach ($lista['filas'] as $m): $anch = $maxMonto > 0 ? (float) $m['debito'] / $maxMonto * 100 : 0; ?>
@@ -253,17 +275,35 @@ if ($modo === 'grupos'):
                   <?php if ($m['nota_banco']): ?><span class="nota"><?= e($m['nota_banco']) ?></span><?php endif ?></td>
                 <td class="ref"><?= e($m['referencia']) ?></td>
                 <td class="monto d"><span class="barra" style="width:<?= number_format($anch, 1, '.', '') ?>%"></span><span><?= bs((float) $m['debito']) ?></span></td>
+                <td class="der"><button type="button" class="btn btn-sm" data-abrir="j<?= $m['id'] ?>"
+                        aria-expanded="false" aria-controls="j<?= $m['id'] ?>">Justificar</button></td>
+              </tr>
+              <tr class="fila-justificar" id="j<?= $m['id'] ?>" hidden>
+                <td colspan="7">
+                  <?php form_clasificar($cats, 'seleccion', ['ids[]' => (string) $m['id']],
+                                        sugerir_patron((string) $m['concepto']), 'fr' . $m['id'], true) ?>
+                  <div class="acciones" style="margin-top:12px">
+                    <button class="btn btn-oro" form="fr<?= $m['id'] ?>">Guardar este movimiento</button>
+                    <button type="button" class="btn" data-cerrar="j<?= $m['id'] ?>">Cancelar</button>
+                  </div>
+                </td>
               </tr>
             <?php endforeach ?>
             </tbody>
           </table>
         </div>
         <?php paginas_html($lista['pagina'], $lista['paginas'], $lista['total'], 'pendientes') ?>
-      </div>
-    </form>
+    </div>
+
+    <?php /* Un formulario por fila: los campos de arriba se atan con form="…". */
+    foreach ($lista['filas'] as $m): ?>
+      <form method="post" id="fr<?= $m['id'] ?>"></form>
+    <?php endforeach ?>
 
     <div class="tarjeta" style="margin-top:14px">
-      <h2>Clasificar lo seleccionado</h2>
+      <h2>Clasificar varios de una vez</h2>
+      <p class="nota" style="margin:0 0 12px">Marque las casillas de la izquierda y use este formulario.
+        Para uno solo, es más rápido el botón <b>Justificar</b> de su propia fila.</p>
       <?php form_clasificar($cats, 'seleccion', [], '', 'fClas') ?>
       <div class="acciones" style="margin-top:14px">
         <button class="btn btn-oro" onclick="document.querySelectorAll('input[name=\'ids[]\']:checked').forEach(function(c){var h=document.createElement('input');h.type='hidden';h.name='ids[]';h.value=c.value;document.getElementById('fClas').appendChild(h)});">

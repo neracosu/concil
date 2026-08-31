@@ -76,6 +76,9 @@ function reaplicar_reglas(bool $incluirYaMapeados = false, ?int $cuentaId = null
     if ($cuentaId) {
         $where .= ' AND cuenta_id = ' . (int) $cuentaId;
     }
+    // Reaplicar solo alcanza a la sede activa: las reglas son comunes, pero
+    // los movimientos de otra unidad de negocio no se tocan desde aquí.
+    $where .= ' AND ' . filtro_sede('');
 
     $sel = $pdo->query("SELECT id, concepto, nota_banco, referencia FROM movimientos WHERE $where");
     $upd = $pdo->prepare("UPDATE movimientos

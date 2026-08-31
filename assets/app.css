@@ -346,3 +346,24 @@ body.guia-activa{overflow-x:hidden}
   .guia-foco,.guia-carta,.guia-carta__progreso i{transition:none}
   .guia-carta.centrada{animation:none}
 }
+
+/* Comprobaciones de un archivo antes de importarlo */
+.comprobaciones { list-style:none; margin:14px 0 0; padding:0; display:grid; gap:6px }
+.comprobaciones li { position:relative; padding-left:22px; font-size:13px; line-height:1.45; color:var(--suave) }
+.comprobaciones li::before { position:absolute; left:0; top:0; font-weight:700 }
+.comprobaciones li.bien::before  { content:"✓"; color:var(--entrada) }
+.comprobaciones li.aviso::before { content:"!"; color:var(--pendiente) }
+
+/* Justificar sin salir de la fila */
+.fila-justificar > td { background:var(--panel-2); padding:18px 16px; border-top:0 }
+.fila-justificar .pila { max-width:820px }
+tr:has(+ .fila-justificar:not([hidden])) { background:var(--panel-2) }
+tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
+
+/* Selector de unidad de negocio, bajo la marca */
+.sede-caja { padding:12px 16px 14px; border-bottom:1px solid var(--linea) }
+.sede-rotulo { display:block; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+               color:var(--tenue); margin-bottom:6px }
+.sede-caja select { width:100%; font-size:13.5px; padding:7px 9px }
+.sede-unica { font-size:14px; color:var(--texto) }
+.tarjeta-activa { border-color:var(--oro) }
