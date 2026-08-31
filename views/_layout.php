@@ -22,7 +22,9 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
     <div class="marca">
       <b><?= e(APP_NOMBRE) ?></b><span>by <?= e(APP_MARCA) ?></span>
     </div>
-    <?php $lasSedes = sedes(); if (count($lasSedes) > 0): ?>
+    <?php /* Mientras no se haya elegido unidad no se enseña ninguna: la
+             pantalla está pidiendo justamente esa decisión. */
+    $lasSedes = sedes(); if ($lasSedes !== [] && sede_elegida()): ?>
       <div class="sede-caja" data-guia="sede">
         <span class="sede-rotulo">Unidad de negocio</span>
         <?php if (count($lasSedes) > 1): ?>
@@ -49,7 +51,10 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
         <a class="sede-gestion" href="?r=sede"><?= count($lasSedes) > 1 ? 'Ver y crear unidades' : 'Añadir otra unidad' ?></a>
       </div>
     <?php endif ?>
-    <nav class="nav">
+    <?php /* Mientras se elige unidad no hay a dónde ir: cualquier otra ruta
+             rebota aquí, así que se ocultan los enlaces y la pantalla se lee
+             como lo que es, una decisión antes de empezar. */ ?>
+    <nav class="nav"<?= sede_elegida() ? '' : ' hidden' ?>>
       <div class="nav-titulo">Trabajo diario</div>
       <a href="?r=panel"       class="<?= $ruta === 'panel' ? 'on' : '' ?>">Panel</a>
       <a href="?r=carga"       class="<?= $ruta === 'carga' ? 'on' : '' ?>">Cargar extractos</a>

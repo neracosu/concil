@@ -198,6 +198,12 @@ pueden comparar. Solo se separan las cuentas y los movimientos.
 El acceso sigue siendo un **único PIN** que ve todas las unidades y cambia entre
 ellas con el selector. No hay usuarios ni permisos por sede.
 
+**En cada inicio de sesión se elige unidad antes de ver nada.** Es una pantalla
+completa, no un aviso que se pueda saltar: mientras no se elija, el menú está
+oculto y cualquier ruta rebota a ella. Ahí mismo se crea una unidad nueva. La
+elección no se arrastra de un día para otro a propósito: quien concilia lleva
+varias y empezar en la de ayer invita a equivocarse.
+
 El aislamiento se aplica también a lo que llega por formulario: la cuenta
 elegida al cargar un extracto y el movimiento al que se anota un proveedor se
 comprueban contra la unidad activa antes de tocarlos, porque sus identificadores

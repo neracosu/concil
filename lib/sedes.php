@@ -48,6 +48,17 @@ function sede_nombre(): string
     return '';
 }
 
+/**
+ * ¿Se eligió unidad en esta sesión? No basta con que sede_actual() devuelva
+ * algo: con una sola unidad devuelve esa, y aun así hay que preguntar, porque
+ * ahí es donde se ofrece crear la siguiente.
+ */
+function sede_elegida(): bool
+{
+    $s = (int) ($_SESSION['sede'] ?? 0);
+    return $s > 0 && in_array($s, array_map('intval', array_column(sedes(), 'id')), true);
+}
+
 function fijar_sede(int $id): void
 {
     $_SESSION['sede'] = $id;

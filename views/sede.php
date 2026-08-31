@@ -65,8 +65,8 @@ $lista = $pdo->query("SELECT s.id, s.nombre,
                    LEFT JOIN movimientos m ON m.cuenta_id = c.id
                     GROUP BY s.id ORDER BY s.nombre")->fetchAll();
 
-$activa = sede_actual();
-$eligiendo = $activa === null;
+$activa = sede_elegida() ? sede_actual() : null;
+$eligiendo = !sede_elegida();
 
 encabezado_html(
     $eligiendo ? '¿Con cuál vas a trabajar?' : 'Unidades de negocio',

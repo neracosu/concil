@@ -90,6 +90,9 @@ function entrar(): void
 {
     session_regenerate_id(true);
     $_SESSION['auth'] = true;
+    // La unidad de negocio se elige en cada inicio de sesión: quien concilia
+    // lleva varias y arrastrar la del día anterior invita a equivocarse.
+    unset($_SESSION['sede']);
     $_SESSION['visto'] = time();
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
     bitacora('acceso', 'Ingreso correcto');

@@ -93,6 +93,11 @@ la cadena del saldo solo confirma. Banplus no entrega las filas en orden de
 saldo y Provincial las entrega al revés, así que **nunca** conviertas esa
 comprobación en un rechazo.
 
+**`sede_elegida()` no es lo mismo que `sede_actual()`.** La primera dice si se
+eligió unidad en esta sesión; la segunda devuelve una igualmente —la única que
+haya— para que ninguna consulta reviente mientras se está eligiendo. El front
+controller mira `sede_elegida()`, y las consultas usan `sede_actual()`.
+
 **Todo se filtra por sede.** `filtro_sede()` de `lib/sedes.php` ya va dentro de
 `where_filtros()`, así que cualquier consulta que pase por ahí queda cubierta.
 Si escribes una consulta cruda contra `movimientos`, añádelo a mano o estarás

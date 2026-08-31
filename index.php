@@ -74,8 +74,8 @@ if (autenticado() && ($_POST['accion'] ?? '') === 'cambiar_sede') {
     redirigir('?r=' . ($ruta === 'movimiento' ? 'movimientos' : $ruta));
 }
 
-// Con más de una sede y ninguna elegida, lo primero es elegirla.
-if (autenticado() && $ruta !== 'salir' && sede_actual() === null) {
+// Lo primero de cada sesión es decir en qué unidad se va a trabajar.
+if (autenticado() && $ruta !== 'salir' && !sede_elegida()) {
     $ruta = 'sede';
 }
 
