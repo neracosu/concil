@@ -427,6 +427,9 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     recordar_formato($info['huella']['clave'], $info['banco'], $info['huella'], $m);
     anotar_arranque($cuentaId, $info['saldo_inicial'] ?? null, $fechaMin);
     anotar_numero($cuentaId, (string) ($info['numero'] ?? ''));
+    // Las comisiones que no se reconocen por su texto necesitan ver la pareja,
+    // así que se resuelven cuando el archivo entero ya está guardado.
+    $automaticos += aplicar_comisiones($cuentaId);
 
     $duplicados = $filas - $insertados;
     $automaticos = min($automaticos, $insertados);

@@ -105,6 +105,15 @@ panel y el contador de Ajustes. Y **cualquier id que llegue de un formulario hay
 que comprobarlo contra la sede** antes de usarlo: el `cuenta_id` de la carga y
 el `movimiento_id` al anotar un proveedor permitían tocar otra unidad.
 
+**Las comisiones tienen dos caminos y hay que respetar los dos.** La mayoría de
+los bancos las nombra y basta una regla de texto; Banesco cobra la comisión del
+pago móvil con el mismo concepto que el pago, así que solo se distingue por ser
+el 0,3 % de un movimiento con su misma referencia. Ese tipo de regla
+(`proporcion`) no pasa por `casar_regla()` —que mira un movimiento aislado— sino
+por `aplicar_comisiones()`, una pasada aparte. Si añades tipos de regla nuevos,
+acuérdate de excluirlos en `casar_regla()` o el `default` de `coincide()` los
+tratará como «contiene» y casarán con cualquier cosa.
+
 **La normalización manda.** `norm()` pasa a mayúsculas, quita acentos y sustituye
 todo lo que no sea alfanumérico por un espacio. Los patrones de las reglas se
 guardan ya normalizados (salvo los `regex`, que se aplican sobre el texto

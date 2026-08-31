@@ -19,6 +19,11 @@ function cargar_reglas(?int $cuentaId = null): array
 function casar_regla(array $reglas, array $campos): ?array
 {
     foreach ($reglas as $r) {
+        // Las reglas de proporción no miran el texto de un movimiento sino su
+        // monto frente al de su pareja, así que se aplican en otra pasada.
+        if ($r['tipo'] === 'proporcion') {
+            continue;
+        }
         $texto = $campos[$r['campo']] ?? $campos['concepto'];
         if ($texto === '') {
             continue;
@@ -53,6 +58,12 @@ function validar_patron(string $tipo, string $patron): ?string
     if ($tipo === 'regex') {
         if (@preg_match('/' . str_replace('/', '\/', $patron) . '/u', '') === false) {
             return 'La expresión regular no es válida.';
+        }
+    }
+    if ($tipo === 'proporcion') {
+        $n = (float) str_replace(',', '.', $patron);
+        if ($n <= 0 || $n >= 100) {
+            return 'La comisión se escribe como porcentaje, por ejemplo 0,3 para el 0,3 %.';
         }
     }
     return null;
@@ -107,5 +118,77 @@ function reaplicar_reglas(bool $incluirYaMapeados = false, ?int $cuentaId = null
         $hit->execute([$rid]);
     }
     $pdo->commit();
+    return $n;
+}
+
+
+/**
+ * Comisiones que no se pueden reconocer por su texto.
+ *
+ * Algunos bancos cobran la comisión con el mismo concepto que la operación que
+ * la origina: en Banesco, la comisión de un pago móvil se llama también
+ * «Banesco Pago Movil», así que ninguna regla de texto puede separarlas. Lo que
+ * sí las distingue es que comparten la referencia con el movimiento que las
+ * causó y son un porcentaje fijo de él: 0,3 % en la mayoría de los bancos.
+ *
+ * Medido sobre julio de 2026: 162 de 163 parejas de Banesco están exactamente
+ * en el 0,3 %. La única que se salía era un cargo de Movistar al 14 %, que la
+ * tolerancia estrecha descarta sola.
+ *
+ * Se aplica como pasada aparte porque necesita ver la pareja, y no un
+ * movimiento aislado como el resto del motor.
+ */
+function aplicar_comisiones(?int $cuentaId = null): int
+{
+    $pdo = db();
+    $reglas = array_filter(cargar_reglas($cuentaId), fn($r) => $r['tipo'] === 'proporcion');
+    if ($reglas === []) {
+        return 0;
+    }
+
+    $where = "m.tipo = 'D' AND m.referencia <> '' AND " . filtro_sede();
+    if ($cuentaId) {
+        $where .= ' AND m.cuenta_id = ' . (int) $cuentaId;
+    }
+
+    // Referencias con más de un débito: solo ahí puede haber una pareja.
+    $grupos = $pdo->query("SELECT m.cuenta_id, m.referencia,
+                                  MIN(m.debito) menor, MAX(m.debito) mayor
+                             FROM movimientos m
+                            WHERE $where
+                         GROUP BY m.cuenta_id, m.referencia
+                           HAVING COUNT(*) > 1 AND MIN(m.debito) > 0 AND MAX(m.debito) > MIN(m.debito)")
+                  ->fetchAll();
+
+    $marcar = $pdo->prepare("UPDATE movimientos
+                                SET categoria_id = ?, estado = 'conciliado', origen = 'regla',
+                                    regla_id = ?, actualizado_en = NOW()
+                              WHERE cuenta_id = ? AND referencia = ? AND debito = ?
+                                AND tipo = 'D' AND categoria_id IS NULL");
+    $sumar = $pdo->prepare('UPDATE reglas SET aciertos = aciertos + ? WHERE id = ?');
+
+    $n = 0;
+    $porRegla = [];
+    foreach ($grupos as $g) {
+        $proporcion = (float) $g['menor'] / (float) $g['mayor'] * 100;
+        foreach ($reglas as $r) {
+            $tasa = (float) str_replace(',', '.', (string) $r['patron']);
+            // Tolerancia estrecha a propósito: con ±0,02 puntos, el 0,3 % de la
+            // mayoría no se confunde con el 0,35 % de Bancrecer.
+            if (abs($proporcion - $tasa) > 0.02) {
+                continue;
+            }
+            $marcar->execute([$r['categoria_id'], $r['id'], $g['cuenta_id'], $g['referencia'], $g['menor']]);
+            $hechos = $marcar->rowCount();
+            if ($hechos > 0) {
+                $n += $hechos;
+                $porRegla[$r['id']] = ($porRegla[$r['id']] ?? 0) + $hechos;
+            }
+            break;
+        }
+    }
+    foreach ($porRegla as $id => $c) {
+        $sumar->execute([$c, $id]);
+    }
     return $n;
 }

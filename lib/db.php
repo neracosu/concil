@@ -229,6 +229,39 @@ function migrar(): void
         clave VARCHAR(60) PRIMARY KEY,
         valor TEXT NOT NULL
     ) $t");
+
+    sembrar_comisiones($pdo);
+}
+
+/**
+ * Dos reglas para las comisiones bancarias, sembradas una sola vez.
+ *
+ * Las que ya venían son muy específicas y dejaban fuera formas evidentes
+ * («COM.CREDITO INM.OB» de Bancrecer, «COM PAGO OB JURIDICO» del Exterior).
+ * La primera regla las cubre todas sin tragarse las compras: sobre el texto ya
+ * normalizado, COMPRA no tiene un límite de palabra tras COM.
+ *
+ * La segunda es de otro tipo: reconoce la comisión por ser el 0,3 % de un
+ * movimiento con su misma referencia. Es la única forma de ver las de Banesco,
+ * que se llaman igual que el pago que las origina.
+ */
+function sembrar_comisiones(PDO $pdo): void
+{
+    if (ajuste('reglas_comision') === '1') {
+        return;
+    }
+    $cat = $pdo->query("SELECT id FROM categorias WHERE nombre LIKE '%omisiones bancarias%' LIMIT 1")
+               ->fetchColumn();
+    if ($cat === false) {
+        return;                 // aún no se sembraron las categorías
+    }
+    $ins = $pdo->prepare('INSERT INTO reglas (nombre, campo, tipo, patron, categoria_id, beneficiario, prioridad)
+                          VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $ins->execute(['Comisiones · cualquier concepto que diga COM o COMISIÓN', 'concepto', 'regex',
+                   '(^|\\s)COMIS(ION)?(\\s|$)|(^|\\s)COM(\\s|$)', $cat, 'Banco', 70]);
+    $ins->execute(['Comisiones · 0,3 % de un movimiento con la misma referencia', 'monto', 'proporcion',
+                   '0.3', $cat, 'Banco', 75]);
+    guardar_ajuste('reglas_comision', '1');
 }
 
 /** ¿Existe ese índice? Se usa para migrar claves sin repetir el ALTER. */

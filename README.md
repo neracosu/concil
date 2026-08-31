@@ -395,6 +395,33 @@ reglas solo se aplican a débitos; ver [Decisiones de diseño](#decisiones-de-di
 notas que ya venían escritas en los propios extractos y siguen sin clasificar.
 Asignarle categoría a una nota crea la regla y la aplica de inmediato.
 
+### Comisiones bancarias
+
+Cada banco cobra sus comisiones de una forma, pero todas van a la misma
+categoría. Hay dos caminos y se complementan:
+
+**Por el texto.** La mayoría las nombra: `COM.CREDITO INM.OB` en Bancrecer,
+`COM PAGO OB JURIDICO` en Exterior, `COMIS.PAGO INMEDIATO` en el Tesoro,
+`Comision Transferencia Inm` en la columna *Motivo* de Banplus. Una sola regla
+las cubre todas sobre el texto ya normalizado, sin tragarse las compras: en
+`COMPRA` no hay límite de palabra después de `COM`.
+
+**Por la proporción**, para las que no dan ninguna pista. Banesco cobra la
+comisión de un pago móvil con el mismo concepto que el pago —«Banesco Pago
+Movil»— así que ninguna regla de texto puede separarlas. Lo que sí las
+distingue: comparten la referencia con el movimiento que las causó y son un
+porcentaje fijo de él.
+
+Es un tipo de regla propio (`tipo = 'proporcion'`, patrón `0.3` para el 0,3 %) y
+se aplica en una pasada aparte, porque necesita ver la pareja y no un movimiento
+aislado. La tolerancia es de ±0,02 puntos, estrecha a propósito: así el 0,3 % de
+la mayoría no se confunde con el 0,35 % de Bancrecer ni con el 0,62 % de
+Bicentenario, que se pueden añadir como reglas propias desde la pantalla.
+
+Medido sobre julio de 2026: de 163 parejas de Banesco, **162 están exactamente
+en el 0,3 %**. La única que se salía era un cargo de Movistar al 14 %, que la
+tolerancia descarta sola.
+
 ## Control de duplicados
 
 Los extractos suelen ser acumulativos: el archivo de mañana repite lo de hoy.

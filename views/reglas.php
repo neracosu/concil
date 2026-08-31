@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'guardar') {
         $id     = (int) ($_POST['id'] ?? 0);
         $nombre = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 160);
-        $tipo   = in_array($_POST['tipo'] ?? '', ['contiene', 'empieza', 'termina', 'igual', 'regex'], true) ? $_POST['tipo'] : 'contiene';
+        $tipo   = in_array($_POST['tipo'] ?? '', ['contiene', 'empieza', 'termina', 'igual', 'regex', 'proporcion'], true) ? $_POST['tipo'] : 'contiene';
         $campo  = in_array($_POST['campo'] ?? '', ['concepto', 'nota', 'referencia'], true) ? $_POST['campo'] : 'concepto';
         $patron = mb_substr(trim((string) ($_POST['patron'] ?? '')), 0, 255);
         $cat    = (int) ($_POST['categoria_id'] ?? 0);
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('mal', $err);
             redirigir('?r=reglas');
         }
-        $guardado = $tipo === 'regex' ? $patron : norm($patron);
+        $guardado = in_array($tipo, ['regex', 'proporcion'], true) ? $patron : norm($patron);
 
         if ($id > 0) {
             $pdo->prepare('UPDATE reglas SET nombre=?, campo=?, tipo=?, patron=?, categoria_id=?, beneficiario=?, cuenta_id=?, prioridad=? WHERE id=?')
@@ -215,7 +215,9 @@ encabezado_html('Reglas de mapeo', 'reglas',
         </select></div>
       <div><label>Cómo compara</label>
         <select name="tipo">
-          <?php foreach (['contiene' => 'Contiene', 'empieza' => 'Empieza con', 'termina' => 'Termina con', 'igual' => 'Es exactamente', 'regex' => 'Expresión regular'] as $k => $v): ?>
+          <?php foreach (['contiene' => 'Contiene', 'empieza' => 'Empieza con', 'termina' => 'Termina con',
+                          'igual' => 'Es exactamente', 'regex' => 'Expresión regular',
+                          'proporcion' => 'Es un % de otro movimiento con la misma referencia'] as $k => $v): ?>
             <option value="<?= $k ?>" <?= ($editar['tipo'] ?? 'contiene') === $k ? 'selected' : '' ?>><?= $v ?></option>
           <?php endforeach ?>
         </select></div>
