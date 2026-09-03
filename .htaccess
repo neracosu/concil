@@ -8,6 +8,16 @@ DirectoryIndex index.php
 # (además cada carpeta tiene su propio .htaccess que lo deniega).
 RedirectMatch 404 ^/conciliacion/(lib|views)/.*$
 
+# Ni el repositorio ni la documentación se sirven por web. El `.git` deja
+# reconstruir todo el código commit a commit, y CLAUDE.md cuenta dónde viven
+# los datos y cómo funciona la sesión. El código de lib/ ya está denegado
+# arriba; esto cierra las dos puertas que quedaban abiertas.
+RedirectMatch 404 ^/conciliacion/\.git(/.*)?$
+
+<FilesMatch "^\.gitignore$|\.(md|sql|gz|log|bak)$">
+  Require all denied
+</FilesMatch>
+
 # Ningún extracto bancario se sirve por web, esté donde esté. Los archivos del
 # banco van en DATA_DIR, fuera de public_html; esto es la red de seguridad para
 # cuando alguien deja una copia aquí sin darse cuenta.
