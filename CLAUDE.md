@@ -136,9 +136,13 @@ Si escribes una consulta cruda contra `movimientos`, añádelo a mano o estarás
 mostrando datos de otra unidad de negocio. Devuelve `'0'` cuando la sede no
 tiene cuentas, para no generar un `IN ()` vacío que no es SQL válido.
 
-No basta con mirar las consultas a `movimientos`: las que van contra `cuentas` o
-`importaciones` también se escapan, y así se colaron el historial de cargas del
-panel y el contador de Ajustes. Y **cualquier id que llegue de un formulario hay
+No basta con mirar las consultas a `movimientos`: las que van contra `cuentas`,
+`importaciones`, `facturas` o `pagos_factura` también se escapan, y así se
+colaron el historial de cargas del panel y el contador de Ajustes. Los
+**proveedores** sí son del grupo entero a propósito; las **facturas no**, porque
+la deuda la tiene una empresa concreta: `facturas.sede_id` va en la clave única
+y todo `factura_id` que llegue de un formulario se comprueba con
+`factura_de_sede()`. Y **cualquier id que llegue de un formulario hay
 que comprobarlo contra la sede** antes de usarlo: el `cuenta_id` de la carga y
 el `movimiento_id` al anotar un proveedor permitían tocar otra unidad.
 
@@ -171,8 +175,22 @@ ocurrencia es el número de vez que esa firma aparece **dentro del archivo que s
 está importando**. No la cambies por un contador global: rompería la carga de
 extractos acumulativos.
 
+**El reparto de un pago se rehace entero.** `repartir_pago()` borra los enlaces
+de ese movimiento y los vuelve a escribir, así que quitar una factura es no
+mandarla. Por eso `lista_facturas()` tiene que seguir dibujando las facturas que
+ese pago ya cubre aunque estén saldadas: si desaparecieran de la pantalla, el
+siguiente guardado borraría el reparto sin que nadie se entere. Y el saldo de una
+factura **se calcula, nunca se guarda**: retener no es dejar de pagar, así que
+está cubierta cuando `aplicado + retenido >= monto`.
+
+**La tasa se congela en el reparto.** Una factura en dólares pagada en bolívares
+guarda en `pagos_factura.tasa` la del BCV del día del **movimiento**. Si mañana
+cambia, lo anotado ayer no se mueve.
+
 **Migraciones.** `migrar()` corre en cada petición y debe ser idempotente. Para
-añadir una columna usa `columna_si_falta()`, nunca un `ALTER TABLE` directo.
+añadir una columna usa `columna_si_falta()`, nunca un `ALTER TABLE` directo. Si
+tienes que cambiar una clave única, crea antes el índice suelto de la columna que
+sostiene la foránea: MySQL no deja soltar el índice del que depende una FK.
 
 **Solo débitos.** Casi todas las consultas filtran `tipo = 'D'` por decisión de
 producto, no por omisión. Los créditos se guardan completos. Si te piden
