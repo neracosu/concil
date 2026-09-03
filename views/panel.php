@@ -1,6 +1,10 @@
 <?php
 /** Panel: estado del período y a dónde fue el dinero. */
 
+// La tasa del día se busca aquí, al entrar, y como mucho una vez al día: es la
+// primera pantalla y así el resto ya la encuentra guardada.
+tasas_al_dia();
+
 $hoy = date('Y-m-d');
 if (!isset($_GET['desde']) && !isset($_GET['hasta'])) {
     $r = db()->query("SELECT MIN(m.fecha) a, MAX(m.fecha) b FROM movimientos m

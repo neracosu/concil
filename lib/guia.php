@@ -162,6 +162,13 @@ function guia_pasos(): array
             'titulo' => 'Y cambie su clave apenas termine',
             'texto' => 'Son seis números, los que usted quiera. No la comparta por escrito.',
         ],
+        [
+            'ruta' => 'ajustes', 'sel' => '[data-guia="tasas"]',
+            'titulo' => 'A cuánto estaba el dólar ese día',
+            'texto' => 'Al lado de cada operación verá la tasa oficial del BCV <b>del día en que se hizo</b>, '
+                     . 'no la de hoy. Es la que necesita administración para sacar sus cuentas.',
+            'nota' => 'Se busca sola una vez al día. Si algún día faltara, con este botón las trae todas.',
+        ],
 
         // ------------------------------------------------------------ Cierre
         [

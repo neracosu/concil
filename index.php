@@ -9,6 +9,7 @@ require __DIR__ . '/lib/config.php';
 require __DIR__ . '/lib/texto.php';
 require __DIR__ . '/lib/registro.php';
 require __DIR__ . '/lib/db.php';
+require __DIR__ . '/lib/tasas.php';
 require __DIR__ . '/lib/sedes.php';
 require __DIR__ . '/lib/usuarios.php';
 require __DIR__ . '/lib/auth.php';

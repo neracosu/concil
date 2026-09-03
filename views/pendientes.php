@@ -313,6 +313,7 @@ if ($modo === 'grupos'):
             <thead><tr>
               <th style="width:34px"><input type="checkbox" id="marcarTodos" style="width:auto" aria-label="Marcar todos"></th>
               <th>Fecha</th><th>Cuenta</th><th>Concepto</th><th>Referencia</th><th class="der">Débito Bs</th>
+              <th class="der" title="Tasa oficial del BCV el día de la operación">Tasa BCV</th>
               <th style="width:120px"></th>
             </tr></thead>
             <tbody>
@@ -325,11 +326,12 @@ if ($modo === 'grupos'):
                   <?php if ($m['nota_banco']): ?><span class="nota"><?= e($m['nota_banco']) ?></span><?php endif ?></td>
                 <td class="ref"><?= e($m['referencia']) ?></td>
                 <td class="monto d"><span class="barra" style="width:<?= number_format($anch, 1, '.', '') ?>%"></span><span><?= bs((float) $m['debito']) ?></span></td>
+                <td class="der num" style="color:var(--mudo);white-space:nowrap"><?= e(tasa_texto($m['tasa_bcv'])) ?></td>
                 <td class="der"><button type="button" class="btn btn-sm" data-abrir="j<?= $m['id'] ?>"
                         aria-expanded="false" aria-controls="j<?= $m['id'] ?>">Justificar</button></td>
               </tr>
               <tr class="fila-justificar" id="j<?= $m['id'] ?>" hidden>
-                <td colspan="7">
+                <td colspan="8">
                   <?php form_clasificar($cats, 'seleccion', ['ids[]' => (string) $m['id']],
                                         sugerir_patron((string) $m['concepto']), 'fr' . $m['id'], true) ?>
                   <div class="acciones" style="margin-top:12px">

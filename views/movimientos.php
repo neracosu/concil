@@ -15,9 +15,10 @@ if ($export === 'csv' || $export === 'xlsx') {
     $sql = "SELECT m.fecha, c.nombre cuenta, c.banco, m.referencia, m.concepto, m.nota_banco,
                    m.debito, m.credito, m.saldo,
                    COALESCE(cat.nombre,'Sin clasificar') categoria, COALESCE(cat.grupo,'') grupo,
-                   m.beneficiario, m.justificacion, m.origen
+                   m.beneficiario, m.justificacion, m.origen, t.tasa tasa_bcv
               FROM movimientos m
               JOIN cuentas c ON c.id = m.cuenta_id
+         LEFT JOIN tasas t ON t.fecha = m.fecha
          LEFT JOIN categorias cat ON cat.id = m.categoria_id
              WHERE $w
           ORDER BY " . orden_sql($f);
@@ -25,7 +26,8 @@ if ($export === 'csv' || $export === 'xlsx') {
     $s->execute($p);
 
     $cab = ['Fecha', 'Cuenta', 'Banco', 'Referencia', 'Concepto del banco', 'Nota del banco',
-            'Débito', 'Crédito', 'Saldo', 'Categoría', 'Grupo', 'Beneficiario', 'Justificación', 'Clasificado por'];
+            'Débito', 'Crédito', 'Saldo', 'Categoría', 'Grupo', 'Beneficiario', 'Justificación', 'Clasificado por',
+            'Tasa BCV'];
 
     $filas = (function () use ($s) {
         while ($r = $s->fetch()) {
@@ -35,6 +37,8 @@ if ($export === 'csv' || $export === 'xlsx') {
                 (float) $r['debito'], (float) $r['credito'], $r['saldo'] === null ? '' : (float) $r['saldo'],
                 $r['categoria'], $r['grupo'], $r['beneficiario'], $r['justificacion'],
                 match ($r['origen']) { 'regla' => 'Regla automática', 'manual' => 'Manual', default => 'Sin clasificar' },
+                // Como número, no como texto: en la hoja de cálculo la usan para dividir.
+                $r['tasa_bcv'] === null ? '' : (float) $r['tasa_bcv'],
             ];
         }
     })();
@@ -44,7 +48,7 @@ if ($export === 'csv' || $export === 'xlsx') {
     if ($export === 'csv') {
         exportar_csv($nombre, $cab, $filas);
     }
-    exportar_xlsx($nombre, $cab, $filas, [6, 7, 8]);
+    exportar_xlsx($nombre, $cab, $filas, [6, 7, 8, 14]);
 }
 
 $lista = listar_movimientos($f, $pagina);
@@ -137,6 +141,7 @@ function opciones_categoria(array $cats, ?int $sel): void
       <thead><tr>
         <th>Fecha</th><th>Cuenta</th><th>Concepto</th><th>Referencia</th>
         <th>Categoría</th><th class="der"><?= $f['tipo'] === 'C' ? 'Crédito' : 'Débito' ?> Bs</th><th class="der">Saldo Bs</th>
+        <th class="der" title="Tasa oficial del BCV el día de la operación">Tasa BCV</th>
       </tr></thead>
       <tbody>
       <?php foreach ($lista['filas'] as $m):
@@ -160,10 +165,11 @@ function opciones_categoria(array $cats, ?int $sel): void
             <span><?= bs($monto) ?></span></td>
           <td class="der num" style="color:var(--mudo);white-space:nowrap">
             <?= $m['saldo'] === null ? '—' : bs((float) $m['saldo']) ?></td>
+          <td class="der num" style="color:var(--mudo);white-space:nowrap"><?= e(tasa_texto($m['tasa_bcv'])) ?></td>
         </tr>
       <?php endforeach ?>
       <?php if ($lista['filas'] === []): ?>
-        <tr><td colspan="8" class="vacio"><b>Ningún movimiento coincide con el filtro</b>Prueba a ampliar el rango de fechas o limpiar la búsqueda.</td></tr>
+        <tr><td colspan="9" class="vacio"><b>Ningún movimiento coincide con el filtro</b>Prueba a ampliar el rango de fechas o limpiar la búsqueda.</td></tr>
       <?php endif ?>
       </tbody>
     </table>

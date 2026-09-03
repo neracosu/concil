@@ -23,6 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirigir('?r=ajustes');
     }
 
+    if ($accion === 'tasas') {
+        $r = sincronizar_tasas(true);
+        if ($r['error'] !== '') {
+            flash('mal', $r['error'] . ' Vuelva a intentarlo en un rato; las tasas ya guardadas siguen ahí.');
+        } else {
+            flash('ok', 'Tasas del BCV al día: ' . number_format($r['guardadas'], 0, ',', '.') . ' días guardados.');
+        }
+        bitacora('tasas', 'Actualización manual · ' . $r['guardadas'] . ' días');
+        redirigir('?r=ajustes');
+    }
+
     if ($accion === 'purgar') {
         $dias = max(1, (int) ($_POST['dias'] ?? 90));
         $s = $pdo->prepare('DELETE FROM bitacora WHERE creado_en < DATE_SUB(NOW(), INTERVAL ? DAY)');
@@ -82,6 +93,32 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
       <p style="color:var(--tenue);font-size:12.5px;margin:0">
         6 dígitos. Tras <?= MAX_INTENTOS ?> intentos fallidos el acceso se bloquea <?= (int) (BLOQUEO_SEGS / 60) ?> minutos.</p>
       <div class="acciones"><button class="btn btn-oro">Cambiar PIN</button></div>
+    </form>
+  </div>
+
+  <div class="tarjeta" data-guia="tasas">
+    <h2>Tasa del dólar</h2>
+    <?php $t = estado_tasas(); ?>
+    <p class="nota" style="margin:0 0 12px">
+      Junto a cada operación se muestra la tasa oficial del BCV <b>del día en que ocurrió</b>,
+      no la de hoy. Así administración puede sacar sus cuentas con el valor que regía entonces,
+      aunque el archivo del banco se haya cargado meses después.
+    </p>
+    <dl style="margin:0 0 14px">
+      <div class="dato"><dt>Días guardados</dt><dd><?= number_format($t['dias'], 0, ',', '.') ?></dd></div>
+      <?php if ($t['ultima']): ?>
+        <div class="dato"><dt>Van desde</dt><dd><?= e(date('d/m/Y', strtotime($t['primera']))) ?></dd></div>
+        <div class="dato"><dt>Hasta</dt><dd><?= e(date('d/m/Y', strtotime($t['ultima']))) ?></dd></div>
+        <div class="dato"><dt>Tasa de ese día</dt><dd>Bs <?= e(tasa_texto(tasa_de($t['ultima']))) ?></dd></div>
+      <?php endif ?>
+      <?php if ($t['sincronizado']): ?>
+        <div class="dato"><dt>Última consulta</dt><dd><?= e(date('d/m/Y H:i', strtotime($t['sincronizado']))) ?></dd></div>
+      <?php endif ?>
+    </dl>
+    <form method="post">
+      <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+      <input type="hidden" name="accion" value="tasas">
+      <div class="acciones"><button class="btn">Buscar las tasas que falten</button></div>
     </form>
   </div>
 

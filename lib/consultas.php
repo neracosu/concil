@@ -72,10 +72,13 @@ function listar_movimientos(array $f, int $pagina, int $porPagina = POR_PAGINA):
     $pagina = max(1, min($pagina, $paginas));
     $off = ($pagina - 1) * $porPagina;
 
-    $sql = "SELECT m.*, c.nombre AS cuenta, c.banco, cat.nombre AS categoria, cat.color
+    // La tasa se ata por la fecha del movimiento, que es la del extracto: un
+    // archivo de julio cargado en septiembre se sigue leyendo con las de julio.
+    $sql = "SELECT m.*, c.nombre AS cuenta, c.banco, cat.nombre AS categoria, cat.color, t.tasa AS tasa_bcv
               FROM movimientos m
               JOIN cuentas c ON c.id = m.cuenta_id
          LEFT JOIN categorias cat ON cat.id = m.categoria_id
+         LEFT JOIN tasas t ON t.fecha = m.fecha
              WHERE $w
           ORDER BY " . orden_sql($f) . "
              LIMIT $porPagina OFFSET $off";

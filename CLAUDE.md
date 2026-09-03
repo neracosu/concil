@@ -178,6 +178,14 @@ añadir una columna usa `columna_si_falta()`, nunca un `ALTER TABLE` directo.
 producto, no por omisión. Los créditos se guardan completos. Si te piden
 activarlos, es quitar ese filtro, no volver a importar.
 
+**La tasa del BCV va por día de calendario.** `lib/tasas.php` guarda una fila
+por fecha y la ata a `movimientos.fecha` —la del extracto—, nunca a la de la
+carga. La fuente (`bcv.today`) trae dos campos de fecha y solo uno sirve como
+clave: `date` es el día de calendario y `effective_date` el día en que el BCV la
+valoró, así que el sábado y el domingo comparten el `effective_date` del viernes.
+Guardar por `effective_date` deja el fin de semana sin fila; se guarda por
+`date`. Una tasa con `origen = 'manual'` no la pisa la sincronización.
+
 **La visita guiada.** Los pasos de `lib/guia.php` apuntan a atributos
 `data-guia="..."` de las vistas. Si renombras o quitas uno de esos elementos, el
 paso correspondiente se salta en silencio. Al añadir una sección nueva, añade su

@@ -31,6 +31,7 @@ banco no explica.
 - [Motor de reglas](#motor-de-reglas)
 - [Control de duplicados](#control-de-duplicados)
 - [Saldos](#saldos)
+- [Tasa del dólar](#tasa-del-dólar)
 - [Seguridad](#seguridad)
 - [Respaldo y restauración](#respaldo-y-restauración)
 - [Rendimiento](#rendimiento)
@@ -249,6 +250,29 @@ mismo proveedor. Reportes ofrece un corte por proveedor.
 El campo `beneficiario` se conserva: lo rellenan las reglas con etiquetas
 gruesas («Banco», «SENIAT») y responde a otra pregunta.
 
+## Tasa del dólar
+
+Junto a cada operación se muestra la **tasa oficial del BCV del día en que
+ocurrió**. Administración necesita leer un pago de julio con la tasa de julio,
+no con la de hoy, así que la tasa se guarda por fecha y no se recalcula nunca.
+
+La fecha que manda es la del movimiento —la que trae el extracto del banco—, no
+la de la carga del archivo. Un extracto de julio subido en septiembre sigue
+leyéndose con las tasas de julio.
+
+Las tasas se traen de `https://bcv.today` (JSON, sin clave, tomado de
+`bcv.org.ve`). La primera vez se descarga el histórico completo, cinco años en
+una sola llamada; después se busca la del día, como mucho una vez al día, al
+entrar al panel. En **Ajustes → Tasa del dólar** se ve qué hay guardado y se
+pueden pedir las que falten.
+
+Se guarda **una fila por día de calendario**, no por día bancario: el sábado y
+el domingo llevan la tasa del viernes, que es la que rige. La fuente ya entrega
+los días completos, así que no quedan huecos que rellenar.
+
+Si la consulta falla, la aplicación sigue igual: donde no hay tasa se muestra un
+guion. Es un dato de apoyo y nunca puede detener una carga ni una pantalla.
+
 ## Hora
 
 Todo el sistema funciona en **hora de Venezuela** (`America/Caracas`): lo que se
@@ -343,6 +367,7 @@ lib/
   importador.php       Detección de formato, mapeo de columnas, importación
   reglas.php           Motor de mapeo automático
   consultas.php        Filtros, paginación, agregados, saldos
+  tasas.php            Tasa oficial del BCV por día
   exportar.php         Escritura de CSV y XLSX
   seed.php             Categorías y reglas iniciales
   auth.php             Acceso por PIN, sesión, CSRF

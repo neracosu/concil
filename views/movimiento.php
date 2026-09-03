@@ -39,9 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $s = $pdo->prepare("SELECT m.*, c.nombre cuenta, c.banco, cat.nombre categoria, cat.color,
-                           r.nombre regla, i.archivo, i.creado_en cargado
+                           r.nombre regla, i.archivo, i.creado_en cargado, t.tasa tasa_bcv
                       FROM movimientos m
                       JOIN cuentas c ON c.id = m.cuenta_id
+                 LEFT JOIN tasas t ON t.fecha = m.fecha
                  LEFT JOIN categorias cat ON cat.id = m.categoria_id
                  LEFT JOIN reglas r ON r.id = m.regla_id
                  LEFT JOIN importaciones i ON i.id = m.importacion_id
@@ -82,6 +83,7 @@ encabezado_html('Movimiento', 'movimientos',
     <h2>Lo que dice el banco</h2>
     <dl style="margin:0">
       <div class="dato"><dt>Fecha</dt><dd><?= e(date('d/m/Y', strtotime($m['fecha']))) ?></dd></div>
+      <div class="dato"><dt>Tasa del BCV ese día</dt><dd><?= e(tasa_texto($m['tasa_bcv'])) ?></dd></div>
       <div class="dato"><dt>Cuenta</dt><dd class="texto"><?= e($m['cuenta']) ?><?= $m['banco'] ? ' · ' . e($m['banco']) : '' ?></dd></div>
       <div class="dato"><dt>Referencia</dt><dd><?= e($m['referencia']) ?: '—' ?></dd></div>
       <div class="dato"><dt>Concepto</dt><dd class="texto"><?= e($m['concepto']) ?></dd></div>

@@ -186,6 +186,17 @@ function migrar(): void
         UNIQUE KEY uq_formato (clave)
     ) $t");
 
+    // Tasa oficial del BCV, una por día de calendario. Va aparte de los
+    // movimientos porque es un dato del día, no del movimiento: la misma tasa
+    // sirve para todas las operaciones de esa fecha y para todas las sedes.
+    // Se guarda con ocho decimales, que es como la publica la fuente.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tasas (
+        fecha     DATE           NOT NULL PRIMARY KEY,
+        tasa      DECIMAL(18,8)  NOT NULL,
+        origen    VARCHAR(10)    NOT NULL DEFAULT 'bcv',
+        creado_en DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) $t");
+
     // Proveedores y facturas. El proveedor cuelga del movimiento porque todo
     // pago tiene destinatario; las facturas van aparte para que quepan los
     // casos reales: una factura pagada en partes, o un pago que cubre varias.
