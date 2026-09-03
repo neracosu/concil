@@ -24,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion  = $_POST['accion'] ?? '';
     $catId   = (int) ($_POST['categoria_id'] ?? 0);
     $prov    = mb_substr(limpiar((string) ($_POST['proveedor'] ?? '')), 0, 160);
-    $factura = mb_substr(limpiar((string) ($_POST['factura'] ?? '')), 0, 60);
     $benef   = $prov;
     $justif  = mb_substr(limpiar((string) ($_POST['justificacion'] ?? '')), 0, 1000);
 
@@ -88,22 +87,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $n = $s->rowCount();
     }
 
-    // El proveedor se anota en cada movimiento alcanzado; la factura solo
-    // cuando fue uno solo, que es cuando el formulario la pide.
+    // El proveedor se anota en cada movimiento alcanzado. El reparto entre
+    // facturas solo cabe cuando se justificó uno solo: lo que se reparte es su
+    // pago, y repartir el de cincuenta a la vez no significaría nada.
+    $provId = null;
     if ($prov !== '' && $afectados !== []) {
         $provId = proveedor_id($prov);
         if ($provId !== null) {
             $marcas = implode(',', array_fill(0, count($afectados), '?'));
             $pdo->prepare("UPDATE movimientos SET proveedor_id = ? WHERE id IN ($marcas)")
                 ->execute([$provId, ...$afectados]);
-            if ($factura !== '' && count($afectados) === 1) {
-                $movId = (int) $afectados[0];
-                $monto = (float) $pdo->query("SELECT debito FROM movimientos WHERE id = $movId")->fetchColumn();
-                $facId = factura_id($provId, $factura);
-                if ($facId !== null) {
-                    vincular_pago($facId, $movId, $monto);
-                }
-            }
+        }
+    }
+
+    $avisoFac = '';
+    if (count($afectados) === 1) {
+        try {
+            $avisoFac = guardar_reparto((int) $afectados[0], $provId, $_POST);
+        } catch (Throwable $ex) {
+            // La clasificación ya está guardada; decir solo lo que falló evita
+            // que haya que rehacer todo el formulario.
+            flash('mal', $ex->getMessage() . ' Lo demás sí se guardó.');
+            redirigir(url([], 'pendientes'));
         }
     }
 
@@ -112,7 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     bitacora('justificacion', "$n movimiento(s)" . ($reglaId ? ' + regla nueva' : ''));
     flash('ok', $n . ' movimiento' . ($n === 1 ? '' : 's') . ' justificado' . ($n === 1 ? '' : 's')
-        . ($reglaId ? '. La regla queda activa para las próximas cargas.' : '.'));
+        . ($reglaId ? '. La regla queda activa para las próximas cargas.' : '.')
+        . ($avisoFac !== '' ? ' ' . $avisoFac : ''));
     redirigir(url([], 'pendientes'));
 }
 
@@ -152,13 +158,13 @@ echo '</datalist>';
  * anidar formularios dentro de la tabla, los campos se atan al suyo con el
  * atributo form="…" y la etiqueta <form> se emite aparte, fuera de la tabla.
  */
-function form_clasificar(array $cats, string $accion, array $ocultos, string $patronSugerido, string $idForm, bool $suelto = false): void
+function form_clasificar(array $cats, string $accion, array $ocultos, string $patronSugerido, string $idForm, bool $suelto = false, ?array $mov = null): void
 {
     $att = $suelto ? ' form="' . e($idForm) . '"' : '';
-    // El número de factura solo se pide cuando se está justificando un único
-    // movimiento: ponerle la misma factura a un grupo de cincuenta no
-    // significaría nada. El proveedor sí se puede aplicar a todo el grupo.
-    $unico = $suelto;
+    // Las facturas solo se piden cuando se está justificando un único
+    // movimiento: es su pago el que se reparte. El proveedor sí se puede
+    // aplicar a todo el grupo de una vez.
+    $unico = $suelto && $mov !== null;
     if (!$suelto): ?>
     <form method="post" class="pila" id="<?= e($idForm) ?>">
     <?php else: ?>
@@ -183,13 +189,15 @@ function form_clasificar(array $cats, string $accion, array $ocultos, string $pa
         <div>
           <label>A quién se le pagó <span style="text-transform:none;letter-spacing:0">(opcional)</span></label>
           <input type="text" name="proveedor" maxlength="160" list="listaProveedores"
+                 <?= $unico ? 'data-prov-de="' . (int) $mov['id'] . '"' : '' ?>
                  placeholder="Proveedor, empleado, organismo…"<?= $att ?>>
         </div>
       </div>
       <?php if ($unico): ?>
         <div>
-          <label>Nº de factura <span style="text-transform:none;letter-spacing:0">(opcional)</span></label>
-          <input type="text" name="factura" maxlength="60" placeholder="El número que aparece en la factura"<?= $att ?>>
+          <label>De qué facturas era este pago
+            <span style="text-transform:none;letter-spacing:0">(opcional)</span></label>
+          <?php panel_facturas($mov, isset($mov['proveedor_id']) ? (int) $mov['proveedor_id'] ?: null : null, $idForm, true) ?>
         </div>
       <?php endif ?>
       <div>
@@ -333,7 +341,7 @@ if ($modo === 'grupos'):
               <tr class="fila-justificar" id="j<?= $m['id'] ?>" hidden>
                 <td colspan="8">
                   <?php form_clasificar($cats, 'seleccion', ['ids[]' => (string) $m['id']],
-                                        sugerir_patron((string) $m['concepto']), 'fr' . $m['id'], true) ?>
+                                        sugerir_patron((string) $m['concepto']), 'fr' . $m['id'], true, $m) ?>
                   <div class="acciones" style="margin-top:12px">
                     <button class="btn btn-oro" form="fr<?= $m['id'] ?>">Guardar este movimiento</button>
                     <button type="button" class="btn" data-cerrar="j<?= $m['id'] ?>">Cancelar</button>

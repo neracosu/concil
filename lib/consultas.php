@@ -14,6 +14,7 @@ function filtros(): array
         'estado'    => in_array($g['estado'] ?? '', ['pendiente', 'conciliado'], true) ? $g['estado'] : '',
         'texto'     => trim((string) ($g['texto'] ?? '')),
         'benef'     => trim((string) ($g['benef'] ?? '')),
+        'proveedor' => (int) ($g['proveedor'] ?? 0),
         'min'       => $g['min'] ?? '',
         'max'       => $g['max'] ?? '',
         'orden'     => in_array($g['orden'] ?? '', ['fecha', 'monto', 'concepto'], true) ? $g['orden'] : 'fecha',
@@ -31,6 +32,7 @@ function where_filtros(array $f): array
     if ($f['cuenta'] > 0)              { $w[] = 'm.cuenta_id = ?';     $p[] = $f['cuenta']; }
     if ($f['tipo'] !== '')             { $w[] = 'm.tipo = ?';          $p[] = $f['tipo']; }
     if ($f['benef'] !== '')            { $w[] = 'm.beneficiario = ?';  $p[] = $f['benef']; }
+    if (($f['proveedor'] ?? 0) > 0)    { $w[] = 'm.proveedor_id = ?'; $p[] = $f['proveedor']; }
     if ($f['categoria'] === 0)         { $w[] = 'm.categoria_id IS NULL'; }
     elseif ($f['categoria'] !== null)  { $w[] = 'm.categoria_id = ?';  $p[] = $f['categoria']; }
     if ($f['estado'] === 'pendiente')  { $w[] = 'm.categoria_id IS NULL'; }

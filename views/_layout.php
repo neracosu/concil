@@ -65,6 +65,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <div class="nav-titulo">Configuración</div>
       <a href="?r=reglas"     class="<?= $ruta === 'reglas' ? 'on' : '' ?>">Reglas de mapeo</a>
       <a href="?r=categorias" class="<?= $ruta === 'categorias' ? 'on' : '' ?>">Categorías</a>
+      <a href="?r=proveedores" class="<?= $ruta === 'proveedores' ? 'on' : '' ?>">Proveedores</a>
       <a href="?r=cuentas"    class="<?= $ruta === 'cuentas' ? 'on' : '' ?>">Cuentas</a>
       <a href="?r=sede"       class="<?= $ruta === 'sede' ? 'on' : '' ?>">Unidades de negocio</a>
       <?php if (es_maestro()): ?>

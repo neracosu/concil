@@ -23,6 +23,7 @@ require __DIR__ . '/lib/exportar.php';
 require __DIR__ . '/lib/seed.php';
 require __DIR__ . '/lib/guia.php';
 require __DIR__ . '/views/_layout.php';
+require __DIR__ . '/views/_facturas.php';
 
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');

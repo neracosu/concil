@@ -99,6 +99,15 @@ function guia_pasos(): array
 
         // ------------------------------------------------------- Movimientos
         [
+            'ruta' => 'pendientes', 'sel' => '[data-guia="modo"]',
+            'titulo' => 'Y de qué factura era cada pago',
+            'texto' => 'Al explicar un pago de a uno, debajo aparecen <b>las facturas de ese proveedor '
+                     . 'que todavía no están cubiertas</b>. Marque las que cubre este pago y escriba cuánto '
+                     . 'va a cada una.',
+            'nota' => 'Un pago puede cubrir tres facturas, y una factura puede irse cubriendo con tres pagos. '
+                    . 'Las dos cosas se hacen desde la misma pantalla.',
+        ],
+        [
             'ruta' => 'movimientos', 'sel' => '[data-guia="filtros"]',
             'titulo' => 'Aquí busca cualquier cosa',
             'texto' => 'Por fechas, por banco, por tipo de gasto, por monto o escribiendo un nombre. '
@@ -152,6 +161,14 @@ function guia_pasos(): array
                      . 'agregue los suyos cuando le hagan falta.',
         ],
         [
+            'ruta' => 'proveedores', 'sel' => '[data-guia="prov-archivo"]',
+            'titulo' => 'A quién le compra la empresa',
+            'texto' => 'Si contabilidad ya tiene la lista de proveedores en un archivo, súbala aquí y entran '
+                     . 'todos de una vez. También puede escribirlos uno a uno.',
+            'nota' => 'La lista es la misma para todas las empresas del grupo. Lo que cada una debe, no: '
+                    . 'las facturas son de quien las debe.',
+        ],
+        [
             'ruta' => 'cuentas', 'sel' => '[data-guia="saldoinicial"]',
             'titulo' => 'Esto sí conviene hacerlo hoy',
             'texto' => 'Algunos bancos no mandan el saldo en su archivo. Escriba aquí cuánto tenía la cuenta '
@@ -193,6 +210,10 @@ function ayuda_pantalla(string $ruta): string
         'reportes'    => 'El resumen de <b>cuánto se gastó en cada cosa</b>. Cambie el agrupamiento para ver la misma plata desde otro ángulo.',
         'reglas'      => 'Aquí está <b>todo lo que el sistema ya aprendió</b>. Lo que usted explica una vez queda guardado y se aplica solo de ahora en adelante.',
         'categorias'  => 'Los <b>tipos de gasto</b> con los que se explica cada salida de dinero.',
+        'proveedores' => 'A quién le compra la empresa. <b>La lista la ven todas las unidades</b>, así se puede '
+                       . 'saber cuánto le pagó el grupo entero a alguien. Lo que se le debe sí es de cada una.',
+        'proveedor'   => 'Todo lo de este proveedor en esta unidad: <b>sus facturas, cuánto queda por cubrir '
+                       . 'de cada una y con qué pagos se cubrieron</b>.',
         'cuentas'     => 'Sus cuentas de banco y <b>cuánto tiene en cada una</b>.',
         'sede'        => 'Cada empresa o tienda del grupo lleva sus cuentas y sus movimientos <b>por separado</b>. '
                        . 'Arriba a la izquierda elige con cuál está trabajando. Las categorías y las reglas '

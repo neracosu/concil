@@ -198,6 +198,8 @@ function nombre_pantalla(string $ruta): string
         'reportes'    => 'viendo reportes',
         'reglas'      => 'las reglas',
         'categorias'  => 'las categorías',
+        'proveedores' => 'los proveedores',
+        'proveedor'   => 'la ficha de un proveedor',
         'cuentas'     => 'las cuentas',
         'sede'        => 'eligiendo unidad',
         'ajustes'     => 'los ajustes',

@@ -268,6 +268,62 @@ function migrar(): void
         $pdo->exec('ALTER TABLE bitacora ADD KEY idx_bit_usuario (usuario_id)');
     }
 
+    // --------------------------------------------------------- Proveedores
+    // Lo que trae el listado que exporta contabilidad. El código es el nombre
+    // corto con que lo llaman («TOTTI», «40 GRADOS») y por ahí lo buscan; no es
+    // único porque cada empresa del grupo lleva el suyo.
+    columna_si_falta($pdo, 'proveedores', 'codigo',    "VARCHAR(40) NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'proveedores', 'nit',       "VARCHAR(20) NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'proveedores', 'telefono',  "VARCHAR(60) NOT NULL DEFAULT ''");
+    // El RIF limpio es la mejor forma de no duplicar un proveedor, pero llega
+    // sucio y a veces ni siquiera es un RIF, así que se guarda aparte del texto
+    // original y queda vacío cuando no lo es. No es único: el vacío se repite.
+    columna_si_falta($pdo, 'proveedores', 'rif_clave', "VARCHAR(20) NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'proveedores', 'activo',    'TINYINT(1)  NOT NULL DEFAULT 1');
+    if (!indice_existe($pdo, 'proveedores', 'idx_prov_rif')) {
+        $pdo->exec('ALTER TABLE proveedores ADD KEY idx_prov_rif (rif_clave)');
+    }
+    if (!indice_existe($pdo, 'proveedores', 'idx_prov_codigo')) {
+        $pdo->exec('ALTER TABLE proveedores ADD KEY idx_prov_codigo (codigo)');
+    }
+
+    // Al proveedor lo comparte todo el grupo, pero una factura la debe una
+    // empresa concreta: sin sede_id, una unidad vería las facturas de otra.
+    columna_si_falta($pdo, 'facturas', 'sede_id',        'INT NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'facturas', 'moneda',         "CHAR(3) NOT NULL DEFAULT 'VES'");
+    // Retener no es dejar de pagar: la factura queda cubierta con lo pagado más
+    // lo retenido. Van en la misma moneda de la factura.
+    columna_si_falta($pdo, 'facturas', 'retencion_iva',  'DECIMAL(18,2) NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'facturas', 'retencion_islr', 'DECIMAL(18,2) NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'facturas', 'nota_credito',   'DECIMAL(18,2) NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'facturas', 'nota',           "VARCHAR(255) NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'facturas', 'usuario_id',     'INT NULL');
+    columna_si_falta($pdo, 'facturas', 'origen',         "VARCHAR(12) NOT NULL DEFAULT 'manual'");
+    // Dos empresas del grupo pueden recibir facturas con el mismo número del
+    // mismo proveedor, así que la sede entra en la clave. El índice suelto de
+    // proveedor_id se crea antes de soltar la clave vieja: es el que sostiene
+    // la clave foránea, y sin él MySQL no deja borrarla.
+    if (!indice_existe($pdo, 'facturas', 'uq_factura_sede')) {
+        if (!indice_existe($pdo, 'facturas', 'idx_factura_prov')) {
+            $pdo->exec('ALTER TABLE facturas ADD KEY idx_factura_prov (proveedor_id)');
+        }
+        $pdo->exec('ALTER TABLE facturas ADD UNIQUE KEY uq_factura_sede (sede_id, proveedor_id, numero)');
+        if (indice_existe($pdo, 'facturas', 'uq_factura')) {
+            $pdo->exec('ALTER TABLE facturas DROP INDEX uq_factura');
+        }
+    }
+    if (!indice_existe($pdo, 'facturas', 'idx_factura_sede')) {
+        $pdo->exec('ALTER TABLE facturas ADD KEY idx_factura_sede (sede_id)');
+    }
+
+    // Un pago se reparte entre varias facturas y una factura recibe varios
+    // pagos. «monto» es lo aplicado en la moneda de la factura; «monto_bs», lo
+    // que salió del banco. La tasa se congela en el reparto: si mañana el BCV
+    // cambia, lo que se anotó ayer no se mueve.
+    columna_si_falta($pdo, 'pagos_factura', 'monto_bs',   'DECIMAL(18,2) NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'pagos_factura', 'tasa',       'DECIMAL(18,8) NULL');
+    columna_si_falta($pdo, 'pagos_factura', 'usuario_id', 'INT NULL');
+
     sembrar_comisiones($pdo);
     sembrar_maestro($pdo);
 }

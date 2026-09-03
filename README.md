@@ -225,27 +225,94 @@ sede**, porque dos unidades pueden tener cada una su cuenta «BANESCO».
 
 ## Proveedores y facturas
 
-Al justificar un pago se puede anotar **a quién se le pagó** y **el número de
-factura**. El proveedor se guarda en el propio movimiento, porque todo pago
-tiene destinatario haya factura o no; las facturas van en su tabla y se enlazan
-al pago a través de `pagos_factura`.
+Al justificar un pago se anota **a quién se le pagó** y **contra qué facturas
+fue**. El proveedor se guarda en el propio movimiento, porque todo pago tiene
+destinatario haya factura o no; las facturas van en su tabla y se enlazan al
+pago a través de `pagos_factura`, que guarda el monto aplicado en cada enlace.
 
-Esa separación es deliberada. En la práctica una factura se paga en varias
-partes, o un solo pago cubre varias facturas: con el número de factura metido en
-una columna del movimiento, ninguno de los dos casos cabría. Hoy la pantalla
-solo deja anotar una factura por movimiento —y solo cuando se justifica de uno
-en uno, porque ponerle la misma factura a un grupo de cincuenta movimientos no
-significa nada—, pero el dato no habrá que rehacerlo.
+Esa separación es lo que permite los dos casos reales:
+
+- **Un pago que cubre varias facturas.** Se marca cada una y se escribe cuánto
+  de ese pago va a cada cual. El pie va diciendo cuánto queda sin repartir.
+- **Una factura que se cubre con varios pagos.** Cada pago aporta su parte y la
+  factura muestra lo que lleva y lo que le falta, con la fecha y el monto de los
+  pagos anteriores a la vista.
+
+Todo ocurre en la misma pantalla, sin salir de donde se justifica: la bandeja
+**Por justificar** (modo «uno por uno») y el detalle de un movimiento comparten
+el mismo panel, `views/_facturas.php`. Al elegir proveedor, sus facturas sin
+cubrir se piden al servidor sin recargar la página (`?r=facturas_panel`); sin
+JavaScript la pantalla sigue funcionando, solo que la lista se refresca al
+guardar.
+
+### Cuánto le falta a una factura
+
+El saldo **se calcula, nunca se guarda**: es el monto menos lo retenido menos lo
+aplicado. Un estado almacenado se desincroniza en cuanto alguien deshace un
+pago; una suma no.
+
+**Retener no es dejar de pagar.** En Venezuela el comprador retiene parte del
+IVA y del ISLR y se los entrega al SENIAT en nombre del proveedor, así que del
+banco sale menos de lo que dice la factura. La factura guarda su retención de
+IVA, la de ISLR y la nota de crédito, y se da por cubierta cuando
+`aplicado + retenido >= monto`. Sin eso, toda factura con retención se quedaría
+eternamente «a medias».
+
+### Facturas en dólares
+
+Cada factura lleva su moneda. El saldo vive en la moneda de la factura y el
+pago se reparte **en bolívares**, que es lo que de verdad salió del banco; si la
+factura está en dólares se convierte con la **tasa del BCV del día del
+movimiento** —no la de hoy— y esa tasa se guarda congelada en el reparto. Cuando
+mañana el BCV cambie, lo anotado ayer no se mueve.
+
+### Dos números por factura
 
 En Venezuela una factura lleva **dos** números: el suyo y el «número de control»
 pre-impreso que exige la Providencia Administrativa 00071 del SENIAT, que nunca
-se reinicia durante la vida del contribuyente. La tabla guarda los dos, junto
-con el RIF del proveedor, aunque al justificar solo se pida el número de
-factura: lo demás se completa después sin frenar el trabajo diario.
+se reinicia durante la vida del contribuyente. Se piden los dos al anotarla,
+junto con la fecha y el monto: sin monto no se puede saber cuánto queda por
+cubrir, que es la pregunta que hace auditoría.
+
+### Qué se comparte y qué no
 
 Los proveedores son **comunes a todas las unidades de negocio**, igual que las
 categorías, de modo que se puede preguntar cuánto le pagó el grupo entero a un
-mismo proveedor. Reportes ofrece un corte por proveedor.
+mismo proveedor. Las **facturas no**: la deuda la tiene una empresa concreta, así
+que `facturas.sede_id` entra en la clave única y dos empresas del grupo pueden
+recibir la factura número 1 del mismo proveedor sin chocar.
+
+### Cargar el listado desde un archivo
+
+En **Proveedores** se sube el listado que exporta el sistema de contabilidad —el
+mismo Excel, o cualquiera con esa forma— y entran todos de una vez. Funciona
+como la carga de extractos: primero se muestra qué haría con cada fila y solo al
+confirmar se guarda algo.
+
+El encabezado se localiza **por estructura**, exigiendo el nombre y el RIF en la
+misma fila; si el archivo no trae rótulos reconocibles, se marca a mano qué es
+cada columna. Se reconocen `CODIGO`, `PROVEEDOR(ES)`, `RIF`, `NIT` y `TELEFONO`.
+
+Para no duplicar, se compara **primero por RIF y después por nombre
+normalizado**, que es el orden que recomienda la práctica de auditoría: los
+proveedores repetidos son la causa más frecuente de pagos duplicados. Y nunca se
+funden dos fichas en silencio:
+
+- El RIF llega sucio y a veces no es un RIF (un teléfono, una palabra). Solo se
+  usa como clave si encaja en `^[JGVEP]\d{8,10}$`; si no, se guarda el texto tal
+  cual y la ficha se marca **sin verificar**.
+- Si en el archivo dos nombres distintos comparten un RIF, **entran los dos** y
+  se avisa: uno de los dos está mal tecleado y perder un proveedor real sería
+  peor. El segundo entra sin usar ese RIF como clave.
+- Si el RIF apunta a una ficha existente y el nombre a otra, la fila no entra y
+  se muestra el choque para que lo resuelva una persona.
+
+A quien ya está en el listado no se le pisa ningún dato: solo se le completan
+los campos que tenía vacíos. Volver a cargar el mismo archivo no crea nada.
+
+Desde el listado se pueden **unir dos fichas** del mismo proveedor: los pagos y
+las facturas pasan a la que se queda, las facturas repetidas se juntan en una, y
+lo que a la de destino le faltara se completa con los datos de la otra.
 
 El campo `beneficiario` se conserva: lo rellenan las reglas con etiquetas
 gruesas («Banco», «SENIAT») y responde a otra pregunta.
@@ -371,12 +438,14 @@ lib/
   exportar.php         Escritura de CSV y XLSX
   seed.php             Categorías y reglas iniciales
   auth.php             Acceso por PIN, sesión, CSRF
+  proveedores.php      Fichas de proveedor, facturas, reparto de un pago
   guia.php             Textos de la visita guiada
   registro.php         Registro de fallos: qué pasó, dónde y cómo
   carga.php            Incluidor de conveniencia para scripts CLI
 
 views/
   _layout.php          Armazón, navegación, cinta de conciliación, paginación
+  _facturas.php        Panel de reparto de un pago entre facturas (compartido)
   login.php            Acceso por PIN
   panel.php            Resumen del período y saldos por cuenta
   carga.php            Subida en dos pasos con confirmación de cuenta
@@ -386,13 +455,16 @@ views/
   reportes.php         Agregados por categoría, beneficiario, cuenta, mes, grupo
   reglas.php           Alta y mantenimiento de reglas, sugerencias automáticas
   categorias.php       Catálogo de tipos de gasto
+  proveedores.php      Listado de proveedores, alta manual y carga desde archivo
+  proveedor.php        Ficha: sus facturas, lo que falta de cada una y sus pagos
+  facturas_panel.php   Fragmento con las facturas de un proveedor (sin recargar)
   cuentas.php          Cuentas bancarias y saldo de arranque
   sede.php             Elegir, crear y renombrar unidades de negocio
   ajustes.php          PIN, estado del sistema, bitácora
 
 assets/
   app.css              Estilos (paleta de marca, tablas densas, guía)
-  app.js               PIN, zona de carga, confirmaciones
+  app.js               PIN, zona de carga, confirmaciones, reparto de pagos
   guia.js              Motor de la visita guiada entre secciones
 ```
 
@@ -402,9 +474,9 @@ assets/
 |---|---|
 | `usuarios` | Quién puede entrar, su PIN, si es maestro y dónde está ahora |
 | `sedes` | Unidades de negocio del consorcio |
-| `proveedores` | A quién se le paga, con su RIF; comunes a todas las unidades |
-| `facturas` | Número de factura y número de control, por proveedor |
-| `pagos_factura` | Qué movimiento pagó qué factura, y por cuánto |
+| `proveedores` | A quién se le paga: código, RIF, NIT, teléfono; comunes a todas las unidades |
+| `facturas` | Factura por proveedor **y por sede**: sus dos números, fecha, monto, moneda y retenciones |
+| `pagos_factura` | Qué movimiento cubrió qué factura y por cuánto, en bolívares y en la moneda de la factura, con la tasa congelada |
 | `cuentas` | Cuentas bancarias: banco, número, titular, RIF, saldo de arranque y su sede |
 | `formatos` | Huellas de formato aprendidas, con su mapeo de columnas |
 | `categorias` | Tipos de gasto, agrupados y con color |
