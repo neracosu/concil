@@ -61,6 +61,14 @@ if ($ruta === 'login' && autenticado()) {
     exit;
 }
 
+// Claro u oscuro. Se atiende antes que la vista para que la propia respuesta ya
+// salga con el modo nuevo, sin un parpadeo del anterior.
+if (autenticado() && ($_POST['accion'] ?? '') === 'tema') {
+    exigir_csrf();
+    fijar_tema((string) ($_POST['tema'] ?? ''));
+    redirigir('?r=' . $ruta . (isset($_GET['id']) ? '&id=' . (int) $_GET['id'] : ''));
+}
+
 // Cambiar de unidad de negocio. Va por POST y con testigo porque descarta la
 // carga pendiente y borra sus archivos: un GET lo dispararía cualquier página
 // ajena con una imagen incrustada.

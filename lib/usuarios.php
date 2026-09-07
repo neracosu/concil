@@ -63,6 +63,36 @@ function nombre_usuario(): string
     return (string) (usuario_actual()['nombre'] ?? '');
 }
 
+/**
+ * Claro, oscuro o lo que diga el equipo.
+ *
+ * Se guarda en la ficha de la persona para que la lleve a cualquier
+ * computadora, y además en una galleta: la pantalla de acceso se dibuja antes
+ * de saber quién entra, y llegar a un fogonazo blanco de madrugada molesta.
+ */
+function tema(): string
+{
+    $u = usuario_actual();
+    $t = (string) ($u['tema'] ?? ($_COOKIE['CONCILTEMA'] ?? ''));
+    return in_array($t, ['claro', 'oscuro'], true) ? $t : '';
+}
+
+/** Deja anotada la preferencia en la ficha y en la galleta. */
+function fijar_tema(string $t): void
+{
+    $t = in_array($t, ['claro', 'oscuro'], true) ? $t : '';
+    $id = usuario_id_actual();
+    if ($id !== null) {
+        db()->prepare('UPDATE usuarios SET tema = ? WHERE id = ?')->execute([$t, $id]);
+    }
+    setcookie('CONCILTEMA', $t, [
+        'expires'  => time() + 31536000,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
 /** El id de quien está trabajando, para dejarlo anotado en lo que toque. */
 function usuario_id_actual(): ?int
 {

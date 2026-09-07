@@ -14,6 +14,11 @@
 :root{
   --tinta:#06091a; --panel:#0b1026; --panel-2:#111838; --panel-3:#18204a;
   --linea:rgba(255,255,255,.08); --linea-fuerte:rgba(212,168,87,.28);
+  --linea-suave:rgba(255,255,255,.05); --fila:rgba(255,255,255,.045); --fila-sobre:rgba(255,255,255,.028);
+  --velo:rgba(6,9,26,.72); --sombra:rgba(0,0,0,.62); --velo-fuerte:rgba(3,5,15,.86);
+  --oro-texto:linear-gradient(120deg,#f7e9c4,#ecd193 40%,#d4a857 60%,#b88a3a);
+  --sobre-oro:#1a1305;
+  color-scheme:dark;
 
   --texto:#f3eedd; --suave:rgba(243,238,221,.72); --mudo:rgba(243,238,221,.46); --tenue:rgba(243,238,221,.26);
 
@@ -26,6 +31,48 @@
   --sans:"Outfit",system-ui,-apple-system,sans-serif;
   --t:120ms cubic-bezier(.2,.7,.2,1);
   --lateral:236px;
+}
+
+/* ==========================================================================
+   Modo claro.
+   Los mismos nombres, otros valores: ninguna regla de abajo sabe en qué modo
+   está. El dorado de marca se oscurece porque sobre papel blanco el de la
+   pantalla no se lee; los colores contables se apagan por lo mismo.
+   Se escribe dos veces —para quien lo elige y para quien no elige nada y su
+   equipo está en claro— porque CSS no deja reusar un bloque de variables.
+   ========================================================================== */
+:root[data-tema="claro"]{
+  --tinta:#f4f2ec; --panel:#fffefb; --panel-2:#f7f5ef; --panel-3:#ece8dd;
+  --linea:rgba(20,16,4,.13); --linea-fuerte:rgba(140,101,32,.34);
+  --linea-suave:rgba(20,16,4,.08); --fila:rgba(20,16,4,.07); --fila-sobre:rgba(140,101,32,.06);
+  --velo:rgba(244,242,236,.78); --sombra:rgba(60,48,20,.22); --velo-fuerte:rgba(244,242,236,.92);
+  --oro-texto:linear-gradient(120deg,#7a5616,#8c6520 45%,#a87c2c);
+  --sobre-oro:#fffefb;
+  color-scheme:light;
+
+  --texto:#1d1a10; --suave:rgba(29,26,16,.76); --mudo:rgba(29,26,16,.55); --tenue:rgba(29,26,16,.32);
+
+  --oro:#8c6520; --oro-claro:#6d4e17; --oro-oscuro:#e3cfa2;
+  --salida:#b8371a; --entrada:#1f7a35; --pendiente:#8a6100;
+  --azul:#37508f; --cian:#0f6f8c; --violeta:#7a1fa6;
+}
+
+@media (prefers-color-scheme: light){
+  :root:not([data-tema="oscuro"]):not([data-tema="claro"]){
+    --tinta:#f4f2ec; --panel:#fffefb; --panel-2:#f7f5ef; --panel-3:#ece8dd;
+    --linea:rgba(20,16,4,.13); --linea-fuerte:rgba(140,101,32,.34);
+    --linea-suave:rgba(20,16,4,.08); --fila:rgba(20,16,4,.07); --fila-sobre:rgba(140,101,32,.06);
+    --velo:rgba(244,242,236,.78); --sombra:rgba(60,48,20,.22); --velo-fuerte:rgba(244,242,236,.92);
+    --oro-texto:linear-gradient(120deg,#7a5616,#8c6520 45%,#a87c2c);
+    --sobre-oro:#fffefb;
+    color-scheme:light;
+
+    --texto:#1d1a10; --suave:rgba(29,26,16,.76); --mudo:rgba(29,26,16,.55); --tenue:rgba(29,26,16,.32);
+
+    --oro:#8c6520; --oro-claro:#6d4e17; --oro-oscuro:#e3cfa2;
+    --salida:#b8371a; --entrada:#1f7a35; --pendiente:#8a6100;
+    --azul:#37508f; --cian:#0f6f8c; --violeta:#7a1fa6;
+  }
 }
 
 *{box-sizing:border-box}
@@ -46,7 +93,7 @@ button{cursor:pointer}
 .acceso-caja{width:100%;max-width:352px;text-align:center}
 .acceso-logo{
   font-size:46px;font-weight:700;letter-spacing:.13em;margin:0;line-height:1;
-  background:var(--gold-grad-text,linear-gradient(120deg,#f7e9c4,#ecd193 40%,#d4a857 60%,#b88a3a));
+  background:var(--oro-texto,linear-gradient(120deg,#f7e9c4,#ecd193 40%,#d4a857 60%,#b88a3a));
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .acceso-marca{font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--mudo);margin:12px 0 22px}
@@ -72,7 +119,7 @@ button{cursor:pointer}
 .marca{padding:2px 8px 0}
 .marca b{
   display:block;font-size:21px;font-weight:700;letter-spacing:.10em;line-height:1;
-  background:var(--gold-grad-text,linear-gradient(120deg,#f7e9c4,#ecd193 40%,#d4a857 60%,#b88a3a));
+  background:var(--oro-texto,linear-gradient(120deg,#f7e9c4,#ecd193 40%,#d4a857 60%,#b88a3a));
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .marca span{display:block;font-size:9.5px;letter-spacing:.20em;text-transform:uppercase;color:var(--mudo);margin-top:5px}
@@ -91,7 +138,7 @@ button{cursor:pointer}
 }
 .lateral-pie{margin-top:auto;font-size:11.5px;color:var(--tenue);padding:0 8px}
 .lateral-pie .credito{
-  margin-top:14px;padding-top:12px;border-top:1px solid var(--linea-soft,rgba(255,255,255,.06));
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--linea-suave);
   font-size:10.5px;line-height:1.65;color:var(--tenue);
 }
 .lateral-pie .credito b{color:var(--oro);letter-spacing:.09em;font-weight:600}
@@ -112,7 +159,7 @@ button{cursor:pointer}
 }
 .btn:hover{background:var(--panel-3);border-color:var(--linea-fuerte)}
 .btn:active{transform:translateY(1px)}
-.btn-oro{background:var(--oro);color:#1a1305;border-color:var(--oro);font-weight:600}
+.btn-oro{background:var(--oro);color:var(--sobre-oro);border-color:var(--oro);font-weight:600}
 .btn-oro:hover{background:var(--oro-claro);border-color:var(--oro-claro)}
 .btn-sm{padding:5px 10px;font-size:12.5px}
 .btn-peligro:hover{background:rgba(255,143,107,.14);border-color:var(--salida);color:var(--salida)}
@@ -169,10 +216,10 @@ thead th{
   white-space:nowrap;position:sticky;top:0;z-index:2;
 }
 thead th.der{text-align:right}
-tbody td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.045);vertical-align:top}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--fila);vertical-align:top}
 tbody tr:last-child td{border-bottom:none}
 tbody tr{transition:background var(--t)}
-tbody tr:hover{background:rgba(255,255,255,.028)}
+tbody tr:hover{background:var(--fila-sobre)}
 td.der{text-align:right}
 td.fecha,td.ref{font-family:var(--mono);font-size:12.5px;color:var(--mudo);white-space:nowrap}
 td.concepto{max-width:390px;min-width:230px}
@@ -213,7 +260,7 @@ td.monto.c .barra{background:rgba(127,209,139,.12)}
 .paginas .saltos{display:flex;gap:5px}
 .paginas .saltos a,.paginas .saltos span{padding:4px 10px;border-radius:var(--r-sm);font-family:var(--mono);font-size:12.5px}
 .paginas .saltos a{background:var(--panel-3);color:var(--suave)}
-.paginas .saltos a:hover{background:var(--oro);color:#1a1305}
+.paginas .saltos a:hover{background:var(--oro);color:var(--sobre-oro)}
 .paginas .saltos span{color:var(--tenue)}
 
 /* ---------- Zona de carga ---------- */
@@ -230,7 +277,7 @@ td.monto.c .barra{background:rgba(127,209,139,.12)}
 /* ---------- Detalle / formulario lateral ---------- */
 .pila{display:flex;flex-direction:column;gap:12px}
 .par{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.dato{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13.5px}
+.dato{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid var(--linea-suave);font-size:13.5px}
 .dato:last-child{border-bottom:none}
 .dato dt{color:var(--mudo)}
 .dato dd{margin:0;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
@@ -263,11 +310,11 @@ body.guia-activa{overflow-x:hidden}
   opacity:0;transition:opacity 200ms ease,background 240ms ease;
 }
 .guia-velo.visible{opacity:1}
-.guia-velo.opaco{background:rgba(3,5,15,.80);backdrop-filter:blur(3px)}
+.guia-velo.opaco{background:var(--velo-fuerte);backdrop-filter:blur(3px)}
 
 .guia-foco{
   position:absolute;z-index:85;border-radius:var(--r);pointer-events:none;
-  box-shadow:0 0 0 9999px rgba(3,5,15,.80), 0 0 0 2px var(--oro), 0 0 34px rgba(212,168,87,.30);
+  box-shadow:0 0 0 9999px var(--velo-fuerte), 0 0 0 2px var(--oro), 0 0 34px rgba(212,168,87,.30);
   transition:top 300ms var(--easing,cubic-bezier(.2,.7,.2,1)),left 300ms cubic-bezier(.2,.7,.2,1),
              width 300ms cubic-bezier(.2,.7,.2,1),height 300ms cubic-bezier(.2,.7,.2,1),opacity 200ms ease;
 }
@@ -275,7 +322,7 @@ body.guia-activa{overflow-x:hidden}
 .guia-carta{
   position:absolute;z-index:95;width:min(384px,calc(100vw - 28px));
   background:var(--panel);border:1px solid var(--linea-fuerte);border-radius:var(--r);
-  padding:20px 22px 18px;box-shadow:0 24px 70px rgba(0,0,0,.62);
+  padding:20px 22px 18px;box-shadow:0 24px 70px var(--sombra);
   transition:top 300ms cubic-bezier(.2,.7,.2,1),left 300ms cubic-bezier(.2,.7,.2,1),opacity 160ms ease;
 }
 .guia-carta.saliendo{opacity:0}
@@ -380,12 +427,12 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
 .elegir-cuerpo{margin:0;background:var(--tinta);min-height:100vh}
 .elegir-velo{
   position:fixed;inset:0;display:grid;place-items:center;padding:22px;
-  background:radial-gradient(1200px 600px at 50% -10%,rgba(212,168,87,.07),transparent 60%),rgba(3,5,15,.92);
+  background:radial-gradient(1200px 600px at 50% -10%,rgba(212,168,87,.07),transparent 60%),var(--velo-fuerte);
   backdrop-filter:blur(3px);overflow:auto;
 }
 .elegir-carta{
   width:min(560px,100%);background:var(--panel);border:1px solid var(--linea-fuerte);
-  border-radius:var(--r);padding:34px 34px 26px;box-shadow:0 24px 70px rgba(0,0,0,.62);
+  border-radius:var(--r);padding:34px 34px 26px;box-shadow:0 24px 70px var(--sombra);
   animation:guia-entra-simple 320ms cubic-bezier(.2,.7,.2,1);
 }
 @keyframes guia-entra-simple{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -451,7 +498,7 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
        text-decoration:none;background:var(--panel-2);border:1px solid var(--linea)}
 .quien:hover{border-color:var(--oro)}
 .quien-inicial{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
-               background:var(--oro);color:#1a1305;font-weight:700;font-size:14px}
+               background:var(--oro);color:var(--sobre-oro);font-weight:700;font-size:14px}
 .quien > span:last-child{display:flex;flex-direction:column;line-height:1.25;min-width:0}
 .quien b{color:var(--texto);font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .quien span span{color:var(--tenue);font-size:11px}
@@ -558,3 +605,12 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
 
 /* Cada factura nueva del reparto, cuando se anota más de una. */
 .nueva-factura + .nueva-factura{margin-top:14px;padding-top:14px;border-top:1px dashed var(--linea)}
+
+/* Claro u oscuro. Tres botones y no un interruptor: «automático» es un estado
+   de verdad, y con dos no se puede volver a él. */
+.tema{display:flex;gap:4px;margin:0 0 12px}
+.tema button{flex:1;padding:6px 4px;font-size:11px;letter-spacing:.02em;
+  background:transparent;border:1px solid var(--linea);border-radius:var(--r-sm);
+  color:var(--mudo);transition:color var(--t),border-color var(--t),background var(--t)}
+.tema button:hover{color:var(--texto)}
+.tema button.on{color:var(--oro);border-color:var(--linea-fuerte);background:var(--panel-3)}

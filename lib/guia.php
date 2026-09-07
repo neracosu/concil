@@ -216,6 +216,14 @@ function guia_pasos(): array
             'nota' => 'También puede corregirlo desde el propio pago, sin venir hasta aquí.',
         ],
 
+        [
+            'ruta' => 'ajustes', 'sel' => '[data-guia="tema"]', 'lado' => 'derecha',
+            'titulo' => 'Con fondo claro o con fondo oscuro',
+            'texto' => 'Aquí elige cómo quiere ver la pantalla. <b>Automático</b> se pone como esté '
+                     . 'su computadora; los otros dos mandan siempre.',
+            'nota' => 'Lo que elija le sigue a cualquier computadora donde entre.',
+        ],
+
         // ------------------------------------------------------------ Cierre
         [
             'ruta' => 'panel', 'sel' => '',

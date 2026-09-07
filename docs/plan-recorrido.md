@@ -172,18 +172,26 @@ faltaba no era el bloqueo sino que la persona llegara hasta él: la factura no
 se veía. Ahora el bloqueo además dice **quién la pagó y desde qué banco**, en
 vez del seco «solo le faltan 0,00».
 
-## Fase 6 · Modo oscuro y modo claro · nº 9
+## Fase 6 · Modo oscuro y modo claro · nº 9 — HECHA el 06/09/2026
 
-**Un día. Versión 1.9.**
+**Entregada como versión 2.0.**
 
 - Los colores pasan a variables en `views/_layout.php`, un juego claro y otro
   oscuro, y un interruptor que recuerda la elección de cada persona.
 - Se revisan **las diecisiete pantallas**, no solo el diseño base: las tablas,
   los avisos, los colores de las categorías y el XLSX exportado no heredan solos.
 
-Va después de las fases de contenido a propósito, pero **desde la Fase 1 todo
-lo nuevo se escribe ya con variables de color**, para no tener que repintarlo
-dos veces.
+Cómo quedó:
+- **Tres opciones, no un interruptor**: Automático, Claro y Oscuro. «Automático»
+  es un estado de verdad —sigue a la computadora— y con dos botones no habría
+  manera de volver a él.
+- La elección **va en la ficha de la persona** (`usuarios.tema`), así que la
+  lleva a cualquier computadora, **y en una galleta**, porque la pantalla de
+  acceso se dibuja antes de saber quién entra.
+- Los colores estaban casi todos en variables; hubo que sacar a variable los
+  cuatro que quedaban crudos (líneas de tabla, velos, sombras) y **la letra que
+  va encima del dorado**, que en claro se volvía ilegible.
+- Las catorce pantallas comprobadas en claro: 200 y sin un aviso.
 
 ## Fase 7 · Los dos lados de un traspaso · nº 5
 

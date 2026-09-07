@@ -5,7 +5,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
     global $mensaje;
     $pend = pendientes_total();
     ?><!doctype html>
-<html lang="es">
+<html lang="es"<?= tema() !== '' ? ' data-tema="' . e(tema()) . '"' : '' ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -14,7 +14,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
 <meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=13">
+<link rel="stylesheet" href="assets/app.css?v=14">
 </head>
 <body>
 <div class="app">
@@ -81,6 +81,17 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
           <span><b><?= e($yo['nombre']) ?></b><span><?= $yo['maestro'] ? 'Maestro' : 'Mi perfil' ?></span></span>
         </a>
       <?php endif ?>
+      <form method="post" class="tema" data-guia="tema">
+        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+        <input type="hidden" name="accion" value="tema">
+        <?php $ahora = tema();
+        foreach ([['', 'Automático', 'Como esté la computadora'],
+                  ['claro', 'Claro', 'Fondo blanco'],
+                  ['oscuro', 'Oscuro', 'Fondo negro']] as [$v, $rot, $ayuda]): ?>
+          <button name="tema" value="<?= e($v) ?>" title="<?= e($ayuda) ?>"
+                  class="<?= $ahora === $v ? 'on' : '' ?>"><?= e($rot) ?></button>
+        <?php endforeach ?>
+      </form>
       <a href="?r=salir">Cerrar sesión</a>
       <div class="credito">
         <b><?= e(APP_NOMBRE) ?></b> v<?= e(APP_VERSION) ?><br>
