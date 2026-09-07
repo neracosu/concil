@@ -687,3 +687,6 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
 .lateral-pie .credito-version:hover{color:var(--suave);background:var(--fila)}
 .lateral-pie .credito-version.on{color:var(--suave);background:var(--fila)}
 .lateral-pie .credito-version:hover b,.lateral-pie .credito-version.on b{color:var(--oro-claro)}
+.mejoras-pie b{color:var(--texto);font-weight:600}
+.mejoras-tel{color:var(--oro);font-family:var(--mono);white-space:nowrap}
+.mejoras-tel:hover{text-decoration:underline}

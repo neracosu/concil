@@ -12,6 +12,12 @@ const APP_LEMA    = 'Conciliación bancaria';
 const APP_CREDITO = 'CONCIL by VIP Soft';
 const APP_NAME    = APP_CREDITO;   // usado en los títulos del navegador
 
+// A quién se le dicen las cosas. «Quien lleva el sistema» no lleva a nadie.
+// El teléfono NO se escribe aquí: este repositorio es público y un número en el
+// código se queda en internet para siempre, también en el historial. Vive en
+// secrets.php, con lo demás que no sale de este servidor.
+const APP_SOPORTE = 'Ing. Neri Colon';
+
 // El número de versión no se escribe aquí a mano: es el de la última mejora
 // anotada en lib/mejoras.php. Escrito en dos sitios acababa diciendo una cosa
 // en el menú y otra en la pantalla de Mejoras.
@@ -81,6 +87,12 @@ function secretos(): array
         $s = require SECRETS;
     }
     return $s;
+}
+
+/** Teléfono de quien lleva el sistema. Vacío si no está puesto: se calla. */
+function soporte_telefono(): string
+{
+    return (string) (secretos()['soporte_tel'] ?? '');
 }
 
 /** Tope real de subida del servidor, en MB (el menor entre los dos límites). */

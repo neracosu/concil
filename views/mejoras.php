@@ -72,8 +72,10 @@ encabezado_html('Mejoras', 'mejoras',
 <?php endforeach ?>
 
 <p class="mejoras-pie">
-  ¿Echa algo en falta o se le ocurre una mejora? Dígaselo a quien lleva el sistema:
-  así fue como entraron casi todas las de esta lista.
+  ¿Echa algo en falta o se le ocurre una mejora? Dígaselo a
+  <b><?= e(APP_SOPORTE) ?></b><?php $tel = soporte_telefono(); if ($tel !== ''): ?>,
+  <a href="tel:<?= e(preg_replace('/\D/', '', $tel)) ?>" class="mejoras-tel"><?= e($tel) ?></a><?php endif ?>.
+  Así fue como entraron casi todas las de esta lista.
 </p>
 
 <?php pie_html(); ?>
