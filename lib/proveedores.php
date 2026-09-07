@@ -572,6 +572,68 @@ function importar_proveedores(array $filas): array
     return ['creados' => $creados, 'completados' => $completados];
 }
 
+/* --------------------------------------------------- Pagos que se repiten */
+
+/**
+ * Cuántos días seguidos se vigilan. Al mismo proveedor se le paga el mismo
+ * monto muchas veces al año —un alquiler, una cuota—; lo que no es normal es
+ * que se repita dentro del mismo mes.
+ */
+const DIAS_PAGO_REPETIDO = 30;
+
+/**
+ * Otros pagos al mismo proveedor, por el mismo monto y cerca en el tiempo.
+ *
+ * Es la red que atrapa el pago duplicado cuando **no hay factura anotada**, que
+ * es la mayoría de los casos: dos personas pagando desde dos bancos distintos
+ * no se cruzan por ningún lado, y el monto es lo único que comparten.
+ *
+ * Mira todas las cuentas de la unidad a propósito: el caso que nos contaron es
+ * justamente el de la misma factura pagada desde dos bancos.
+ */
+function pagos_repetidos(int $movId, int $provId, float $monto, string $fecha, int $tope = 5): array
+{
+    if ($provId <= 0 || $monto <= 0) {
+        return [];
+    }
+    $s = db()->prepare('SELECT m.id, m.fecha, m.debito, m.justificacion, c.nombre cuenta, u.nombre autor
+                          FROM movimientos m
+                          JOIN cuentas c ON c.id = m.cuenta_id
+                     LEFT JOIN usuarios u ON u.id = m.usuario_id
+                         WHERE m.tipo = \'D\' AND m.proveedor_id = ? AND m.id <> ?
+                           AND ABS(m.debito - ?) < 0.01
+                           AND m.fecha BETWEEN DATE_SUB(?, INTERVAL ' . DIAS_PAGO_REPETIDO . ' DAY)
+                                           AND DATE_ADD(?, INTERVAL ' . DIAS_PAGO_REPETIDO . ' DAY)
+                           AND ' . filtro_sede() . '
+                      ORDER BY m.fecha DESC, m.id DESC
+                         LIMIT ' . max(1, $tope));
+    $s->execute([$provId, $movId, $monto, $fecha, $fecha]);
+    return $s->fetchAll();
+}
+
+/**
+ * Todos los montos que se le repiten a un proveedor dentro de la ventana.
+ * Con $provId se mira uno solo; sin él, la unidad entera, que es lo que
+ * necesita el panel para avisar sin que nadie vaya a buscarlo.
+ */
+function montos_repetidos(?int $provId = null, int $tope = 20): array
+{
+    $extra = $provId !== null ? ' AND m.proveedor_id = ' . (int) $provId : '';
+    return db()->query('SELECT m.proveedor_id, p.nombre proveedor, m.debito,
+                               COUNT(*) veces, MIN(m.fecha) f1, MAX(m.fecha) f2,
+                               COUNT(DISTINCT m.cuenta_id) cuentas,
+                               GROUP_CONCAT(DISTINCT c.nombre ORDER BY c.nombre SEPARATOR ", ") lista_cuentas
+                          FROM movimientos m
+                          JOIN proveedores p ON p.id = m.proveedor_id
+                          JOIN cuentas c ON c.id = m.cuenta_id
+                         WHERE m.tipo = \'D\' AND m.debito > 0 AND ' . filtro_sede() . $extra . '
+                      GROUP BY m.proveedor_id, m.debito
+                        HAVING COUNT(*) > 1
+                           AND DATEDIFF(MAX(m.fecha), MIN(m.fecha)) <= ' . DIAS_PAGO_REPETIDO . '
+                      ORDER BY m.debito DESC
+                         LIMIT ' . max(1, $tope))->fetchAll();
+}
+
 /* ------------------------------------------------------------- Las facturas */
 
 /**

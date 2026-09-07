@@ -78,6 +78,37 @@ encabezado_html('Panel', 'panel',
   </div>
 </div>
 
+<?php $repes = montos_repetidos(null, 8); ?>
+<div class="tarjeta" style="margin-bottom:16px" data-guia="repetidos">
+  <h2>Pagos que podrían estar repetidos</h2>
+  <?php if ($repes === []): ?>
+    <p class="nota" style="margin:0">Ninguno. No hay dos pagos del mismo monto a la misma
+      persona dentro del mismo mes.</p>
+  <?php else: ?>
+    <p class="nota" style="margin:0 0 12px">Al mismo proveedor se le fue el mismo monto más de una vez
+      en menos de un mes. Puede ser correcto; conviene mirarlo.</p>
+    <div class="tabla-scroll">
+      <table>
+        <thead><tr><th>A quién</th><th class="der">Monto Bs</th><th class="der">Veces</th>
+          <th>Cuándo</th><th>Desde</th></tr></thead>
+        <tbody>
+        <?php foreach ($repes as $r): ?>
+          <tr>
+            <td><a href="?r=proveedor&amp;id=<?= (int) $r['proveedor_id'] ?>"><?= e($r['proveedor']) ?></a></td>
+            <td class="der num"><?= bs((float) $r['debito']) ?></td>
+            <td class="der num"><?= (int) $r['veces'] ?></td>
+            <td style="white-space:nowrap"><?= e(date('d/m/y', strtotime($r['f1']))) ?>
+              y <?= e(date('d/m/y', strtotime($r['f2']))) ?></td>
+            <td style="font-size:12.5px;color:<?= (int) $r['cuentas'] > 1 ? 'var(--salida)' : 'var(--mudo)' ?>">
+              <?= e($r['lista_cuentas']) ?><?= (int) $r['cuentas'] > 1 ? ' · dos bancos' : '' ?></td>
+          </tr>
+        <?php endforeach ?>
+        </tbody>
+      </table>
+    </div>
+  <?php endif ?>
+</div>
+
 <div class="tarjeta" style="margin-bottom:16px" data-guia="cinta">
   <h2>A dónde fue el dinero</h2>
   <?php if ($totalDeb > 0): ?>

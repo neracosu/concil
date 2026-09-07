@@ -110,6 +110,27 @@ encabezado_html($p['nombre'], 'proveedores',
   </div>
 </div>
 
+<?php $repes = montos_repetidos($id); if ($repes !== []): ?>
+  <div class="aviso aviso-mal repetido" data-guia="repetidos-prov">
+    <b>Hay pagos que podrían estar repetidos</b>
+    A esta persona se le fue el mismo monto más de una vez en menos de un mes.
+    Puede ser correcto —una cuota, dos facturas iguales— o puede ser el mismo pago hecho dos veces.
+    <ul>
+      <?php foreach ($repes as $r): ?>
+        <li><b>Bs <?= bs((float) $r['debito']) ?></b> · <?= (int) $r['veces'] ?> veces ·
+          <?= e(date('d/m/Y', strtotime($r['f1']))) ?> y <?= e(date('d/m/Y', strtotime($r['f2']))) ?>
+          <?php if ((int) $r['cuentas'] > 1): ?>
+            · <b>desde <?= (int) $r['cuentas'] ?> bancos distintos</b> (<?= e($r['lista_cuentas']) ?>)
+          <?php else: ?>
+            · desde <?= e($r['lista_cuentas']) ?>
+          <?php endif ?>
+          <a href="?r=movimientos&amp;proveedor=<?= $id ?>&amp;tipo=D">ver sus pagos</a>
+        </li>
+      <?php endforeach ?>
+    </ul>
+  </div>
+<?php endif ?>
+
 <div class="rejilla" style="grid-template-columns:minmax(0,1fr) 330px;align-items:start">
   <div class="pila">
     <div class="marco-tabla">

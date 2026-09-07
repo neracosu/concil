@@ -78,6 +78,14 @@ function guia_pasos(): array
 
         // ------------------------------------------------------- Por justificar
         [
+            'ruta' => 'panel', 'sel' => '[data-guia="repetidos"]',
+            'titulo' => 'Que no se pague dos veces lo mismo',
+            'texto' => 'Si a una misma persona se le fue el mismo monto dos veces en menos de un mes, '
+                     . 'aquí aparece. Pasa cuando <b>dos personas pagan desde bancos distintos</b> y ninguna '
+                     . 'sabe lo de la otra.',
+            'nota' => 'Que salga no quiere decir que esté mal; quiere decir que vale la pena mirarlo.',
+        ],
+        [
             'ruta' => 'pendientes', 'sel' => '[data-guia="modo"]',
             'titulo' => 'Lo único que le va a pedir',
             'texto' => 'Las comisiones, los impuestos y los servicios se clasifican solos. Aquí queda lo que el sistema '

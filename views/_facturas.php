@@ -14,6 +14,37 @@
  * Las filas de facturas. Va aparte del panel entero porque es lo único que se
  * vuelve a pedir al servidor cuando se cambia de proveedor.
  */
+/**
+ * El aviso de pago repetido. Se dibuja en la bandeja, en el detalle y en el
+ * trozo que pide el navegador al cambiar de proveedor, porque los tres pasan
+ * por aquí.
+ */
+function aviso_pagos_repetidos(array $mov, ?int $provId): void
+{
+    if ($provId === null || $provId <= 0) {
+        return;
+    }
+    $otros = pagos_repetidos((int) $mov['id'], $provId, (float) $mov['debito'], (string) $mov['fecha']);
+    if ($otros === []) {
+        return;
+    } ?>
+    <div class="aviso aviso-mal repetido">
+      <b>Ojo: a esta persona ya se le pagó lo mismo</b>
+      <?= count($otros) === 1 ? 'Hay otro pago' : 'Hay otros ' . count($otros) . ' pagos' ?>
+      del mismo monto, <b>Bs <?= bs((float) $mov['debito']) ?></b>, en menos de un mes.
+      Compruebe que no sea el mismo dos veces antes de guardar.
+      <ul>
+        <?php foreach ($otros as $o): ?>
+          <li><a href="?r=movimiento&amp;id=<?= (int) $o['id'] ?>"><?= e(date('d/m/Y', strtotime($o['fecha']))) ?></a>
+            desde <b><?= e($o['cuenta']) ?></b><?= $o['autor'] ? ' · lo justificó ' . e($o['autor']) : '' ?>
+            <?php if ($o['justificacion']): ?><span class="origen"><?= e(mb_strimwidth((string) $o['justificacion'], 0, 70, '…')) ?></span><?php endif ?>
+          </li>
+        <?php endforeach ?>
+      </ul>
+    </div>
+    <?php
+}
+
 function lista_facturas(array $mov, ?int $provId, string $att = ''): void
 {
     $movId  = (int) $mov['id'];
@@ -23,6 +54,12 @@ function lista_facturas(array $mov, ?int $provId, string $att = ''): void
         echo '<p class="reparto-vacio">Diga arriba a quién se le pagó y aquí aparecerán sus facturas.</p>';
         return;
     }
+
+    // Lo primero, antes que las facturas: si a ese proveedor ya se le fue el
+    // mismo monto hace poco, hay que decirlo aquí, que es donde todavía se
+    // puede evitar. Va antes de cualquier salida temprana a propósito: el pago
+    // duplicado no necesita que existan facturas para ocurrir.
+    aviso_pagos_repetidos($mov, $provId);
 
     // Las abiertas, más las que este pago ya cubre aunque estén saldadas: si no,
     // al volver a entrar desaparecerían y parecería que se perdió el dato.

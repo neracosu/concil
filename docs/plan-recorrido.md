@@ -109,9 +109,24 @@ después.
   del momento del reparto a propósito, y así se dice en la pantalla.
 - Paso nuevo en la visita guiada, con el ancla `data-guia="tasa-mano"`.
 
-## Fase 4 · Alerta de pagos repetidos · nº 6
+## Fase 4 · Alerta de pagos repetidos · nº 6 — HECHA el 06/09/2026
 
-**Un día. Versión 1.7.**
+**Entregada como versión 1.8.** Margen elegido: **mismo proveedor, mismo monto
+exacto, treinta días** (`DIAS_PAGO_REPETIDO` en `lib/proveedores.php`), mirando
+**todas las cuentas** de la unidad, que es justo el caso que contaron.
+
+Sale en tres sitios:
+- **Al justificar**, encima de las facturas y antes de guardar, que es donde
+  todavía se puede evitar. Se dibuja en `aviso_pagos_repetidos()` de
+  `views/_facturas.php`, por donde pasan la bandeja, el detalle y el trozo que
+  pide el navegador al escribir el proveedor: los tres avisan solos.
+- **En la ficha del proveedor**, con cuántas veces y desde qué bancos.
+- **En el panel**, una tarjeta fija que dice «ninguno» cuando no hay nada: la
+  ausencia de aviso también es información.
+
+Cuando el mismo monto salió de **dos bancos distintos**, el aviso lo dice en
+rojo y con todas las letras. Paso nuevo en la visita guiada
+(`data-guia="repetidos"`).
 
 El aviso que funciona sin depender de que nadie anote facturas.
 
@@ -120,10 +135,7 @@ El aviso que funciona sin depender de que nadie anote facturas.
   **en el momento de justificar**, antes de guardar.
 - El aviso dice desde qué banco salió el otro pago y quién lo justificó, que es
   justo lo que hoy no se ve.
-- **Depende de una respuesta suya**: con qué margen salta (monto exacto o
-  parecido, y dentro de cuántos días).
-
-**Queda listo**: el caso que contaron —dos personas pagando desde dos bancos—
+**Quedó listo**: el caso que contaron —dos personas pagando desde dos bancos—
 deja de pasar desapercibido aunque no haya ni una factura cargada.
 
 ## Fase 5 · Que la factura no se esconda · nº 3, nº 2 y nº 4
