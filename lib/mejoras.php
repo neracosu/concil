@@ -41,6 +41,16 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-07', 'version' => '2.2.1', 'tipo' => 'correccion',
+            'titulo' => 'La visita guiada con fondo claro ya deja ver el resto de la pantalla',
+            'resumen' => 'Con el fondo claro, la visita guiada tapaba todo lo que no estaba explicando: '
+                       . 'no se veía sobre qué parte del sistema le estaban hablando. Ahora el resto se '
+                       . 'apaga, pero se sigue viendo.',
+            'detalles' => [
+                'Lo señalado se ve con su color de siempre; lo demás, atenuado.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-07', 'version' => '2.2', 'tipo' => 'nuevo',
             'titulo' => 'Esta misma pantalla: saber qué se ha hecho',
             'resumen' => 'Ahora puede ver, sin preguntarle a nadie, todo lo que el sistema '

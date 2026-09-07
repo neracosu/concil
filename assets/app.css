@@ -40,12 +40,18 @@
    pantalla no se lee; los colores contables se apagan por lo mismo.
    Se escribe dos veces —para quien lo elige y para quien no elige nada y su
    equipo está en claro— porque CSS no deja reusar un bloque de variables.
+
+   El velo NO sigue al fondo: en oscuro es más oscuro que la pantalla, pero en
+   claro tiene que ser oscuro también. Un velo casi blanco sobre una interfaz
+   clara no atenúa nada, la borra: durante la visita guiada el resto de la
+   pantalla desaparecía en un crema plano y no se veía sobre qué se estaba
+   hablando. Atenuar es dejar el resto visible, solo apagado.
    ========================================================================== */
 :root[data-tema="claro"]{
   --tinta:#f4f2ec; --panel:#fffefb; --panel-2:#f7f5ef; --panel-3:#ece8dd;
   --linea:rgba(20,16,4,.13); --linea-fuerte:rgba(140,101,32,.34);
   --linea-suave:rgba(20,16,4,.08); --fila:rgba(20,16,4,.07); --fila-sobre:rgba(140,101,32,.06);
-  --velo:rgba(244,242,236,.78); --sombra:rgba(60,48,20,.22); --velo-fuerte:rgba(244,242,236,.92);
+  --velo:rgba(52,41,16,.30); --sombra:rgba(60,48,20,.22); --velo-fuerte:rgba(46,36,14,.44);
   --oro-texto:linear-gradient(120deg,#7a5616,#8c6520 45%,#a87c2c);
   --sobre-oro:#fffefb;
   color-scheme:light;
@@ -62,7 +68,7 @@
     --tinta:#f4f2ec; --panel:#fffefb; --panel-2:#f7f5ef; --panel-3:#ece8dd;
     --linea:rgba(20,16,4,.13); --linea-fuerte:rgba(140,101,32,.34);
     --linea-suave:rgba(20,16,4,.08); --fila:rgba(20,16,4,.07); --fila-sobre:rgba(140,101,32,.06);
-    --velo:rgba(244,242,236,.78); --sombra:rgba(60,48,20,.22); --velo-fuerte:rgba(244,242,236,.92);
+    --velo:rgba(52,41,16,.30); --sombra:rgba(60,48,20,.22); --velo-fuerte:rgba(46,36,14,.44);
     --oro-texto:linear-gradient(120deg,#7a5616,#8c6520 45%,#a87c2c);
     --sobre-oro:#fffefb;
     color-scheme:light;
