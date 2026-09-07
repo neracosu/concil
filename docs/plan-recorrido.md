@@ -71,14 +71,22 @@ aparezca el nombre de quien lo hizo.
 **Queda listo**: el reporte de auditoría contesta «quién» sin preguntarle a
 nadie, desde el primer movimiento que justifiquen.
 
-## Fase 2 · Ver los conceptos sin cambiar de pantalla · nº 7
+## Fase 2 · Ver los conceptos sin cambiar de pantalla · nº 7 — HECHA el 06/09/2026
 
-**Unas horas. Sale en el mismo despliegue que la Fase 1.**
+**Entregada como versión 1.6.**
 
-Donde dice «justificar 8 movimientos», un botón que despliega ahí mismo los 8
-conceptos. Toca `views/panel.php` y `views/pendientes.php`. Es pequeña y va
-pegada a la anterior porque cae en las mismas pantallas: un solo despliegue en
-vez de dos.
+En la bandeja, cada tarjeta de grupo lleva ahora un desplegable **«Ver los 8
+conceptos»** con la fecha, la cuenta, el concepto tal como vino del banco, la
+referencia y el monto de cada uno. Se abre sin salir de la pantalla y cada
+fecha enlaza a su movimiento.
+
+- Los movimientos de los grupos visibles se traen **en una sola consulta**, con
+  `ROW_NUMBER()` de MariaDB, y como mucho 30 por grupo (`TOPE_CONCEPTOS`): así
+  el corte lo hace la base y no se leen filas de más. Cuando hay más, la
+  tarjeta lo dice y remite a «Ver uno por uno».
+- Se añadió su paso en la visita guiada, con el ancla `data-guia="conceptos"`.
+- Se quedó **en la bandeja y no en el panel**: es ahí donde se decide
+  clasificar ocho de una vez, y era ahí donde había que ver los ocho.
 
 ## Fase 3 · La tasa a mano · nº 1
 

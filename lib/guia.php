@@ -90,6 +90,13 @@ function guia_pasos(): array
                      . 'Al guardar, <b>se resuelven todos juntos</b>.',
         ],
         [
+            'ruta' => 'pendientes', 'sel' => '[data-guia="conceptos"]',
+            'titulo' => 'Antes de decidir, mire los que son',
+            'texto' => 'Si le parecen muchos para resolverlos de un golpe, abra aquí y <b>vea uno por uno</b> '
+                     . 'lo que el banco escribió en cada pago, con su fecha y su monto.',
+            'nota' => 'Nadie tiene que clasificar a ciegas.',
+        ],
+        [
             'ruta' => 'pendientes', 'sel' => '[data-guia="regla"]',
             'titulo' => 'Esta casilla es la más importante',
             'texto' => 'Con ella marcada, el sistema <b>aprende</b>. Ese tipo de pago llegará ya clasificado el mes que viene '

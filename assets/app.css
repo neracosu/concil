@@ -527,3 +527,12 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
   .reparto-fila{grid-template-columns:28px minmax(0,1fr);grid-template-areas:"m d" ". n"}
   .reparto-marca{grid-area:m} .reparto-datos{grid-area:d} .reparto-monto{grid-area:n}
 }
+
+/* Los conceptos que hay detrás de un grupo. Se despliegan en la misma tarjeta
+   porque la decisión —clasificar los ocho de una vez— se toma ahí mismo. */
+.conceptos{margin:0 0 16px;border:1px solid var(--linea);border-radius:var(--r-sm);padding:0 14px}
+.conceptos>summary{cursor:pointer;padding:11px 0;font-size:13.5px;color:var(--oro-claro);list-style-position:inside}
+.conceptos[open]>summary{border-bottom:1px solid var(--linea);margin-bottom:12px}
+.conceptos .tabla-scroll{margin-bottom:14px}
+.conceptos table{font-size:12.5px}
+.conceptos thead th{position:static}

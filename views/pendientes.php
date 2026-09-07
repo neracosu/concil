@@ -8,6 +8,10 @@ exigir_login();
 
 const GRUPO_SQL = "UPPER(REGEXP_REPLACE(m.concepto, '[0-9]+', '#'))";
 
+/* Cuántos conceptos se enseñan al desplegar un grupo. Con más de treinta la
+   tarjeta deja de leerse y para eso está «Ver uno por uno». */
+const TOPE_CONCEPTOS = 30;
+
 /** Del concepto agrupado saca un patrón usable como regla. */
 function sugerir_patron(string $grupo): string
 {
@@ -255,6 +259,29 @@ if ($modo === 'grupos'):
                          GROUP BY grupo
                          ORDER BY total DESC
                             LIMIT $porPagina OFFSET $off")->fetchAll();
+
+    /* Los movimientos que hay detrás de cada grupo, para poder desplegarlos sin
+       salir de la pantalla: quien va a clasificar ocho de una vez tiene derecho
+       a ver los ocho antes de decidir. Se traen los de los grupos visibles en
+       una sola consulta, y como mucho TOPE_CONCEPTOS por grupo: con la ventana
+       de MariaDB el corte se hace en la base y no se leen filas de más. */
+    $detalle = [];
+    if ($grupos !== []) {
+        $claves = array_column($grupos, 'grupo');
+        $marcas = implode(',', array_fill(0, count($claves), '?'));
+        $sql = 'WITH x AS (
+                  SELECT ' . GRUPO_SQL . " grupo, m.id, m.fecha, m.concepto, m.referencia,
+                         m.debito, m.nota_banco, c.nombre cuenta,
+                         ROW_NUMBER() OVER (PARTITION BY " . GRUPO_SQL . ' ORDER BY m.fecha, m.id) rn
+                    FROM movimientos m JOIN cuentas c ON c.id = m.cuenta_id
+                   WHERE m.tipo = \'D\' AND m.categoria_id IS NULL AND ' . filtro_sede()
+                 . ' AND ' . GRUPO_SQL . " IN ($marcas)
+                )
+                SELECT * FROM x WHERE rn <= " . TOPE_CONCEPTOS . ' ORDER BY grupo, rn';
+        $s = $pdo->prepare($sql);
+        $s->execute($claves);
+        foreach ($s as $r) { $detalle[$r['grupo']][] = $r; }
+    }
     ?>
     <div class="aviso aviso-nota">
       Se agrupan los conceptos que solo cambian en los números. Clasifica el grupo completo de una vez;
@@ -281,6 +308,33 @@ if ($modo === 'grupos'):
               <div class="origen"><?= number_format((int) $g['n'], 0, ',', '.') ?> movimiento<?= $g['n'] == 1 ? '' : 's' ?></div>
             </div>
           </div>
+          <?php $filas = $detalle[$g['grupo']] ?? []; if ($filas !== []): ?>
+            <details class="conceptos"<?= $k === 0 ? ' data-guia="conceptos"' : '' ?>>
+              <summary><?= (int) $g['n'] === 1 ? 'Ver el movimiento' : 'Ver los ' . number_format((int) $g['n'], 0, ',', '.') . ' conceptos' ?></summary>
+              <div class="tabla-scroll">
+                <table>
+                  <thead><tr><th>Fecha</th><th>Cuenta</th><th>Concepto tal como vino del banco</th>
+                    <th>Referencia</th><th class="der">Débito Bs</th></tr></thead>
+                  <tbody>
+                  <?php foreach ($filas as $d): ?>
+                    <tr>
+                      <td class="fecha"><a href="?r=movimiento&amp;id=<?= (int) $d['id'] ?>"><?= e(date('d/m/y', strtotime($d['fecha']))) ?></a></td>
+                      <td style="font-size:12.5px;color:var(--mudo);white-space:nowrap"><?= e($d['cuenta']) ?></td>
+                      <td class="concepto"><span class="txt"><?= e($d['concepto']) ?></span>
+                        <?php if ($d['nota_banco']): ?><span class="nota"><?= e(mb_strimwidth((string) $d['nota_banco'], 0, 60, '…')) ?></span><?php endif ?></td>
+                      <td class="ref"><?= e($d['referencia']) ?></td>
+                      <td class="der num"><?= bs((float) $d['debito']) ?></td>
+                    </tr>
+                  <?php endforeach ?>
+                  </tbody>
+                </table>
+              </div>
+              <?php if ((int) $g['n'] > count($filas)): ?>
+                <p class="origen" style="margin:10px 0 0">Se enseñan los <?= count($filas) ?> primeros.
+                  Los otros <?= number_format((int) $g['n'] - count($filas), 0, ',', '.') ?> están en «Ver uno por uno».</p>
+              <?php endif ?>
+            </details>
+          <?php endif ?>
           <?php form_clasificar($cats, 'grupo', ['grupo' => $g['grupo']], sugerir_patron($g['grupo']), $idf) ?>
           <div class="acciones" style="margin-top:14px">
             <button class="btn btn-oro" form="<?= $idf ?>">Justificar los <?= (int) $g['n'] ?></button>
