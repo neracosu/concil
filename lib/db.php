@@ -376,8 +376,17 @@ function sembrar_maestro(PDO $pdo): void
     }
     $hash = ajuste('pin_hash');
     if ($hash === null) {
-        return;                 // instalación nueva: el PIN aún no existe
+        // Base recién creada: no hay PIN anterior que heredar. Si aquí no se
+        // crea a nadie, la tabla se queda vacía y la pantalla de acceso pide un
+        // PIN que no existe en ninguna parte: la instalación nace cerrada y no
+        // hay forma de entrar. El PIN de arranque se genera solo y queda en
+        // DATA_DIR/PIN-INICIAL.txt.
+        $hash = password_hash(pin_inicial(), PASSWORD_DEFAULT);
+        guardar_ajuste('pin_hash', $hash);
+        guardar_ajuste('pin_inicial_pendiente', '1');
     }
+    // La huella del PIN se queda en ceros: aquí no siempre se conoce el PIN en
+    // claro. La calcula el primer acceso.
     $pdo->prepare('INSERT INTO usuarios (nombre, pin_hash, pin_busqueda, maestro) VALUES (?, ?, ?, 1)')
         ->execute(['Maestro', $hash, str_repeat('0', 64)]);
 }
