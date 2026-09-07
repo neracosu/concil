@@ -247,6 +247,13 @@ El público incluye personas que no trabajan con sistemas. Evita «conciliar»,
 en la visita guiada y en la ayuda de cada pantalla. Di qué gana quien lo usa, no
 qué hace el programa. Frases cortas.
 
+**Español de Venezuela, no de España.** Un texto que suena importado desentona
+y le quita autoridad al producto delante de quien lo va a aprobar. No: «echar en
+falta», «abajo del todo», «de sitio», «el ratón», «pulsar», «ordenador»,
+«fichero». Sí: «faltar algo», «al final de», «de lugar», «el mouse», «hacer
+clic», «computadora», «archivo». Relee lo que escribas pensando en si alguien de
+Caracas lo diría así.
+
 ## Probar de punta a punta
 
 Se puede recorrer la aplicación por HTTP sin conocer el PIN: crear la sesión con
