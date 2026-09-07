@@ -65,7 +65,7 @@ function mejoras(): array
             'titulo' => 'Pasar dinero de una cuenta suya a otra deja de contarse dos veces',
             'resumen' => 'Cuando mueve dinero entre dos cuentas del grupo, antes salían dos apuntes sueltos '
                        . 'y parecían un gasto y un ingreso. Ahora el sistema los reconoce como lo que son: '
-                       . 'el mismo dinero cambiándose de sitio.',
+                       . 'el mismo dinero cambiándose de lugar.',
             'detalles' => [
                 'Solo une lo que no deja lugar a dudas: mismo monto, cuentas distintas y tres días de margen.',
                 'Si hay más de un candidato posible, se lo pregunta en vez de adivinar.',

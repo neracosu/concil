@@ -51,7 +51,7 @@ function guia_pasos(): array
             'ruta' => 'panel', 'sel' => '[data-guia="cinta"]',
             'titulo' => 'En qué se fue el dinero, de un vistazo',
             'texto' => 'Cada color es un tipo de gasto y el ancho es cuánto pesó. Así ve si el mes se le fue '
-                     . 'en proveedores, en nómina o en comisiones. Pase el ratón por encima para ver el monto.',
+                     . 'en proveedores, en nómina o en comisiones. Pase el mouse por encima para ver el monto.',
         ],
         [
             'ruta' => 'panel', 'sel' => '[data-guia="saldos"]',
@@ -235,9 +235,9 @@ function guia_pasos(): array
         [
             'ruta' => 'panel', 'sel' => '[data-guia="mejoras"]', 'lado' => 'derecha',
             'titulo' => 'Y qué se le ha ido añadiendo',
-            'texto' => 'Abajo del todo está el número de la versión que usa. <b>Haga clic ahí</b> y verá, '
+            'texto' => 'Al final del menú está el número de la versión que usa. <b>Haga clic ahí</b> y verá, '
                      . 'en orden, todo lo que el sistema ha aprendido a hacer desde que arrancó.',
-            'nota' => 'Casi todo lo que hay en esa lista lo pidió alguien del equipo. Si echa algo en falta, dígalo.',
+            'nota' => 'Casi todo lo que hay en esa lista lo pidió alguien del equipo. Si le falta algo, pídalo.',
         ],
 
         // ------------------------------------------------------------ Cierre

@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
     if ($accion === 'analizar' && empty($_FILES['archivos']['name'][0])) {
-        flash('mal', 'No elegiste ningún archivo. Pulsa «Elegir archivos» y busca los del banco en tu computadora.');
+        flash('mal', 'No elegiste ningún archivo. Haz clic en «Elegir archivos» y busca los del banco en tu computadora.');
         redirigir('?r=carga');
     }
 
@@ -199,7 +199,7 @@ encabezado_html('Cargar extractos', 'carga',
     <input type="hidden" name="accion" value="analizar">
     <div class="soltar" id="zonaSoltar" data-guia="soltar">
       <b>Los archivos del banco van aquí</b>
-      <span>Arrástralos hasta este recuadro, o pulsa el botón para buscarlos en tu computadora.</span>
+      <span>Arrástralos hasta este recuadro, o haz clic en el botón para buscarlos en tu computadora.</span>
       <input type="file" name="archivos[]" id="archivos" multiple accept=".xlsx,.xls,.csv" hidden>
       <label for="archivos" class="btn btn-oro" style="margin-top:18px;display:inline-flex">Elegir archivos</label>
       <span style="display:block;margin-top:12px;font-size:12.5px;color:var(--tenue)">
