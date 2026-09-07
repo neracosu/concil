@@ -8,26 +8,43 @@ que se pueden usar en cuanto salen. Nada de esperar al final.
 
 ---
 
+## El reinicio manda el calendario
+
+**Lo que hay cargado hoy son pruebas.** Los 1.100 movimientos, las dos
+importaciones y lo poco justificado a mano se van a **borrar antes de que el
+equipo empiece a trabajar de verdad**. Eso quita una urgencia y crea otra, más
+clara: no hay que correr detrás de datos que ya existen, hay que llegar
+**antes del primer día real**.
+
+Por eso el trabajo se parte en dos paquetes:
+
+- **Antes de que arranquen** — Fases 1, 2 y 3. Unos **dos días**. Es lo que, si
+  no está puesto el primer día, deja un agujero que después no se rellena.
+- **Sobre la marcha** — Fases 4, 5, 6 y 7. Entran mientras ellos ya usan el
+  sistema, sin frenar el arranque.
+
 ## Las tres razones que mandan en el orden
 
-**1. Hay un reloj corriendo con la nº 8.** El sistema guarda si una categoría
-la puso una regla o una persona, pero nunca guardó **qué** persona. Hoy hay
-**444 movimientos clasificados por regla, solo 2 a mano y 283 sin justificar**.
-Esos 283 los van a justificar personas, una por una, en los próximos días. Cada
-uno que se justifique antes de añadir la columna del autor **queda sin autor
-para siempre**. Por eso la nº 8 va primera aunque no sea la más vistosa.
+**1. El autor solo se puede guardar hacia adelante.** El sistema anota si una
+categoría la puso una regla o una persona, pero nunca guardó **qué** persona.
+No se puede reconstruir después: lo que se clasifique sin la columna puesta
+queda sin nombre para siempre. Como la base arranca vacía, **no hay nada que
+rescatar hacia atrás** —lo que hay en `bitacora` es de las pruebas y se va con
+ellas—, pero por lo mismo la columna tiene que estar **el día uno**. Es un día
+de trabajo y es la única fase que no admite llegar tarde.
 
-**2. La nº 6 protege hoy; la 2 y la 3 todavía no.** Las tres son contra los
-pagos duplicados, pero la 2 y la 3 solo funcionan **si las facturas están
-anotadas**, y la tabla `facturas` está vacía. La nº 6 —avisar cuando a un
-proveedor se le repite el mismo monto— funciona con lo que ya hay cargado, sin
-que nadie tenga que anotar nada. Va antes.
+**2. La nº 6 protege desde el primer pago; la 2 y la 3 no.** Las tres son
+contra los pagos duplicados, pero la 2 y la 3 solo funcionan **si las facturas
+están anotadas**, y anotar facturas es un hábito que el equipo va a tardar en
+tomar: van a justificar pagos mucho antes de empezar a cargar facturas. La nº 6
+—avisar cuando a un proveedor se le repite el mismo monto— funciona con solo
+los movimientos del banco. Va antes.
 
-**3. La nº 1 es más barata hoy que dentro de un mes.** Corregir la tasa de un
-día choca con que el reparto de un pago congela la tasa del momento. Como
-`pagos_factura` está **vacía**, ahora mismo no hay nada que invalidar: la
-decisión se toma en frío y sin víctimas. Si se deja para después de empezar a
-repartir pagos, hay que decidirla con dinero ya anotado encima.
+**3. La nº 1 es más barata antes del arranque que después.** Corregir la tasa
+de un día choca con que el reparto de un pago congela la tasa del momento.
+Mientras no haya un solo pago repartido no hay nada que invalidar: la decisión
+se toma en frío. En cuanto auditoría empiece a repartir pagos —día uno de su
+trabajo— la misma decisión se toma con dinero anotado encima.
 
 ---
 
@@ -43,12 +60,12 @@ aparezca el nombre de quien lo hizo.
   `views/movimiento.php`.
 - Se muestra en la lista, en el detalle, en el reporte y en el XLSX exportado
   (`views/movimientos.php`, `views/reportes.php`, `lib/exportar.php`).
-- **Rescate de lo viejo**: la tabla `bitacora` guarda 8 justificaciones y 12
-  correcciones con su autor. De ahí se rellena lo poco que hay hecho a mano.
-  Lo que no aparezca queda en blanco, sin inventar.
+- **Sin rescate de lo viejo**: lo que hay clasificado a mano son 2 movimientos
+  de prueba que se borran en el reinicio. Esto abarata la fase: la columna
+  nace vacía y se llena sola desde el primer día real.
 
 **Queda listo**: el reporte de auditoría contesta «quién» sin preguntarle a
-nadie.
+nadie, desde el primer movimiento que justifiquen.
 
 ## Fase 2 · Ver los conceptos sin cambiar de pantalla · nº 7
 
@@ -112,8 +129,9 @@ Las tres van juntas porque son la misma pantalla y la misma tabla.
   lo que hoy empuja a la gente a improvisar.
 
 **Depende de ustedes**: esta fase protege de verdad cuando empiecen a anotar
-facturas. Mientras `facturas` siga vacía, es una red tendida bajo un trapecio
-donde nadie ha subido todavía.
+facturas. No hace falta que esté el primer día —nadie anota facturas la primera
+semana—, pero sí **antes de que auditoría tome el hábito**, o el hábito se toma
+con la pantalla que esconde las facturas pagadas.
 
 **Depende de una respuesta suya**: si pagar una factura ya cubierta se
 **bloquea** o solo se **avisa**. La costumbre de la casa es advertir y dejar
@@ -144,7 +162,9 @@ reglas y la visita guiada.
 
 Antes de tocar código hace falta **un traspaso real de agosto** para ver cómo se
 reconoce: si comparten referencia, si el monto calza exacto, cuántos días de
-diferencia hay entre los dos apuntes.
+diferencia hay entre los dos apuntes. No hay que esperar a que carguen nada:
+los extractos de `DATA_DIR/muestras/` sobreviven al reinicio y ahí están los
+traspasos de verdad.
 
 ---
 
@@ -162,8 +182,12 @@ Cuatro decisiones. Ninguna urgente hoy, pero cada una frena su fase:
 
 Y dos cosas que no son decisiones:
 
-- **Empezar a anotar facturas.** Sin eso, las fases 5 protegen en el papel.
-- **Un traspaso real de agosto** entre dos cuentas propias, para la Fase 7.
+- **Qué se conserva en el reinicio.** Se borran movimientos e importaciones.
+  Deberían quedarse las 5 cuentas, las 20 categorías, las 37 reglas, los 136
+  proveedores y las 1.831 tasas del BCV: volver a cargarlos es trabajo tirado.
+  Confírmenlo antes de borrar.
+- **Cuándo arrancan de verdad.** De esa fecha depende cuánto del plan entra en
+  el paquete de antes y cuánto sobre la marcha.
 
 ---
 
@@ -180,3 +204,7 @@ personas usando el sistema. Por eso:
   guiada, o el paso se salta en silencio y nadie se entera.
 - Antes de cada fase con migración, respaldo de la base en
   `DATA_DIR/respaldos/`.
+- **El reinicio es la única ocasión de comprobar que el sistema se levanta
+  limpio**: con la base vacía, `migrar()` tiene que crear cada tabla y cada
+  columna nueva y sembrar categorías y reglas sin ayuda. Se prueba en una base
+  aparte **antes** de vaciar la de verdad, no después.
