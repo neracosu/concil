@@ -105,6 +105,13 @@ function guia_pasos(): array
             'nota' => 'Nadie tiene que clasificar a ciegas.',
         ],
         [
+            'ruta' => 'pendientes', 'sel' => '[data-guia="factura-nueva"]',
+            'titulo' => 'Las facturas de ese pago',
+            'texto' => 'Si el pago cubre facturas, anótelas aquí: <b>las que hagan falta</b>, no solo una. '
+                     . 'Y si alguna ya estaba pagada, el sistema se lo dice antes de que la pague otra vez.',
+            'nota' => 'Las que ya están cubiertas aparecen abajo, para que se vea quién las pagó.',
+        ],
+        [
             'ruta' => 'pendientes', 'sel' => '[data-guia="regla"]',
             'titulo' => 'Esta casilla es la más importante',
             'texto' => 'Con ella marcada, el sistema <b>aprende</b>. Ese tipo de pago llegará ya clasificado el mes que viene '

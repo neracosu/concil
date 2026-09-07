@@ -309,6 +309,23 @@ function migrar(): void
     columna_si_falta($pdo, 'facturas', 'nota',           "VARCHAR(255) NOT NULL DEFAULT ''");
     columna_si_falta($pdo, 'facturas', 'usuario_id',     'INT NULL');
     columna_si_falta($pdo, 'facturas', 'origen',         "VARCHAR(12) NOT NULL DEFAULT 'manual'");
+    // El número en su forma comparable, para reconocer «0001» y «1» como la
+    // misma factura. Va en columna aparte y con índice suelto: la clave única
+    // sigue siendo la del número tal como se escribió, y cambiarla es la clase
+    // de migración que rompe cosas en caliente.
+    columna_si_falta($pdo, 'facturas', 'numero_clave',   "VARCHAR(60) NOT NULL DEFAULT ''");
+    if (!indice_existe($pdo, 'facturas', 'idx_factura_clave')) {
+        $pdo->exec('ALTER TABLE facturas ADD KEY idx_factura_clave (proveedor_id, sede_id, numero_clave)');
+    }
+    // Las que ya estaban se rellenan una sola vez; después la escribe el alta.
+    if (ajuste('facturas_clave') !== '1') {
+        $viejas = $pdo->query("SELECT id, numero FROM facturas WHERE numero_clave = ''")->fetchAll();
+        $up = $pdo->prepare('UPDATE facturas SET numero_clave = ? WHERE id = ?');
+        foreach ($viejas as $v) {
+            $up->execute([clave_factura((string) $v['numero']), (int) $v['id']]);
+        }
+        guardar_ajuste('facturas_clave', '1');
+    }
     // Dos empresas del grupo pueden recibir facturas con el mismo número del
     // mismo proveedor, así que la sede entra en la clave. El índice suelto de
     // proveedor_id se crea antes de soltar la clave vieja: es el que sostiene

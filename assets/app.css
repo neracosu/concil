@@ -546,3 +546,15 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
 .repetido li{margin-bottom:5px;color:var(--suave)}
 .repetido li b{display:inline;font-size:13.5px}
 .repetido .origen{display:block}
+
+/* Facturas ya pagadas dentro del reparto. Se ven, pero no estorban: es la
+   diferencia entre enterarse de que ya se pagó y volver a pagarla. */
+.pagadas{margin:12px 0 0;border:1px solid var(--linea);border-radius:var(--r-sm);padding:0 12px}
+.pagadas>summary{cursor:pointer;padding:9px 0;font-size:13px;color:var(--suave);list-style-position:inside}
+.pagadas[open]>summary{border-bottom:1px solid var(--linea);margin-bottom:10px}
+.pagadas ul{margin:0 0 12px;padding-left:18px}
+.pagadas li{margin-bottom:6px;font-size:13px;color:var(--suave)}
+.pagadas .origen{display:block}
+
+/* Cada factura nueva del reparto, cuando se anota más de una. */
+.nueva-factura + .nueva-factura{margin-top:14px;padding-top:14px;border-top:1px dashed var(--linea)}

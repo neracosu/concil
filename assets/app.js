@@ -265,5 +265,22 @@
     }
   });
 
+  // Anotar otra factura: se copia el bloque de campos, se vacía y se pone
+  // debajo. Sin esto solo cabía una factura nueva por pago, y un pago cubre a
+  // menudo dos o tres.
+  document.addEventListener('click', function (ev) {
+    var boton = ev.target.closest && ev.target.closest('[data-nueva-otra]');
+    if (!boton) return;
+    var caja = boton.closest('details').querySelector('[data-nuevas]');
+    var ultimo = caja.querySelector('[data-nueva]:last-of-type');
+    if (!caja || !ultimo) return;
+    var copia = ultimo.cloneNode(true);
+    copia.querySelectorAll('input').forEach(function (c) { c.value = ''; });
+    copia.querySelectorAll('select').forEach(function (c) { c.selectedIndex = 0; });
+    caja.appendChild(copia);
+    var primero = copia.querySelector('input');
+    if (primero) primero.focus();
+  });
+
   document.querySelectorAll('[data-reparto]').forEach(recalcular);
 })();

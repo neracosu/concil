@@ -702,6 +702,64 @@ function facturas_de_proveedor(int $proveedorId, bool $soloAbiertas = false): ar
     return $salida;
 }
 
+/**
+ * La forma comparable del número de factura.
+ *
+ * Dos personas escriben la misma factura de tres maneras: «0001», «1» y
+ * «F-0001». Para la base son tres facturas distintas, y ahí es donde se cuela
+ * el pago repetido. Se quita todo lo que no sea letra o número y se le comen
+ * los ceros de la izquierda a cada tramo de dígitos —«1000» sigue siendo mil,
+ * que ese es el error fácil de cometer al programarlo—.
+ */
+function clave_factura(string $numero): string
+{
+    $s = mb_strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $numero) ?? '');
+    return (string) preg_replace_callback('/\d+/', fn($m) => ltrim($m[0], '0') ?: '0', $s);
+}
+
+/** La factura de ese proveedor cuyo número es el mismo, escrito como se escriba. */
+function factura_por_clave(int $proveedorId, string $numero, int $excepto = 0): ?array
+{
+    $clave = clave_factura($numero);
+    if ($clave === '') {
+        return null;
+    }
+    $s = db()->prepare('SELECT f.*, COALESCE(SUM(pf.monto), 0) aplicado
+                          FROM facturas f
+                     LEFT JOIN pagos_factura pf ON pf.factura_id = f.id
+                         WHERE f.proveedor_id = ? AND f.sede_id = ? AND f.numero_clave = ? AND f.id <> ?
+                      GROUP BY f.id LIMIT 1');
+    $s->execute([$proveedorId, (int) sede_actual(), $clave, $excepto]);
+    $f = $s->fetch();
+    if (!$f) {
+        return null;
+    }
+    $f['saldo'] = saldo_factura($f);
+    return $f;
+}
+
+/**
+ * En una frase: quién pagó esa factura y desde dónde. Es lo que hay que poner
+ * en el aviso, porque «ya está cubierta» no le dice a nadie a quién preguntar.
+ */
+function quien_pago_factura(int $facturaId): string
+{
+    $s = db()->prepare('SELECT m.fecha, c.nombre cuenta, u.nombre autor
+                          FROM pagos_factura pf
+                          JOIN movimientos m ON m.id = pf.movimiento_id
+                          JOIN cuentas c ON c.id = m.cuenta_id
+                     LEFT JOIN usuarios u ON u.id = pf.usuario_id
+                         WHERE pf.factura_id = ?
+                      ORDER BY m.fecha DESC LIMIT 1');
+    $s->execute([$facturaId]);
+    $p = $s->fetch();
+    if (!$p) {
+        return '';
+    }
+    return 'La pagaron el ' . date('d/m/Y', strtotime((string) $p['fecha']))
+         . ' desde ' . $p['cuenta'] . ($p['autor'] ? ', lo anotó ' . $p['autor'] : '') . '.';
+}
+
 /** Una factura de la unidad activa, con su saldo. Null si es de otra unidad. */
 function factura_de_sede(int $id): ?array
 {
@@ -753,6 +811,16 @@ function guardar_factura(array $d, int $id = 0): int
     if ($numero === '') {
         throw new RuntimeException('La factura necesita su número.');
     }
+    // El mismo número escrito de otra manera es la misma factura. Se avisa aquí
+    // y no al chocar la clave única, porque la clave única solo salta cuando se
+    // teclea idéntico, que es justo lo que no pasa cuando son dos personas.
+    $gemela = factura_por_clave($proveedorId, $numero, $id);
+    if ($gemela !== null) {
+        $quien = $gemela['saldo']['aplicado'] > 0.01 ? ' ' . quien_pago_factura((int) $gemela['id']) : '';
+        throw new RuntimeException('Ya está anotada la factura «' . $gemela['numero'] . '» de ese proveedor, '
+            . 'que es la misma que «' . $numero . '».' . $quien
+            . ' Búsquela en la lista en vez de anotarla otra vez.');
+    }
     $monto = a_monto((string) ($d['monto'] ?? '0'));
     if ($monto <= 0) {
         throw new RuntimeException('La factura necesita su monto: sin él no se puede saber cuánto queda por cubrir.');
@@ -762,6 +830,7 @@ function guardar_factura(array $d, int $id = 0): int
         'proveedor_id'   => $proveedorId,
         'sede_id'        => $sede,
         'numero'         => $numero,
+        'numero_clave'   => clave_factura($numero),
         'numero_control' => mb_substr(limpiar((string) ($d['numero_control'] ?? '')), 0, 40),
         'fecha'          => a_fecha((string) ($d['fecha'] ?? '')),
         'monto'          => $monto,
@@ -856,9 +925,18 @@ function repartir_pago(int $movimientoId, array $repartos): array
         $yaAplicado = (float) $otros->fetchColumn();
 
         if ($yaAplicado + $monto > $f['saldo']['pagable'] + 0.01) {
-            throw new RuntimeException('A la factura ' . $f['numero'] . ' solo le faltan '
-                . monto_moneda(round($f['saldo']['pagable'] - $yaAplicado, 2), $f['moneda'])
-                . ' y se le están cargando ' . monto_moneda($monto, $f['moneda']) . '.');
+            $falta = round($f['saldo']['pagable'] - $yaAplicado, 2);
+            // Decir quién la pagó y desde dónde: «ya está cubierta» no le dice a
+            // nadie a quién preguntarle, y esto es exactamente el pago repetido
+            // que se quiere atajar.
+            throw new RuntimeException(
+                $falta <= 0.01
+                    ? 'La factura ' . $f['numero'] . ' ya está pagada por completo. '
+                      . quien_pago_factura($facturaId)
+                      . ' Si de verdad se pagó dos veces, hay que reclamarla, no anotarla otra vez.'
+                    : 'A la factura ' . $f['numero'] . ' solo le faltan ' . monto_moneda($falta, $f['moneda'])
+                      . ' y se le están cargando ' . monto_moneda($monto, $f['moneda']) . '. '
+                      . quien_pago_factura($facturaId));
         }
 
         $lineas[] = ['factura_id' => $facturaId, 'monto' => $monto, 'monto_bs' => $montoBs, 'tasa' => $tasa];

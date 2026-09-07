@@ -61,23 +61,33 @@ function lista_facturas(array $mov, ?int $provId, string $att = ''): void
     // duplicado no necesita que existan facturas para ocurrir.
     aviso_pagos_repetidos($mov, $provId);
 
-    // Las abiertas, más las que este pago ya cubre aunque estén saldadas: si no,
-    // al volver a entrar desaparecerían y parecería que se perdió el dato.
-    $abiertas = facturas_de_proveedor($provId, true);
-    $puestas  = [];
+    $puestas = [];
     foreach (facturas_de_movimiento($movId) as $f) {
         $puestas[(int) $f['id']] = (float) $f['monto_bs'];
     }
+
+    /* Las que hay que poder marcar: las que están sin cubrir, más las que este
+       mismo pago ya cubre —si desaparecieran, el siguiente guardado borraría el
+       reparto sin que nadie se entere—.
+
+       Las demás **no se esconden**: se dibujan abajo, cerradas, diciendo quién
+       las pagó y desde qué banco. Esconderlas es lo que hacía que la segunda
+       persona creyera que la factura no estaba anotada, la anotara otra vez y
+       la pagara otra vez desde su banco. */
+    $abiertas = $cubiertas = [];
     foreach (facturas_de_proveedor($provId) as $f) {
-        if (isset($puestas[(int) $f['id']])
-            && !in_array((int) $f['id'], array_map('intval', array_column($abiertas, 'id')), true)) {
+        $cerrada = in_array($f['saldo']['estado'], ['cubierta', 'excedida'], true);
+        if (!$cerrada || isset($puestas[(int) $f['id']])) {
             $abiertas[] = $f;
+        } else {
+            $cubiertas[] = $f;
         }
     }
 
     if ($abiertas === []) {
         echo '<p class="reparto-vacio">Este proveedor no tiene facturas sin cubrir. '
            . 'Anote una aquí abajo si este pago corresponde a alguna.</p>';
+        facturas_ya_pagadas($cubiertas);
         return;
     }
 
@@ -147,6 +157,43 @@ function lista_facturas(array $mov, ?int $provId, string $att = ''): void
         </div>
         <?php
     }
+
+    facturas_ya_pagadas($cubiertas);
+}
+
+/**
+ * Las facturas de esa persona que ya están pagadas.
+ *
+ * No se pueden marcar —ya no deben nada— pero tienen que **verse**: quien va a
+ * pagar desde el segundo banco necesita enterarse de que alguien ya la pagó
+ * desde el primero. Van cerradas para no estorbar a quien solo quiere trabajar.
+ */
+function facturas_ya_pagadas(array $cubiertas): void
+{
+    if ($cubiertas === []) {
+        return;
+    }
+    $tope = 20;
+    $lista = array_slice($cubiertas, 0, $tope); ?>
+    <details class="pagadas" data-guia="pagadas">
+      <summary>Ya pagadas: <?= count($cubiertas) ?></summary>
+      <p class="nota" style="margin:0 0 10px">Estas ya están cubiertas. Se enseñan para que se vea
+        que alguien las pagó, y desde qué banco: así no se pagan dos veces.</p>
+      <ul>
+        <?php foreach ($lista as $f): ?>
+          <li><b><?= e($f['numero']) ?></b>
+            · <?= e(monto_moneda($f['saldo']['monto'], $f['saldo']['moneda'])) ?>
+            <?php if ($f['fecha']): ?> · del <?= e(date('d/m/Y', strtotime((string) $f['fecha']))) ?><?php endif ?>
+            <span class="origen"><?= e(quien_pago_factura((int) $f['id'])) ?></span>
+          </li>
+        <?php endforeach ?>
+      </ul>
+      <?php if (count($cubiertas) > $tope): ?>
+        <p class="origen" style="margin:8px 0 0">Se enseñan las <?= $tope ?> más recientes,
+          de <?= count($cubiertas) ?>.</p>
+      <?php endif ?>
+    </details>
+    <?php
 }
 
 /**
@@ -190,39 +237,18 @@ function panel_facturas(array $mov, ?int $provId, string $idForm = '', bool $dif
         <span>sin repartir <b data-reparto-resto>Bs <?= bs($resto) ?></b></span>
       </div>
 
-      <details class="reparto-nueva">
-        <summary>Anotar una factura que no está en la lista</summary>
-        <div class="par">
-          <div><label>Nº de factura</label>
-            <input type="text" name="nf_numero" maxlength="60" placeholder="El que aparece impreso"<?= $att ?>></div>
-          <div><label>Nº de control</label>
-            <input type="text" name="nf_control" maxlength="40" placeholder="El pre-impreso del SENIAT"<?= $att ?>></div>
+      <details class="reparto-nueva" data-guia="factura-nueva">
+        <summary>Anotar facturas que no están en la lista</summary>
+        <div data-nuevas>
+          <?php factura_nueva_campos($att) ?>
         </div>
-        <div class="par">
-          <div><label>Fecha de la factura</label>
-            <input type="date" name="nf_fecha"<?= $att ?>></div>
-          <div><label>Moneda</label>
-            <select name="nf_moneda"<?= $att ?>>
-              <option value="VES">Bolívares</option>
-              <option value="USD">Dólares</option>
-            </select></div>
-        </div>
-        <div class="par">
-          <div><label>Monto total de la factura</label>
-            <input type="text" name="nf_monto" inputmode="decimal" placeholder="0,00"<?= $att ?>></div>
-          <div><label>De este pago, cuánto va a esa factura</label>
-            <input type="text" name="nf_aplicar" inputmode="decimal" class="reparto-input"
-                   placeholder="0,00"<?= $att ?>></div>
-        </div>
-        <div class="par">
-          <div><label>Retención de IVA <span style="text-transform:none;letter-spacing:0">(si hubo)</span></label>
-            <input type="text" name="nf_ret_iva" inputmode="decimal" placeholder="0,00"<?= $att ?>></div>
-          <div><label>Retención de ISLR <span style="text-transform:none;letter-spacing:0">(si hubo)</span></label>
-            <input type="text" name="nf_ret_islr" inputmode="decimal" placeholder="0,00"<?= $att ?>></div>
+        <div class="acciones" style="margin-top:6px">
+          <button type="button" class="btn" data-nueva-otra>Anotar otra factura</button>
         </div>
         <p class="nota" style="margin:10px 0 0">
-          Lo que se le retiene al proveedor no se le paga a él, se le entrega al SENIAT en su nombre.
-          Anotándolo aquí, la factura queda saldada aunque del banco haya salido menos.
+          Un mismo pago puede cubrir varias facturas: añada las que haga falta.
+          Y lo que se le retiene al proveedor no se le paga a él, se le entrega al SENIAT en su
+          nombre; anotándolo aquí, la factura queda saldada aunque del banco haya salido menos.
         </p>
       </details>
     </div>
@@ -230,7 +256,47 @@ function panel_facturas(array $mov, ?int $provId, string $idForm = '', bool $dif
 }
 
 /**
- * Lee del formulario el reparto y la factura nueva, y los guarda.
+ * Los campos de una factura nueva. Van en función aparte porque el navegador
+ * copia este mismo bloque cada vez que se pide anotar otra, y los nombres
+ * terminan en «[]» para que lleguen todas juntas.
+ */
+function factura_nueva_campos(string $att = ''): void
+{ ?>
+    <div class="nueva-factura" data-nueva>
+      <div class="par">
+        <div><label>Nº de factura</label>
+          <input type="text" name="nf_numero[]" maxlength="60" placeholder="El que aparece impreso"<?= $att ?>></div>
+        <div><label>Nº de control</label>
+          <input type="text" name="nf_control[]" maxlength="40" placeholder="El pre-impreso del SENIAT"<?= $att ?>></div>
+      </div>
+      <div class="par">
+        <div><label>Fecha de la factura</label>
+          <input type="date" name="nf_fecha[]"<?= $att ?>></div>
+        <div><label>Moneda</label>
+          <select name="nf_moneda[]"<?= $att ?>>
+            <option value="VES">Bolívares</option>
+            <option value="USD">Dólares</option>
+          </select></div>
+      </div>
+      <div class="par">
+        <div><label>Monto total de la factura</label>
+          <input type="text" name="nf_monto[]" inputmode="decimal" placeholder="0,00"<?= $att ?>></div>
+        <div><label>De este pago, cuánto va a esa factura</label>
+          <input type="text" name="nf_aplicar[]" inputmode="decimal" class="reparto-input"
+                 placeholder="0,00"<?= $att ?>></div>
+      </div>
+      <div class="par">
+        <div><label>Retención de IVA <span style="text-transform:none;letter-spacing:0">(si hubo)</span></label>
+          <input type="text" name="nf_ret_iva[]" inputmode="decimal" placeholder="0,00"<?= $att ?>></div>
+        <div><label>Retención de ISLR <span style="text-transform:none;letter-spacing:0">(si hubo)</span></label>
+          <input type="text" name="nf_ret_islr[]" inputmode="decimal" placeholder="0,00"<?= $att ?>></div>
+      </div>
+    </div>
+    <?php
+}
+
+/**
+ * Lee del formulario el reparto y las facturas nuevas, y los guarda.
  * Devuelve el aviso que hay que enseñar, o cadena vacía si no había nada.
  */
 function guardar_reparto(int $movimientoId, ?int $provId, array $post): string
@@ -242,23 +308,35 @@ function guardar_reparto(int $movimientoId, ?int $provId, array $post): string
         }
     }
 
-    // La factura nueva se crea antes de repartir, para que entre en el mismo
-    // reparto y el tope del pago la tenga en cuenta.
-    $nueva = trim((string) ($post['nf_numero'] ?? ''));
-    if ($nueva !== '') {
+    // Las facturas nuevas se crean antes de repartir, para que entren en el
+    // mismo reparto y el tope del pago las tenga en cuenta. Pueden venir
+    // varias: un pago cubre a menudo más de una factura.
+    $numeros = array_map('trim', array_map('strval', (array) ($post['nf_numero'] ?? [])));
+    $conNumero = array_keys(array_filter($numeros, fn($n) => $n !== ''));
+    $nuevas = 0;
+
+    if ($conNumero !== []) {
         if ($provId === null || $provId <= 0) {
             return 'Para anotar una factura hay que decir primero a quién se le pagó.';
         }
 
-        // Lo que no cuadre se detecta antes de crear la factura: si se creara
-        // primero y el reparto fallara después, quedaría una factura suelta que
+        /** Un campo de la factura número $i, que puede no venir. */
+        $campo = function (string $nombre, int $i, string $defecto = '') use ($post): string {
+            $v = (array) ($post[$nombre] ?? []);
+            return isset($v[$i]) ? (string) $v[$i] : $defecto;
+        };
+
+        // Lo que no cuadre se detecta antes de crear nada: si se crearan
+        // primero y el reparto fallara después, quedarían facturas sueltas que
         // nadie pidió. repartir_pago() lo vuelve a comprobar de todos modos,
         // porque es quien manda.
         $suma = 0.0;
         foreach ($repartos as $x) {
             $suma += a_monto((string) $x);
         }
-        $suma += a_monto((string) ($post['nf_aplicar'] ?? '0'));
+        foreach ($conNumero as $i) {
+            $suma += a_monto($campo('nf_aplicar', $i, '0'));
+        }
         $debito = (float) db()->query('SELECT debito FROM movimientos WHERE id = ' . $movimientoId)
                               ->fetchColumn();
         if (round($suma, 2) > $debito + 0.01) {
@@ -266,25 +344,28 @@ function guardar_reparto(int $movimientoId, ?int $provId, array $post): string
                 . bs(round($suma, 2)) . '. No se puede repartir más de lo que salió del banco.');
         }
 
-        $facId = guardar_factura([
-            'proveedor_id'   => $provId,
-            'numero'         => $nueva,
-            'numero_control' => (string) ($post['nf_control'] ?? ''),
-            'fecha'          => (string) ($post['nf_fecha'] ?? ''),
-            'monto'          => (string) ($post['nf_monto'] ?? '0'),
-            'moneda'         => (string) ($post['nf_moneda'] ?? 'VES'),
-            'retencion_iva'  => (string) ($post['nf_ret_iva'] ?? '0'),
-            'retencion_islr' => (string) ($post['nf_ret_islr'] ?? '0'),
-        ]);
-        $aplicar = trim((string) ($post['nf_aplicar'] ?? ''));
-        if ($aplicar !== '') {
-            $repartos[$facId] = $aplicar;
+        foreach ($conNumero as $i) {
+            $facId = guardar_factura([
+                'proveedor_id'   => $provId,
+                'numero'         => $numeros[$i],
+                'numero_control' => $campo('nf_control', $i),
+                'fecha'          => $campo('nf_fecha', $i),
+                'monto'          => $campo('nf_monto', $i, '0'),
+                'moneda'         => $campo('nf_moneda', $i, 'VES'),
+                'retencion_iva'  => $campo('nf_ret_iva', $i, '0'),
+                'retencion_islr' => $campo('nf_ret_islr', $i, '0'),
+            ]);
+            $nuevas++;
+            $aplicar = trim($campo('nf_aplicar', $i));
+            if ($aplicar !== '') {
+                $repartos[$facId] = $aplicar;
+            }
         }
     }
 
     // Sin nada marcado no se toca el reparto que ya hubiera: vaciarlo por
     // guardar la justificación borraría trabajo hecho sin querer.
-    if ($repartos === [] && $nueva === '') {
+    if ($repartos === [] && $nuevas === 0) {
         return '';
     }
 

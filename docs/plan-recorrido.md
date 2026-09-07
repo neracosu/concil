@@ -138,9 +138,11 @@ El aviso que funciona sin depender de que nadie anote facturas.
 **Quedó listo**: el caso que contaron —dos personas pagando desde dos bancos—
 deja de pasar desapercibido aunque no haya ni una factura cargada.
 
-## Fase 5 · Que la factura no se esconda · nº 3, nº 2 y nº 4
+## Fase 5 · Que la factura no se esconda · nº 3, nº 2 y nº 4 — HECHA el 06/09/2026
 
-**Dos a tres días. Versión 1.8.**
+**Entregada como versión 1.9.** Comprobada con el caso real: se justifica un
+pago con dos facturas nuevas, y desde otro pago del mismo proveedor la segunda
+persona **ve** que ya están pagadas y **no puede** volver a anotarlas.
 
 Las tres van juntas porque son la misma pantalla y la misma tabla.
 
@@ -164,9 +166,11 @@ facturas. No hace falta que esté el primer día —nadie anota facturas la prim
 semana—, pero sí **antes de que auditoría tome el hábito**, o el hábito se toma
 con la pantalla que esconde las facturas pagadas.
 
-**Depende de una respuesta suya**: si pagar una factura ya cubierta se
-**bloquea** o solo se **avisa**. La costumbre de la casa es advertir y dejar
-pasar; esta puede ser la excepción, porque cuesta dinero.
+**Sobre bloquear o avisar**: resultó que `repartir_pago()` **ya bloqueaba**
+cargar más de lo que falta, desde la Fase 3 del proyecto anterior. Lo que
+faltaba no era el bloqueo sino que la persona llegara hasta él: la factura no
+se veía. Ahora el bloqueo además dice **quién la pagó y desde qué banco**, en
+vez del seco «solo le faltan 0,00».
 
 ## Fase 6 · Modo oscuro y modo claro · nº 9
 
