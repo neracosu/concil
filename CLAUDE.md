@@ -213,12 +213,32 @@ ancla y su paso.
 
 El producto se llama **CONCIL** y el crédito es **by VIP Soft**. Se escribe
 `CONCIL` en mayúsculas y `VIP Soft` con espacio. Las constantes están en
-`lib/config.php` (`APP_NOMBRE`, `APP_MARCA`, `APP_LEMA`, `APP_CREDITO`,
-`APP_VERSION`): úsalas, no escribas la marca a mano en las vistas.
+`lib/config.php` (`APP_NOMBRE`, `APP_MARCA`, `APP_LEMA`, `APP_CREDITO`): úsalas,
+no escribas la marca a mano en las vistas.
 
 Aparece en el menú, en la pantalla de acceso, en los títulos del navegador, en
 el primer y el último paso de la visita guiada, en el nombre de los archivos
 exportados y en las propiedades de los XLSX (`docProps/app.xml`).
+
+## La versión y la pantalla de Mejoras
+
+**`APP_VERSION` no se escribe a mano.** Sale de la primera entrada de
+`mejoras()` en `lib/mejoras.php`, que `config.php` incluye para definirla. El
+número del menú y lo que cuenta la pantalla de Mejoras no pueden discrepar
+porque son el mismo dato.
+
+Al entregar algo que la gente nota, se añade su entrada **al principio** del
+array, con la fecha del día, y el número sube ahí: `nuevo` sube el del medio
+(2.1 → 2.2), lo demás el último (2.2 → 2.2.1). El primer número solo cambia
+cuando el sistema cambia de cara, y eso lo decide una persona.
+
+No se anota lo que nadie ve: acomodos internos, cambios de documentación o de
+cómo está escrito el programa. Eso vive en el git log, que es su sitio. El
+registro de cambios **no va en este archivo**.
+
+El texto se escribe como se lo contarías al dueño del negocio, con las reglas
+de «Al escribir textos de interfaz». Si al añadir la entrada el número sube,
+el commit puede seguir llamándose «Versión X.Y: …» como hasta ahora.
 
 ## Al escribir textos de interfaz
 

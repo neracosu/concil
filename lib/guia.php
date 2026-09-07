@@ -232,6 +232,14 @@ function guia_pasos(): array
             'nota' => 'Lo que elija le sigue a cualquier computadora donde entre.',
         ],
 
+        [
+            'ruta' => 'panel', 'sel' => '[data-guia="mejoras"]', 'lado' => 'derecha',
+            'titulo' => 'Y qué se le ha ido añadiendo',
+            'texto' => 'Abajo del todo está el número de la versión que usa. <b>Haga clic ahí</b> y verá, '
+                     . 'en orden, todo lo que el sistema ha aprendido a hacer desde que arrancó.',
+            'nota' => 'Casi todo lo que hay en esa lista lo pidió alguien del equipo. Si echa algo en falta, dígalo.',
+        ],
+
         // ------------------------------------------------------------ Cierre
         [
             'ruta' => 'panel', 'sel' => '',
@@ -264,5 +272,7 @@ function ayuda_pantalla(string $ruta): string
                        . 'Arriba a la izquierda elige con cuál está trabajando. Las categorías y las reglas '
                        . 'son las mismas para todas, así lo aprendido en una sirve en las demás.',
         'ajustes'     => 'Su clave de entrada y el estado del sistema.',
+        'mejoras'     => 'Todo lo que el sistema ha ido aprendiendo a hacer, desde que arrancó hasta hoy. '
+                       . '<b>Lo más reciente, arriba.</b>',
     ][$ruta] ?? '';
 }

@@ -10,8 +10,13 @@ const APP_NOMBRE  = 'CONCIL';
 const APP_MARCA   = 'VIP Soft';
 const APP_LEMA    = 'Conciliación bancaria';
 const APP_CREDITO = 'CONCIL by VIP Soft';
-const APP_VERSION = '2.1';
 const APP_NAME    = APP_CREDITO;   // usado en los títulos del navegador
+
+// El número de versión no se escribe aquí a mano: es el de la última mejora
+// anotada en lib/mejoras.php. Escrito en dos sitios acababa diciendo una cosa
+// en el menú y otra en la pantalla de Mejoras.
+require_once __DIR__ . '/mejoras.php';
+define('APP_VERSION', version_actual());
 const DATA_DIR    = '/home/mardenli/conciliacion_data';
 const UPLOAD_DIR  = DATA_DIR . '/uploads';
 const SECRETS     = DATA_DIR . '/secrets.php';

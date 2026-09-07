@@ -622,3 +622,62 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
   padding:9px 0;border-top:1px solid var(--linea-suave)}
 .traspaso-opcion:first-of-type{border-top:0}
 .traspaso-opcion .origen{display:block}
+
+/* ---------- Mejoras ----------
+   Una línea de tiempo, no una tabla: aquí no se compara, se lee de arriba
+   abajo. El punto de color vive sobre la línea y por eso la tarjeta va
+   desplazada; en pantalla estrecha la línea y el punto desaparecen. */
+.mejoras-cabecera{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  flex-wrap:wrap;margin-bottom:14px}
+.mejoras-etiquetas{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.etq.mejoras-total{background:var(--panel-3);color:var(--texto);border-color:var(--linea-fuerte)}
+.mejoras-version{background:var(--panel);border:1px solid var(--linea-fuerte);border-radius:var(--r);
+  padding:11px 18px;text-align:right;flex:none}
+.mejoras-version .rotulo{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mudo)}
+.mejoras-version .valor{font-family:var(--mono);font-size:24px;line-height:1.15;margin-top:3px;
+  background:var(--oro-texto);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.mejoras-que-es{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-sm);
+  padding:11px 15px;margin-bottom:26px;font-size:13.5px;color:var(--suave)}
+.mejoras-que-es summary{cursor:pointer;color:var(--texto);font-size:13.5px;user-select:none}
+.mejoras-que-es>div{margin-top:9px;line-height:1.6}
+.mejoras-que-es p{margin:0 0 7px}
+.mejoras-que-es ul{margin:0 0 7px;padding-left:18px}
+.mejoras-que-es li{margin-bottom:4px}
+
+.mejoras-mes{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--mudo);
+  font-weight:500;margin:0 0 14px}
+.mejoras{position:relative;margin-bottom:34px}
+.mejoras::before{content:"";position:absolute;left:5px;top:10px;bottom:10px;width:1px;
+  background:var(--linea);}
+.mejora{position:relative;margin-left:30px;margin-bottom:12px;padding:16px 18px;
+  background:var(--panel);border:1px solid var(--linea);border-radius:var(--r)}
+.mejora-punto{position:absolute;left:-29px;top:22px;width:11px;height:11px;border-radius:50%;
+  border:3px solid var(--tinta)}
+.mejora-alto{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.mejora-alto time{font-size:12px;color:var(--mudo)}
+.mejora-version{font-family:var(--mono);font-size:11px;color:var(--tenue);
+  background:var(--panel-3);border-radius:20px;padding:2px 8px}
+.mejora h3{margin:0 0 6px;font-size:16px;font-weight:600;line-height:1.35;color:var(--texto)}
+.mejora p{margin:0;font-size:14px;line-height:1.6;color:var(--suave)}
+.mejora ul{margin:11px 0 0;padding-left:17px;font-size:13.5px;line-height:1.6;color:var(--suave)}
+.mejora li{margin-bottom:5px}
+.mejora li::marker{color:var(--tenue)}
+.mejoras-pie{color:var(--mudo);font-size:13.5px;line-height:1.6;text-align:center;
+  border-top:1px solid var(--linea-suave);padding-top:18px;margin:0}
+
+@media (max-width:640px){
+  .mejoras::before{display:none}
+  .mejora{margin-left:0}
+  .mejora-punto{display:none}
+  .mejoras-version{width:100%;text-align:left}
+}
+
+/* El número de versión del pie es un enlace a Mejoras. Necesita regla propia
+   porque el pie del menú pinta sus enlaces en rojo al pasar por encima, que es
+   el gesto de «cerrar sesión» y aquí diría otra cosa. */
+.lateral-pie .credito-version{display:block;color:var(--tenue);margin:0 -5px 2px;padding:3px 5px;
+  border-radius:var(--r-sm);transition:background var(--t),color var(--t)}
+.lateral-pie .credito-version:hover{color:var(--suave);background:var(--fila)}
+.lateral-pie .credito-version.on{color:var(--suave);background:var(--fila)}
+.lateral-pie .credito-version:hover b,.lateral-pie .credito-version.on b{color:var(--oro-claro)}

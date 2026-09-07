@@ -14,7 +14,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
 <meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=14">
+<link rel="stylesheet" href="assets/app.css?v=15">
 </head>
 <body>
 <div class="app">
@@ -94,7 +94,11 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       </form>
       <a href="?r=salir">Cerrar sesión</a>
       <div class="credito">
-        <b><?= e(APP_NOMBRE) ?></b> v<?= e(APP_VERSION) ?><br>
+        <?php // El número de versión lleva a lo que trae: suelto no le dice nada a nadie. ?>
+        <a href="?r=mejoras" class="credito-version<?= $ruta === 'mejoras' ? ' on' : '' ?>"
+           data-guia="mejoras" title="Ver todo lo que se ha mejorado">
+          <b><?= e(APP_NOMBRE) ?></b> v<?= e(APP_VERSION) ?>
+        </a>
         <span><?= e(APP_LEMA) ?></span><br>
         <span>by <?= e(APP_MARCA) ?></span>
       </div>
