@@ -88,19 +88,26 @@ fecha enlaza a su movimiento.
 - Se quedó **en la bandeja y no en el panel**: es ahí donde se decide
   clasificar ocho de una vez, y era ahí donde había que ver los ocho.
 
-## Fase 3 · La tasa a mano · nº 1
+## Fase 3 · La tasa a mano · nº 1 — HECHA el 06/09/2026
 
-**Medio día. Versión 1.6.**
+**Entregada como versión 1.7.** El usuario decidió: **la corrección vale para
+el día entero**, no para un movimiento suelto. El BCV publica una tasa por día
+y dos tasas distintas el mismo día es justo lo que nadie sabría explicar
+después.
 
-Poder corregir la tasa del BCV de un día cuando la que trajo la fuente no es la
-que se aplicó. La pieza ya existe a medias: una tasa con `origen = 'manual'` la
-sincronización **no la pisa**.
-
-- Pantalla para corregirla desde el detalle del movimiento y desde Ajustes.
-- Queda anotado quién la cambió y cuál era la anterior.
-- **Depende de una respuesta suya**: si la corrección vale para el día entero
-  o solo para ese movimiento. Con la respuesta «el día entero» es medio día de
-  trabajo; «solo ese movimiento» es un día y una columna más.
+- Se corrige desde **Ajustes** (cualquier fecha) y desde el **propio pago** («La
+  tasa de ese día no es la correcta»), que es donde se nota el error.
+- La tasa escrita a mano queda marcada `origen = 'manual'` y **la
+  sincronización no la pisa** — comprobado trayendo los 1.830 días del
+  histórico encima de una corregida.
+- Queda anotado **quién** la escribió (`tasas.usuario_id`, se ve en el detalle:
+  «escrita a mano por Eurides») y **cuál era la anterior**, en la bitácora:
+  `04/09/2026 · 807,39 → 810,50`.
+- Se rechaza lo que no tiene sentido: fecha futura, fecha ilegible y tasa cero
+  o negativa. El tope alto ataja el dedo que corre los decimales.
+- Lo ya repartido entre facturas **no se mueve**: `pagos_factura.tasa` guarda la
+  del momento del reparto a propósito, y así se dice en la pantalla.
+- Paso nuevo en la visita guiada, con el ancla `data-guia="tasa-mano"`.
 
 ## Fase 4 · Alerta de pagos repetidos · nº 6
 

@@ -193,6 +193,13 @@ function guia_pasos(): array
                      . 'no la de hoy. Es la que necesita administración para sacar sus cuentas.',
             'nota' => 'Se busca sola una vez al día. Si algún día faltara, con este botón las trae todas.',
         ],
+        [
+            'ruta' => 'ajustes', 'sel' => '[data-guia="tasa-mano"]',
+            'titulo' => 'Y si ese día se usó otra',
+            'texto' => 'Cuando el valor que trajo el sistema no es con el que se trabajó, aquí lo cambia. '
+                     . 'Lo que escriba vale para <b>todas las operaciones de ese día</b> y ya no se lo vuelven a pisar.',
+            'nota' => 'También puede corregirlo desde el propio pago, sin venir hasta aquí.',
+        ],
 
         // ------------------------------------------------------------ Cierre
         [

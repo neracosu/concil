@@ -145,6 +145,63 @@ function tasa_de(?string $fecha): ?float
     return $cache[$fecha] = ($v === false ? null : (float) $v);
 }
 
+/**
+ * Corrige a mano la tasa de un día entero.
+ *
+ * Vale para la fecha completa, no para un movimiento suelto: el BCV publica una
+ * tasa por día y tener dos tasas distintas el mismo día es justo lo que nadie
+ * sabría explicar después. Queda marcada como «manual», y así la
+ * sincronización ya no la pisa: quien la escribió sabe algo que la fuente no.
+ *
+ * Lo ya repartido entre facturas no se mueve: `pagos_factura.tasa` guarda la
+ * del momento del reparto a propósito.
+ */
+function corregir_tasa(string $fecha, float $tasa): array
+{
+    $fecha = substr(trim($fecha), 0, 10);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha) || strtotime($fecha) === false) {
+        return ['ok' => false, 'mensaje' => 'Esa fecha no se entiende. Use el calendario.'];
+    }
+    if ($fecha > date('Y-m-d')) {
+        return ['ok' => false, 'mensaje' => 'No se puede poner la tasa de un día que todavía no llega.'];
+    }
+    // El tope no es capricho: sirve para atajar el dedo que escribe la tasa con
+    // los decimales corridos, que es el error de verdad.
+    if ($tasa <= 0 || $tasa > 100000000) {
+        return ['ok' => false, 'mensaje' => 'La tasa tiene que ser un número mayor que cero.'];
+    }
+
+    $pdo = db();
+    $s = $pdo->prepare('SELECT tasa, origen FROM tasas WHERE fecha = ?');
+    $s->execute([$fecha]);
+    $antes = $s->fetch();
+
+    $pdo->prepare("INSERT INTO tasas (fecha, tasa, origen, usuario_id) VALUES (?, ?, 'manual', ?)
+                   ON DUPLICATE KEY UPDATE tasa = VALUES(tasa), origen = 'manual',
+                                           usuario_id = VALUES(usuario_id)")
+        ->execute([$fecha, $tasa, usuario_id_actual()]);
+
+    $dia = date('d/m/Y', strtotime($fecha));
+    $rastro = $antes
+        ? tasa_texto($antes['tasa']) . ' → ' . tasa_texto($tasa)
+        : 'no había · ' . tasa_texto($tasa);
+    bitacora('tasa_corregida', $dia . ' · ' . $rastro);
+
+    return ['ok' => true, 'mensaje' => 'Tasa del ' . $dia . ' corregida: Bs ' . tasa_texto($tasa)
+                                     . ($antes ? ' (antes ' . tasa_texto($antes['tasa']) . ').' : '.')
+                                     . ' Todas las operaciones de ese día pasan a leerse con ella.'];
+}
+
+/** La tasa guardada de un día exacto, con su procedencia y quién la escribió. */
+function tasa_del_dia(string $fecha): ?array
+{
+    $s = db()->prepare('SELECT t.*, u.nombre autor FROM tasas t
+                     LEFT JOIN usuarios u ON u.id = t.usuario_id
+                         WHERE t.fecha = ?');
+    $s->execute([substr($fecha, 0, 10)]);
+    return $s->fetch() ?: null;
+}
+
 /** Qué hay guardado, para poder decirlo en Ajustes. */
 function estado_tasas(): array
 {

@@ -17,6 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirigir('?r=movimiento&id=' . $id);
     }
 
+    if ($accion === 'tasa') {
+        $r = corregir_tasa((string) ($_POST['fecha'] ?? ''), a_monto((string) ($_POST['tasa'] ?? '')));
+        flash($r['ok'] ? 'ok' : 'mal', $r['mensaje']);
+        redirigir('?r=movimiento&id=' . $id);
+    }
+
     if ($accion === 'guardar') {
         $cat    = (int) ($_POST['categoria_id'] ?? 0) ?: null;
         $prov   = mb_substr(limpiar((string) ($_POST['proveedor'] ?? '')), 0, 160);
@@ -47,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $s = $pdo->prepare("SELECT m.*, c.nombre cuenta, c.banco, cat.nombre categoria, cat.color,
                            r.nombre regla, i.archivo, i.creado_en cargado, t.tasa tasa_bcv,
+                           t.origen tasa_origen, ut.nombre tasa_autor,
                            u.nombre autor
                       FROM movimientos m
                       JOIN cuentas c ON c.id = m.cuenta_id
@@ -54,6 +61,7 @@ $s = $pdo->prepare("SELECT m.*, c.nombre cuenta, c.banco, cat.nombre categoria, 
                  LEFT JOIN categorias cat ON cat.id = m.categoria_id
                  LEFT JOIN reglas r ON r.id = m.regla_id
                  LEFT JOIN usuarios u ON u.id = m.usuario_id
+                 LEFT JOIN usuarios ut ON ut.id = t.usuario_id
                  LEFT JOIN importaciones i ON i.id = m.importacion_id
                      WHERE m.id = ? AND " . filtro_sede());
 $s->execute([$id]);
@@ -94,7 +102,10 @@ encabezado_html('Movimiento', 'movimientos',
     <h2>Lo que dice el banco</h2>
     <dl style="margin:0">
       <div class="dato"><dt>Fecha</dt><dd><?= e(date('d/m/Y', strtotime($m['fecha']))) ?></dd></div>
-      <div class="dato"><dt>Tasa del BCV ese día</dt><dd><?= e(tasa_texto($m['tasa_bcv'])) ?></dd></div>
+      <div class="dato"><dt>Tasa del BCV ese día</dt><dd><?= e(tasa_texto($m['tasa_bcv'])) ?>
+        <?php if (($m['tasa_origen'] ?? '') === 'manual'): ?>
+          <span class="origen" style="display:block">escrita a mano<?= $m['tasa_autor'] ? ' por ' . e($m['tasa_autor']) : '' ?></span>
+        <?php endif ?></dd></div>
       <div class="dato"><dt>Cuenta</dt><dd class="texto"><?= e($m['cuenta']) ?><?= $m['banco'] ? ' · ' . e($m['banco']) : '' ?></dd></div>
       <div class="dato"><dt>Referencia</dt><dd><?= e($m['referencia']) ?: '—' ?></dd></div>
       <div class="dato"><dt>Concepto</dt><dd class="texto"><?= e($m['concepto']) ?></dd></div>
@@ -114,6 +125,28 @@ encabezado_html('Movimiento', 'movimientos',
         <div class="dato"><dt>Lo hizo</dt><dd class="texto"><?= e($m['autor']) ?>
           <span class="origen" style="display:block"><?= e(date('d/m/Y H:i', strtotime((string) $m['actualizado_en']))) ?></span></dd></div><?php endif ?>
     </dl>
+
+    <details class="tasa-mano">
+      <summary>La tasa de ese día no es la correcta</summary>
+      <p class="nota" style="margin:0 0 12px">
+        Escriba la que de verdad se usó el <b><?= e(date('d/m/Y', strtotime((string) $m['fecha']))) ?></b>.
+        Vale para todas las operaciones de esa fecha, no solo para esta, y la
+        próxima consulta al BCV ya no la cambia.
+      </p>
+      <form method="post">
+        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+        <input type="hidden" name="accion" value="tasa">
+        <input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
+        <input type="hidden" name="fecha" value="<?= e(substr((string) $m['fecha'], 0, 10)) ?>">
+        <div class="par">
+          <div><label>Bolívares por dólar</label>
+            <input type="text" name="tasa" required inputmode="decimal"
+                   placeholder="Ej.: 807,38" value="<?= e($m['tasa_bcv'] === null ? '' : tasa_texto($m['tasa_bcv'])) ?>"></div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn btn-oro">Guardar esa tasa</button></div>
+        </div>
+      </form>
+    </details>
 
     <?php if ((int) $parecidos['n'] > 0): ?>
       <div class="aviso aviso-nota" style="margin:16px 0 0">

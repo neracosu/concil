@@ -203,6 +203,10 @@ function migrar(): void
         creado_en DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) $t");
 
+    // Quién corrigió la tasa a mano. Una tasa escrita por una persona es una
+    // afirmación, no un dato descargado, y hay que poder preguntarle a alguien.
+    columna_si_falta($pdo, 'tasas', 'usuario_id', 'INT NULL');
+
     // Proveedores y facturas. El proveedor cuelga del movimiento porque todo
     // pago tiene destinatario; las facturas van aparte para que quepan los
     // casos reales: una factura pagada en partes, o un pago que cubre varias.

@@ -34,6 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirigir('?r=ajustes');
     }
 
+    if ($accion === 'tasa_manual') {
+        $r = corregir_tasa((string) ($_POST['fecha'] ?? ''), a_monto((string) ($_POST['tasa'] ?? '')));
+        flash($r['ok'] ? 'ok' : 'mal', $r['mensaje']);
+        redirigir('?r=ajustes');
+    }
+
     if ($accion === 'purgar') {
         $dias = max(1, (int) ($_POST['dias'] ?? 90));
         $s = $pdo->prepare('DELETE FROM bitacora WHERE creado_en < DATE_SUB(NOW(), INTERVAL ? DAY)');
@@ -120,6 +126,27 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
       <input type="hidden" name="accion" value="tasas">
       <div class="acciones"><button class="btn">Buscar las tasas que falten</button></div>
     </form>
+
+    <details class="tasa-mano" data-guia="tasa-mano">
+      <summary>Corregir la tasa de un día</summary>
+      <p class="nota" style="margin:0 0 12px">
+        Si ese día se trabajó con otro valor, escríbalo aquí. Vale para
+        <b>todas las operaciones de esa fecha</b>, y la próxima consulta al BCV
+        ya no lo cambia. Los pagos que ya se repartieron entre facturas
+        conservan la tasa con la que se guardaron.
+      </p>
+      <form method="post">
+        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+        <input type="hidden" name="accion" value="tasa_manual">
+        <div class="par">
+          <div><label>Día</label>
+            <input type="date" name="fecha" required max="<?= e(date('Y-m-d')) ?>" value="<?= e(date('Y-m-d')) ?>"></div>
+          <div><label>Bolívares por dólar</label>
+            <input type="text" name="tasa" required inputmode="decimal" placeholder="Ej.: 807,38"></div>
+        </div>
+        <div class="acciones" style="margin-top:12px"><button class="btn btn-oro">Guardar esa tasa</button></div>
+      </form>
+    </details>
   </div>
 
   <div class="tarjeta">
