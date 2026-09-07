@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($accion === 'quitar') {
         $pdo->prepare("UPDATE movimientos m SET m.categoria_id = NULL, m.beneficiario = '', m.estado = 'pendiente',
-                              m.origen = '', m.regla_id = NULL, m.actualizado_en = NOW()
+                              m.origen = '', m.regla_id = NULL, m.usuario_id = NULL, m.actualizado_en = NOW()
                         WHERE m.id = ? AND " . filtro_sede())->execute([$id]);
         flash('ok', 'El movimiento volvió a la bandeja de pendientes.');
         redirigir('?r=movimiento&id=' . $id);
@@ -24,9 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $justif = mb_substr(limpiar((string) ($_POST['justificacion'] ?? '')), 0, 1000);
         $pdo->prepare("UPDATE movimientos m
                           SET m.categoria_id = ?, m.beneficiario = ?, m.justificacion = ?,
-                              m.estado = ?, m.origen = 'manual', m.regla_id = NULL, m.actualizado_en = NOW()
+                              m.estado = ?, m.origen = 'manual', m.regla_id = NULL,
+                              m.usuario_id = ?, m.actualizado_en = NOW()
                         WHERE m.id = ? AND " . filtro_sede())
-            ->execute([$cat, $benef, $justif, $cat ? 'conciliado' : 'pendiente', $id]);
+            ->execute([$cat, $benef, $justif, $cat ? 'conciliado' : 'pendiente', usuario_id_actual(), $id]);
         // Proveedor y facturas se anotan aparte del UPDATE porque viven en sus
         // propias tablas: el movimiento solo guarda a quién se le pagó.
         $provId = anotar_proveedor($id, $prov, '', 0.0);
@@ -45,12 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $s = $pdo->prepare("SELECT m.*, c.nombre cuenta, c.banco, cat.nombre categoria, cat.color,
-                           r.nombre regla, i.archivo, i.creado_en cargado, t.tasa tasa_bcv
+                           r.nombre regla, i.archivo, i.creado_en cargado, t.tasa tasa_bcv,
+                           u.nombre autor
                       FROM movimientos m
                       JOIN cuentas c ON c.id = m.cuenta_id
                  LEFT JOIN tasas t ON t.fecha = m.fecha
                  LEFT JOIN categorias cat ON cat.id = m.categoria_id
                  LEFT JOIN reglas r ON r.id = m.regla_id
+                 LEFT JOIN usuarios u ON u.id = m.usuario_id
                  LEFT JOIN importaciones i ON i.id = m.importacion_id
                      WHERE m.id = ? AND " . filtro_sede());
 $s->execute([$id]);
@@ -107,6 +110,9 @@ encabezado_html('Movimiento', 'movimientos',
           <span class="origen"><?= e(date('d/m/Y H:i', strtotime($m['cargado']))) ?></span></dd></div><?php endif ?>
       <?php if ($m['regla']): ?>
         <div class="dato"><dt>Clasificado por</dt><dd class="texto"><?= e($m['regla']) ?></dd></div><?php endif ?>
+      <?php if ($m['autor']): ?>
+        <div class="dato"><dt>Lo hizo</dt><dd class="texto"><?= e($m['autor']) ?>
+          <span class="origen" style="display:block"><?= e(date('d/m/Y H:i', strtotime((string) $m['actualizado_en']))) ?></span></dd></div><?php endif ?>
     </dl>
 
     <?php if ((int) $parecidos['n'] > 0): ?>

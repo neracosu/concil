@@ -15,9 +15,10 @@ if ($export === 'csv' || $export === 'xlsx') {
     $sql = "SELECT m.fecha, c.nombre cuenta, c.banco, m.referencia, m.concepto, m.nota_banco,
                    m.debito, m.credito, m.saldo,
                    COALESCE(cat.nombre,'Sin clasificar') categoria, COALESCE(cat.grupo,'') grupo,
-                   m.beneficiario, m.justificacion, m.origen, t.tasa tasa_bcv
+                   m.beneficiario, m.justificacion, m.origen, u.nombre autor, t.tasa tasa_bcv
               FROM movimientos m
               JOIN cuentas c ON c.id = m.cuenta_id
+         LEFT JOIN usuarios u ON u.id = m.usuario_id
          LEFT JOIN tasas t ON t.fecha = m.fecha
          LEFT JOIN categorias cat ON cat.id = m.categoria_id
              WHERE $w
@@ -27,7 +28,7 @@ if ($export === 'csv' || $export === 'xlsx') {
 
     $cab = ['Fecha', 'Cuenta', 'Banco', 'Referencia', 'Concepto del banco', 'Nota del banco',
             'Débito', 'Crédito', 'Saldo', 'Categoría', 'Grupo', 'Beneficiario', 'Justificación', 'Clasificado por',
-            'Tasa BCV'];
+            'Quién lo hizo', 'Tasa BCV'];
 
     $filas = (function () use ($s) {
         while ($r = $s->fetch()) {
@@ -37,6 +38,8 @@ if ($export === 'csv' || $export === 'xlsx') {
                 (float) $r['debito'], (float) $r['credito'], $r['saldo'] === null ? '' : (float) $r['saldo'],
                 $r['categoria'], $r['grupo'], $r['beneficiario'], $r['justificacion'],
                 match ($r['origen']) { 'regla' => 'Regla automática', 'manual' => 'Manual', default => 'Sin clasificar' },
+                // En blanco cuando lo puso una regla sola: nadie lo hizo.
+                (string) ($r['autor'] ?? ''),
                 // Como número, no como texto: en la hoja de cálculo la usan para dividir.
                 $r['tasa_bcv'] === null ? '' : (float) $r['tasa_bcv'],
             ];
@@ -158,7 +161,8 @@ function opciones_categoria(array $cats, ?int $sel): void
           <td class="ref"><?= e($m['referencia']) ?></td>
           <td><?php if ($m['categoria']): ?>
               <span class="etq"><i style="background:<?= e($m['color']) ?>"></i><?= e($m['categoria']) ?></span>
-              <?php if ($m['origen']): ?><span class="origen" style="display:block;margin-top:3px"><?= $m['origen'] === 'regla' ? 'automático' : 'manual' ?></span><?php endif ?>
+              <?php if ($m['origen']): ?><span class="origen" style="display:block;margin-top:3px"><?= $m['origen'] === 'regla' ? 'automático' : 'manual' ?><?php
+                if ($m['autor']): ?> · <?= e($m['autor']) ?><?php endif ?></span><?php endif ?>
             <?php else: ?><span class="etq vacia">Sin clasificar</span><?php endif ?></td>
           <td class="monto <?= $m['tipo'] === 'C' ? 'c' : 'd' ?>">
             <span class="barra" style="width:<?= number_format($anch, 1, '.', '') ?>%"></span>

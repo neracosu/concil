@@ -155,6 +155,12 @@ function migrar(): void
     // beneficiario se queda: lo llenan las reglas con etiquetas gruesas y sirve
     // para otra cosa.
     columna_si_falta($pdo, 'movimientos', 'proveedor_id', 'INT NULL');
+
+    // Quién dejó puesta la clasificación. Va en el movimiento y no solo en la
+    // bitácora porque auditoría lo pregunta fila por fila. Solo se llena hacia
+    // adelante: lo clasificado antes de que existiera la columna no se puede
+    // reconstruir, y se queda en blanco antes que inventar un nombre.
+    columna_si_falta($pdo, 'movimientos', 'usuario_id', 'INT NULL');
     if (!indice_existe($pdo, 'movimientos', 'idx_mov_prov')) {
         $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_prov (proveedor_id)');
     }

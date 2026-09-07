@@ -92,9 +92,13 @@ function reaplicar_reglas(bool $incluirYaMapeados = false, ?int $cuentaId = null
     $where .= ' AND ' . filtro_sede('');
 
     $sel = $pdo->query("SELECT id, concepto, nota_banco, referencia FROM movimientos WHERE $where");
+    // El autor se borra a propósito: si una regla vuelve a clasificar el
+    // movimiento, la clasificación ya no es obra de nadie y dejar el nombre
+    // anterior sería atribuirle a una persona algo que no decidió.
     $upd = $pdo->prepare("UPDATE movimientos
                              SET categoria_id = ?, beneficiario = ?, regla_id = ?,
-                                 origen = 'regla', estado = 'conciliado', actualizado_en = NOW()
+                                 origen = 'regla', estado = 'conciliado',
+                                 usuario_id = NULL, actualizado_en = NOW()
                            WHERE id = ?");
     $hit = $pdo->prepare('UPDATE reglas SET aciertos = aciertos + 1 WHERE id = ?');
 
@@ -162,7 +166,7 @@ function aplicar_comisiones(?int $cuentaId = null): int
 
     $marcar = $pdo->prepare("UPDATE movimientos
                                 SET categoria_id = ?, estado = 'conciliado', origen = 'regla',
-                                    regla_id = ?, actualizado_en = NOW()
+                                    regla_id = ?, usuario_id = NULL, actualizado_en = NOW()
                               WHERE cuenta_id = ? AND referencia = ? AND debito = ?
                                 AND tipo = 'D' AND categoria_id IS NULL");
     $sumar = $pdo->prepare('UPDATE reglas SET aciertos = aciertos + ? WHERE id = ?');

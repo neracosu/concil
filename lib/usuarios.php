@@ -63,6 +63,13 @@ function nombre_usuario(): string
     return (string) (usuario_actual()['nombre'] ?? '');
 }
 
+/** El id de quien está trabajando, para dejarlo anotado en lo que toque. */
+function usuario_id_actual(): ?int
+{
+    $id = (int) (usuario_actual()['id'] ?? 0);
+    return $id > 0 ? $id : null;
+}
+
 /** Busca al usuario que corresponde a ese PIN, si está activo. */
 function usuario_por_pin(string $pin): ?array
 {

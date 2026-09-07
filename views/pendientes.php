@@ -49,10 +49,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $reglaId = (int) $pdo->lastInsertId();
     }
 
+    // Aunque la clasificación se guarde como «regla» —porque de paso se creó
+    // una—, quien decidió fue la persona que está aquí, y así queda anotado.
     $set = "categoria_id = ?, beneficiario = ?, estado = 'conciliado',
-            origen = ?, regla_id = ?, actualizado_en = NOW()"
+            origen = ?, regla_id = ?, usuario_id = ?, actualizado_en = NOW()"
          . ($justif !== '' ? ', justificacion = ?' : '');
-    $base = [$catId, $benef, $reglaId ? 'regla' : 'manual', $reglaId];
+    $base = [$catId, $benef, $reglaId ? 'regla' : 'manual', $reglaId, usuario_id_actual()];
     if ($justif !== '') {
         $base[] = $justif;
     }
