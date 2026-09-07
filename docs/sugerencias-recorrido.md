@@ -57,24 +57,42 @@ anotado sigue aquí y en el historial de git.
 - **Lo que dijeron**: «revisar facturas duplicadas ya reportadas.»
 - **Qué significa**: que el sistema avise cuando la factura que se está
   anotando ya estaba registrada antes, para no pagarla dos veces.
+- **El caso real, aclarado el 06/09**: «los duplicados salen cuando las
+  personas encargadas de pagar a proveedores puede que le paguen a un mismo
+  proveedor la misma factura desde dos bancos distintos». O sea: **no es un
+  error de tecleo, es que son varias personas pagando** y cada una mira su
+  banco. Las fichas 2, 3 y 6 son tres caras de este mismo caso y hay que
+  planificarlas juntas.
 - **Dónde toca**: `lib/proveedores.php`, `views/facturas_panel.php`,
   `views/_facturas.php`, tabla `facturas`.
 - **Tamaño**: M
-- **Estado**: `recogida` — falta aclarar qué cuenta como repetida (ver
-  preguntas).
+- **Estado**: `entendida` — falta solo saber qué hace «la misma factura» cuando
+  el número se teclea distinto (ver preguntas).
 
 ### 3 · Reconocer la misma factura pagada desde cuentas distintas
 
 - **Lo que dijeron**: «identificar facturas también entre cuentas para evitar
   pagos duplicados.»
-- **Qué significa**: la misma factura se puede pagar desde el Tesoro y desde
-  Banesco sin que nadie lo note, porque cada cuenta se mira por separado. Piden
-  que la búsqueda de facturas cruce **todas** las cuentas.
-- **Dónde toca**: `lib/consultas.php` (la factura hoy ya es de la sede, no de
-  la cuenta: hay que comprobar dónde se está estrechando la búsqueda),
-  `lib/proveedores.php`, `views/_facturas.php`.
+- **Qué significa**: la misma factura se paga desde el Tesoro y desde Banesco,
+  por dos personas distintas, sin que ninguna se entere. Piden que el sistema
+  reconozca la factura mire quien mire y desde el banco que sea.
+- **Comprobado el 06/09: hoy el sistema no solo lo permite, empuja al error.**
+  Al justificar un pago, `lista_facturas()` (en `views/_facturas.php`) enseña
+  **solo las facturas abiertas**, más las que ese mismo pago ya cubre. En
+  cuanto la primera persona la paga desde su banco, la factura **desaparece de
+  la pantalla** de la segunda. La segunda no la ve, da por hecho que no está
+  anotada, la anota otra vez y la paga. La factura sí es de la unidad entera y
+  no de la cuenta —ese lado está bien—; el problema es que quedan escondidas.
+- **La única red que hay hoy es frágil**: la clave única
+  `uq_factura_sede (sede_id, proveedor_id, numero)` avisa «ya hay una factura
+  número X de ese proveedor», pero solo si la segunda persona teclea el número
+  **exactamente igual**. Para la base, «0001», «1» y «F-0001» son tres facturas
+  distintas.
+- **Dónde toca**: `views/_facturas.php` (que las cubiertas se sigan viendo,
+  marcadas y con quién las pagó), `lib/proveedores.php` (`saldo_factura()` ya
+  contempla el estado `excedida`, hoy no se avisa de él), `lib/consultas.php`.
 - **Tamaño**: M
-- **Estado**: `recogida`
+- **Estado**: `entendida`
 
 ### 4 · Añadir facturas nuevas sin salir de la pantalla de justificar
 
@@ -113,12 +131,17 @@ anotado sigue aquí y en el historial de git.
 - **Lo que dijeron**: «alerta cuando un proveedor repite el mismo monto de pago
   o patrones similares asociados a pagos duplicados.»
 - **Qué significa**: un aviso automático cuando dos pagos al mismo proveedor se
-  parecen demasiado —mismo monto, fechas cercanas— porque suele ser el mismo
-  pago hecho dos veces.
+  parecen demasiado —mismo monto, fechas cercanas, bancos distintos— porque
+  suele ser el mismo pago hecho dos veces por dos personas.
+- **Es la red de seguridad de la nº 3**: la nº 3 solo protege si la factura
+  está anotada. Cuando el pago se justifica sin factura —que es la mayoría
+  hoy—, lo único que queda es notar que a ese proveedor se le fue el mismo
+  monto dos veces. Por eso conviene que el aviso mire el **proveedor y el
+  monto**, no la factura.
 - **Dónde toca**: `lib/consultas.php`, `views/proveedor.php`,
   `views/panel.php`.
 - **Tamaño**: M
-- **Estado**: `recogida` — falta saber qué margen los hace sospechosos (ver
+- **Estado**: `entendida` — falta saber qué margen los hace sospechosos (ver
   preguntas).
 
 ### 7 · Desplegar los conceptos detrás de «justificar 8 movimientos»
@@ -177,11 +200,16 @@ anotado sigue aquí y en el historial de git.
 2. **(nº 1)** Si se corrige una tasa después de haber repartido pagos entre
    facturas con la anterior, ¿se rehace lo repartido o se respeta lo ya
    guardado?
-3. **(nº 2)** «Duplicadas ya reportadas»: ¿reportadas por el ERP o por
-   auditoría, en una lista que nos van a pasar? ¿O se refieren a las que ya
-   están cargadas en CONCIL?
-4. **(nº 2)** ¿Qué hace repetida a una factura: mismo proveedor y mismo número,
-   o también mismo monto y misma fecha aunque el número cambie?
+3. ~~**(nº 2)** «Duplicadas ya reportadas»~~ — **respondida el 06/09**: son las
+   de aquí. El caso es que dos personas paguen la misma factura del mismo
+   proveedor desde dos bancos distintos.
+4. **(nº 2 y 3)** ¿Qué hace repetida a una factura cuando el número no se
+   teclea igual? ¿Basta con comparar el número sin ceros, guiones ni espacios,
+   o hay que mirar también monto y fecha?
+4b. **(nº 3)** Cuando alguien intente pagar una factura que **ya está cubierta**
+   desde otro banco: ¿el sistema lo **bloquea** o solo **avisa** en rojo y deja
+   seguir? La costumbre de la casa es advertir y no impedir, pero un pago
+   duplicado cuesta dinero de verdad, así que esta la deciden ellos.
 5. **(nº 6)** ¿Con qué margen salta la alerta? ¿Monto exacto, dentro de cuántos
    días, y solo del mismo proveedor?
 6. **(nº 5)** ¿Cómo se están justificando hoy los traspasos entre cuentas
@@ -194,8 +222,12 @@ anotado sigue aquí y en el historial de git.
 
 ## Decisiones ya tomadas en el recorrido
 
-_(cuando alguien zanja algo en la propia reunión, se anota aquí para no
-volver a discutirlo)_
+**06/09 · Qué es un pago duplicado aquí.** No es un error de tecleo ni un
+archivo cargado dos veces: **son varias personas las que pagan a proveedores**,
+cada una desde un banco distinto, y puede que dos paguen la misma factura del
+mismo proveedor sin cruzarse. Todo lo que se construya contra los duplicados
+—fichas 2, 3 y 6— tiene que funcionar **entre cuentas y entre personas**, no
+dentro de una sola cuenta.
 
 ---
 
