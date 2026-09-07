@@ -464,6 +464,9 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     // Las comisiones que no se reconocen por su texto necesitan ver la pareja,
     // así que se resuelven cuando el archivo entero ya está guardado.
     $automaticos += aplicar_comisiones($cuentaId);
+    // Los traspasos necesitan ver las dos cuentas, así que se atan cuando el
+    // archivo ya está dentro: la pareja puede llevar meses esperando en la otra.
+    enlazar_traspasos($cuentaId);
 
     $duplicados = $filas - $insertados;
     $automaticos = min($automaticos, $insertados);

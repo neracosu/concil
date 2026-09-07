@@ -161,6 +161,14 @@ function migrar(): void
     // adelante: lo clasificado antes de que existiera la columna no se puede
     // reconstruir, y se queda en blanco antes que inventar un nombre.
     columna_si_falta($pdo, 'movimientos', 'usuario_id', 'INT NULL');
+
+    // El otro lado de un traspaso entre cuentas propias: el crédito que entró
+    // en la otra cuenta. Se apunta en las dos filas, cada una a la otra, para
+    // que desde cualquiera de las dos se llegue a su pareja sin buscarla.
+    columna_si_falta($pdo, 'movimientos', 'traspaso_id', 'INT NULL');
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_traspaso')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_traspaso (traspaso_id)');
+    }
     if (!indice_existe($pdo, 'movimientos', 'idx_mov_prov')) {
         $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_prov (proveedor_id)');
     }

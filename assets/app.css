@@ -614,3 +614,11 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
   color:var(--mudo);transition:color var(--t),border-color var(--t),background var(--t)}
 .tema button:hover{color:var(--texto)}
 .tema button.on{color:var(--oro);border-color:var(--linea-fuerte);background:var(--panel-3)}
+
+/* Las dos caras de un traspaso. */
+.traspaso b{display:block;margin-bottom:4px;font-size:14px}
+.traspaso b:not(:first-child){display:inline;font-size:inherit;margin:0}
+.traspaso-opcion{display:flex;justify-content:space-between;align-items:center;gap:14px;
+  padding:9px 0;border-top:1px solid var(--linea-suave)}
+.traspaso-opcion:first-of-type{border-top:0}
+.traspaso-opcion .origen{display:block}

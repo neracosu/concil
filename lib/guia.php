@@ -217,6 +217,14 @@ function guia_pasos(): array
         ],
 
         [
+            'ruta' => 'reglas', 'sel' => '[data-guia="traspasos"]',
+            'titulo' => 'El dinero que se mueve entre sus cuentas',
+            'texto' => 'Cuando pasa plata de una cuenta suya a otra salen <b>dos apuntes</b>: uno que sale '
+                     . 'y otro que entra. Con este botón el sistema busca las parejas y las une, para que '
+                     . 'no se cuenten como un gasto y un ingreso que no fueron.',
+            'nota' => 'Cuando no está seguro no adivina: se lo pregunta a usted en el detalle del pago.',
+        ],
+        [
             'ruta' => 'ajustes', 'sel' => '[data-guia="tema"]', 'lado' => 'derecha',
             'titulo' => 'Con fondo claro o con fondo oscuro',
             'texto' => 'Aquí elige cómo quiere ver la pantalla. <b>Automático</b> se pone como esté '

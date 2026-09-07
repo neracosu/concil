@@ -17,6 +17,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirigir('?r=movimiento&id=' . $id);
     }
 
+    if ($accion === 'atar' || $accion === 'soltar') {
+        try {
+            atar_traspaso($id, $accion === 'atar' ? (int) ($_POST['otro_id'] ?? 0) : null);
+            bitacora('traspaso', $accion === 'atar'
+                ? "movimiento $id con " . (int) ($_POST['otro_id'] ?? 0)
+                : "movimiento $id suelto");
+            flash('ok', $accion === 'atar'
+                ? 'Quedaron unidos: es el mismo dinero pasando de una cuenta a la otra.'
+                : 'Ya no están unidos.');
+        } catch (Throwable $ex) {
+            flash('mal', $ex->getMessage());
+        }
+        redirigir('?r=movimiento&id=' . $id);
+    }
+
     if ($accion === 'tasa') {
         $r = corregir_tasa((string) ($_POST['fecha'] ?? ''), a_monto((string) ($_POST['tasa'] ?? '')));
         flash($r['ok'] ? 'ok' : 'mal', $r['mensaje']);
@@ -54,6 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $s = $pdo->prepare("SELECT m.*, c.nombre cuenta, c.banco, cat.nombre categoria, cat.color,
                            r.nombre regla, i.archivo, i.creado_en cargado, t.tasa tasa_bcv,
                            t.origen tasa_origen, ut.nombre tasa_autor,
+                           tr.fecha tr_fecha, tr.tipo tr_tipo, tr.concepto tr_concepto,
+                           tr.debito tr_debito, tr.credito tr_credito, ctr.nombre tr_cuenta,
                            u.nombre autor
                       FROM movimientos m
                       JOIN cuentas c ON c.id = m.cuenta_id
@@ -62,6 +79,8 @@ $s = $pdo->prepare("SELECT m.*, c.nombre cuenta, c.banco, cat.nombre categoria, 
                  LEFT JOIN reglas r ON r.id = m.regla_id
                  LEFT JOIN usuarios u ON u.id = m.usuario_id
                  LEFT JOIN usuarios ut ON ut.id = t.usuario_id
+                 LEFT JOIN movimientos tr ON tr.id = m.traspaso_id
+                 LEFT JOIN cuentas ctr ON ctr.id = tr.cuenta_id
                  LEFT JOIN importaciones i ON i.id = m.importacion_id
                      WHERE m.id = ? AND " . filtro_sede());
 $s->execute([$id]);
@@ -125,6 +144,50 @@ encabezado_html('Movimiento', 'movimientos',
         <div class="dato"><dt>Lo hizo</dt><dd class="texto"><?= e($m['autor']) ?>
           <span class="origen" style="display:block"><?= e(date('d/m/Y H:i', strtotime((string) $m['actualizado_en']))) ?></span></dd></div><?php endif ?>
     </dl>
+
+    <?php if ($m['traspaso_id']): ?>
+      <div class="aviso aviso-nota traspaso" data-guia="traspaso">
+        <b>Es un traspaso entre cuentas suyas</b>
+        Este <?= $m['tipo'] === 'D' ? 'pago salió de' : 'ingreso entró en' ?>
+        <b><?= e($m['cuenta']) ?></b> y el otro lado
+        <?= $m['tr_tipo'] === 'C' ? 'entró en' : 'salió de' ?> <b><?= e($m['tr_cuenta']) ?></b>
+        el <?= e(date('d/m/Y', strtotime((string) $m['tr_fecha']))) ?>.
+        El dinero no salió del grupo.
+        <span class="origen"><?= e(mb_strimwidth((string) $m['tr_concepto'], 0, 80, '…')) ?></span>
+        <div class="acciones" style="margin-top:10px">
+          <a class="btn" href="?r=movimiento&amp;id=<?= (int) $m['traspaso_id'] ?>">Ver el otro lado</a>
+          <form method="post" style="display:inline">
+            <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+            <input type="hidden" name="accion" value="soltar">
+            <input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
+            <button class="btn">No son el mismo dinero</button>
+          </form>
+        </div>
+      </div>
+    <?php else: $posibles = traspasos_posibles($m); if ($posibles !== []): ?>
+      <details class="tasa-mano" data-guia="traspaso">
+        <summary>¿Es un traspaso a otra cuenta suya?</summary>
+        <p class="nota" style="margin:0 0 12px">
+          <?= count($posibles) === 1 ? 'Hay un movimiento' : 'Hay ' . count($posibles) . ' movimientos' ?>
+          del mismo monto en otra cuenta de esta unidad, por esas fechas. Si es el mismo dinero
+          pasando de una cuenta a la otra, únalos: dejará de parecer un gasto y un ingreso.
+        </p>
+        <?php foreach ($posibles as $p): ?>
+          <form method="post" class="traspaso-opcion">
+            <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+            <input type="hidden" name="accion" value="atar">
+            <input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
+            <input type="hidden" name="otro_id" value="<?= (int) $p['id'] ?>">
+            <span>
+              <b><?= e($p['cuenta']) ?></b> · <?= e(date('d/m/Y', strtotime((string) $p['fecha']))) ?>
+              · Bs <?= bs((float) $p['monto']) ?>
+              <span class="origen"><?= e(mb_strimwidth((string) $p['concepto'], 0, 64, '…')) ?></span>
+            </span>
+            <button class="btn">Es este</button>
+          </form>
+        <?php endforeach ?>
+      </details>
+    <?php endif; endif ?>
 
     <details class="tasa-mano">
       <summary>La tasa de ese día no es la correcta</summary>

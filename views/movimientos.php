@@ -154,6 +154,7 @@ function opciones_categoria(array $cats, ?int $sel): void
           <td class="fecha"><a href="?r=movimiento&amp;id=<?= $m['id'] ?>" title="Ver y corregir"><?= e(date('d/m/y', strtotime($m['fecha']))) ?></a></td>
           <td style="font-size:12.5px;color:var(--mudo);white-space:nowrap"><?= e($m['cuenta']) ?></td>
           <td class="concepto"><a href="?r=movimiento&amp;id=<?= $m['id'] ?>"><span class="txt"><?= e($m['concepto']) ?></span></a>
+            <?php if ($m['traspaso_id']): ?><span class="nota"><b style="color:var(--azul)">traspaso entre cuentas propias</b></span><?php endif ?>
             <?php if ($m['beneficiario'] || $m['justificacion'] || $m['nota_banco']): ?>
               <span class="nota"><?php if ($m['beneficiario']): ?><b style="color:var(--suave)"><?= e($m['beneficiario']) ?></b> · <?php endif ?>
                 <?= e(mb_strimwidth((string) ($m['justificacion'] ?: $m['nota_banco']), 0, 60, '…')) ?></span>

@@ -196,3 +196,139 @@ function aplicar_comisiones(?int $cuentaId = null): int
     }
     return $n;
 }
+
+/* ------------------------------------------- Traspasos entre cuentas propias */
+
+/**
+ * Cuántos días caben entre las dos caras de un traspaso. El dinero sale de una
+ * cuenta y entra en la otra el mismo día casi siempre, pero un fin de semana
+ * de por medio lo corre dos o tres.
+ */
+const DIAS_TRASPASO = 3;
+
+/**
+ * Busca la pareja de cada traspaso entre cuentas propias y las ata.
+ *
+ * Un traspaso son dos apuntes: el débito que sale de una cuenta y el crédito
+ * que entra en la otra. Sueltos parecen un gasto y un ingreso, y ni el gasto
+ * lo es ni el ingreso tampoco: el dinero no salió del grupo.
+ *
+ * **Solo ata lo que no admite discusión**: mismo monto, cuentas distintas de la
+ * misma unidad, dentro de la ventana, y que no haya más de un candidato de cada
+ * lado. Con dos candidatos iguales no se elige a la suerte —se quedan para que
+ * lo diga una persona desde el detalle del movimiento—, porque un enlace
+ * equivocado esconde un pago de verdad.
+ */
+function enlazar_traspasos(?int $cuentaId = null): int
+{
+    $pdo = db();
+    $donde = 'm.traspaso_id IS NULL AND ' . filtro_sede();
+    if ($cuentaId) {
+        $donde .= ' AND (m.cuenta_id = ' . (int) $cuentaId . ' OR 1=1)';
+    }
+    $sueltos = $pdo->query("SELECT m.id, m.cuenta_id, m.fecha, m.tipo,
+                                   CASE WHEN m.tipo = 'D' THEN m.debito ELSE m.credito END monto
+                              FROM movimientos m
+                             WHERE $donde
+                               AND (m.debito > 0 OR m.credito > 0)")->fetchAll();
+
+    // Por monto, que es lo único que las dos caras comparten seguro: el banco
+    // que recibe escribe su propio concepto.
+    $porMonto = [];
+    foreach ($sueltos as $m) {
+        $porMonto[(string) round((float) $m['monto'], 2)][$m['tipo']][] = $m;
+    }
+
+    $atar = $pdo->prepare('UPDATE movimientos SET traspaso_id = ?, actualizado_en = NOW() WHERE id = ?');
+    $n = 0;
+    foreach ($porMonto as $grupo) {
+        $debitos  = $grupo['D'] ?? [];
+        $creditos = $grupo['C'] ?? [];
+        foreach ($debitos as $d) {
+            $candidatos = [];
+            foreach ($creditos as $c) {
+                if ((int) $c['cuenta_id'] === (int) $d['cuenta_id']) {
+                    continue;   // dentro de la misma cuenta no hay traspaso
+                }
+                $dias = abs((strtotime($c['fecha']) - strtotime($d['fecha'])) / 86400);
+                if ($dias <= DIAS_TRASPASO) {
+                    $candidatos[] = $c;
+                }
+            }
+            // Uno y solo uno: con dos no se adivina.
+            if (count($candidatos) !== 1) {
+                continue;
+            }
+            $c = $candidatos[0];
+            // Y que ese crédito tampoco tenga dos pretendientes.
+            $suyos = 0;
+            foreach ($debitos as $d2) {
+                $dias = abs((strtotime($c['fecha']) - strtotime($d2['fecha'])) / 86400);
+                if ((int) $d2['cuenta_id'] !== (int) $c['cuenta_id'] && $dias <= DIAS_TRASPASO) {
+                    $suyos++;
+                }
+            }
+            if ($suyos !== 1) {
+                continue;
+            }
+            $atar->execute([(int) $c['id'], (int) $d['id']]);
+            $atar->execute([(int) $d['id'], (int) $c['id']]);
+            $creditos = array_values(array_filter($creditos, fn($x) => (int) $x['id'] !== (int) $c['id']));
+            $n++;
+        }
+    }
+    return $n;
+}
+
+/**
+ * Los movimientos que podrían ser el otro lado de este, para que lo diga una
+ * persona cuando el sistema no se atrevió a decidirlo solo.
+ */
+function traspasos_posibles(array $mov, int $tope = 6): array
+{
+    $contrario = $mov['tipo'] === 'D' ? 'C' : 'D';
+    $monto = (float) ($mov['tipo'] === 'D' ? $mov['debito'] : $mov['credito']);
+    if ($monto <= 0) {
+        return [];
+    }
+    $campo = $contrario === 'D' ? 'm.debito' : 'm.credito';
+    $s = db()->prepare("SELECT m.id, m.fecha, m.concepto, m.referencia, $campo monto, c.nombre cuenta
+                          FROM movimientos m
+                          JOIN cuentas c ON c.id = m.cuenta_id
+                         WHERE m.tipo = ? AND m.traspaso_id IS NULL
+                           AND m.cuenta_id <> ? AND ABS($campo - ?) < 0.01
+                           AND ABS(DATEDIFF(m.fecha, ?)) <= " . (DIAS_TRASPASO * 3) . '
+                           AND ' . filtro_sede() . "
+                      ORDER BY ABS(DATEDIFF(m.fecha, ?)), m.id
+                         LIMIT " . max(1, $tope));
+    $s->execute([$contrario, (int) $mov['cuenta_id'], $monto, $mov['fecha'], $mov['fecha']]);
+    return $s->fetchAll();
+}
+
+/** Ata dos movimientos como las dos caras de un traspaso, o los suelta. */
+function atar_traspaso(int $unoId, ?int $otroId): void
+{
+    $pdo = db();
+    $uno = $pdo->prepare('SELECT m.id, m.traspaso_id FROM movimientos m WHERE m.id = ? AND ' . filtro_sede());
+    $uno->execute([$unoId]);
+    $m = $uno->fetch();
+    if (!$m) {
+        throw new RuntimeException('Ese movimiento no es de esta unidad de negocio.');
+    }
+    $limpiar = $pdo->prepare('UPDATE movimientos SET traspaso_id = NULL WHERE id = ? OR traspaso_id = ?');
+    $limpiar->execute([(int) $m['traspaso_id'] ?: 0, $unoId]);
+
+    if ($otroId === null) {
+        $pdo->prepare('UPDATE movimientos SET traspaso_id = NULL WHERE id = ?')->execute([$unoId]);
+        return;
+    }
+    $otro = $pdo->prepare('SELECT m.id FROM movimientos m WHERE m.id = ? AND m.cuenta_id <>
+                             (SELECT cuenta_id FROM movimientos WHERE id = ?) AND ' . filtro_sede());
+    $otro->execute([$otroId, $unoId]);
+    if (!$otro->fetch()) {
+        throw new RuntimeException('El otro lado tiene que ser un movimiento de otra cuenta de esta unidad.');
+    }
+    $at = $pdo->prepare('UPDATE movimientos SET traspaso_id = ?, actualizado_en = NOW() WHERE id = ?');
+    $at->execute([$otroId, $unoId]);
+    $at->execute([$unoId, $otroId]);
+}

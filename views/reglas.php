@@ -67,6 +67,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirigir('?r=reglas');
     }
 
+    if ($accion === 'traspasos') {
+        $n = enlazar_traspasos();
+        bitacora('traspasos', "$n parejas");
+        flash('ok', $n === 0
+            ? 'No se encontró ninguna pareja nueva de traspaso.'
+            : $n . ' traspaso' . ($n === 1 ? '' : 's') . ' unido' . ($n === 1 ? '' : 's')
+              . ' con su otra cara. Búsquelos en el detalle del movimiento.');
+        redirigir('?r=reglas');
+    }
+
     if ($accion === 'reaplicar') {
         $todos = !empty($_POST['incluir_mapeados']);
         $n = reaplicar_reglas($todos);
@@ -117,6 +127,19 @@ encabezado_html('Reglas de mapeo', 'reglas',
       Rehacer también los ya clasificados por regla
     </label>
     <button class="btn btn-oro" data-confirmar="Se recorrerán todos los débitos aplicando las reglas activas. ¿Continuar?">Reaplicar reglas</button>
+  </div>
+</form>
+
+<form method="post" style="margin-bottom:16px">
+  <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+  <input type="hidden" name="accion" value="traspasos">
+  <div class="tarjeta" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap" data-guia="traspasos">
+    <div style="flex:1;min-width:240px">
+      <b style="display:block;margin-bottom:3px">Unir los traspasos entre sus cuentas</b>
+      <span style="color:var(--mudo);font-size:13px">Cuando pasa dinero de una cuenta suya a otra, salen dos apuntes:
+        uno que sale y otro que entra. Esto los busca y los une, para que no parezcan un gasto y un ingreso.</span>
+    </div>
+    <button class="btn">Buscar traspasos</button>
   </div>
 </form>
 

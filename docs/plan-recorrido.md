@@ -193,21 +193,36 @@ Cómo quedó:
   va encima del dorado**, que en claro se volvía ilegible.
 - Las catorce pantallas comprobadas en claro: 200 y sin un aviso.
 
-## Fase 7 · Los dos lados de un traspaso · nº 5
+## Fase 7 · Los dos lados de un traspaso · nº 5 — HECHA el 06/09/2026
 
-**Varios días. Versión 2.0. Conversación aparte antes de empezar.**
+**Entregada como versión 2.1.**
 
-Es la única que no es una mejora sino un cambio de alcance: hoy los **371
-créditos** —403 millones de bolívares— se guardan enteros pero no se clasifican
-por decisión de producto. Enlazar el débito de una cuenta con el crédito de la
-otra obliga a levantar esa decisión y arrastra el panel, los reportes, las
-reglas y la visita guiada.
+Cómo quedó, y por qué así:
+- Columna `movimientos.traspaso_id`, apuntada **en las dos filas**, cada una a
+  la otra: desde cualquiera de las dos se llega a su pareja.
+- `enlazar_traspasos()` en `lib/reglas.php` **solo ata lo que no admite
+  discusión**: mismo monto, cuentas distintas de la misma unidad, hasta tres
+  días de diferencia, y **un solo candidato de cada lado**. Con dos iguales no
+  se elige a la suerte, porque un enlace equivocado esconde un pago de verdad.
+- Lo que no se atreve a decidir **se lo pregunta a una persona**: en el detalle
+  del movimiento aparece «¿Es un traspaso a otra cuenta suya?» con los
+  candidatos y un botón. Y siempre se puede soltar: «No son el mismo dinero».
+- La pasada corre **al terminar cada carga** —la pareja puede llevar meses
+  esperando en la otra cuenta— y con un botón en Reglas.
+- En el listado, los traspasos se marcan.
+- Paso nuevo en la visita guiada (`data-guia="traspasos"`).
 
-Antes de tocar código hace falta **un traspaso real de agosto** para ver cómo se
-reconoce: si comparten referencia, si el monto calza exacto, cuántos días de
-diferencia hay entre los dos apuntes. No hay que esperar a que carguen nada:
-los extractos de `DATA_DIR/muestras/` sobreviven al reinicio y ahí están los
-traspasos de verdad.
+**Sobre los créditos**: se atan, se ven y se marcan, pero **siguen sin
+clasificarse**. La decisión de producto no se levantó del todo, solo lo justo
+para responder a lo que pidieron; el día que quieran clasificar créditos, es
+quitar el filtro `tipo = 'D'`, no volver a importar.
+
+**Lo que se vio en los datos antes de programar**: en el extracto de Banesco
+hay 26 débitos con la forma `TRFOB 0163 J500198175 ARMORMARKET 2025 7492` —el
+código del banco de destino (0163, el Tesoro) y **el RIF de la propia empresa**—.
+Son traspasos a su propia cuenta del Tesoro, escritos por el banco que los
+manda. El otro lado no se pudo comprobar contra la base porque lo cargado es de
+meses distintos: Banesco de julio y Tesoro solo del 27 de agosto.
 
 ---
 
