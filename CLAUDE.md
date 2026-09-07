@@ -264,6 +264,11 @@ Dos trampas al hacerlo:
 
 ## Antes de subir cambios
 
+- **El repositorio es público.** `neracosu/concil` se lee sin identificarse, así
+  que todo lo que escribas en el código queda en internet para siempre, también
+  en el historial. No solo credenciales: tampoco teléfonos, direcciones ni
+  nombres de proveedores. Eso vive en `secrets.php` y se lee con una función,
+  como `soporte_telefono()`.
 - Ningún secreto en el repositorio. El PIN de instalación se genera solo y vive
   en `DATA_DIR/PIN-INICIAL.txt`; no vuelvas a escribirlo en el código.
 - Ningún extracto bancario ni volcado de base: `.gitignore` los excluye, pero
