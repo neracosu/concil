@@ -48,9 +48,13 @@ trabajo— la misma decisión se toma con dinero anotado encima.
 
 ---
 
-## Fase 1 · Quién hizo cada cambio · nº 8
+## Fase 1 · Quién hizo cada cambio · nº 8 — HECHA el 06/09/2026
 
-**Un día. Versión 1.5.**
+**Entregada como versión 1.5**, commit `4c37cee`. Comprobada por HTTP de punta
+a punta: se justifica un movimiento desde la bandeja y el nombre aparece en la
+lista, en el detalle y en la columna **«Quién lo hizo»** del archivo exportado.
+La pasada automática de reglas **borra** el autor, y quitar la clasificación
+también. Las diecisiete rutas siguen respondiendo 200 sin un aviso.
 
 Lo que pidió auditoría con el reporte en la mano: que donde dice «manual»
 aparezca el nombre de quien lo hizo.
