@@ -136,21 +136,19 @@ Todo en un guion de una sola pasada, que se pueda correr en seco primero.
 
 ---
 
-## En consulta con el departamento (08/09/2026)
+## Consultado con el departamento y cerrado (08/09/2026)
 
-**Nada de esto está cerrado todavía.** La primera respuesta fue «Pets dentro,
-CASHEA fuera», pero se volvió a abrir para confirmarlo con auditoría. Lo que
-sigue es el escenario que se estaba considerando, no una decisión.
+Las dos preguntas están respondidas por auditoría. **Todo entra en la unidad
+que ya existe, ARMOR MARKET**: 24 cuentas y 32.319 movimientos.
 
-**Lo que hay que preguntarles, y por qué esas dos preguntas y no otras:**
+1. ~~¿ARMOR PETS tiene su propio RIF?~~ **RESPONDIDA el 08/09/2026: usa el
+   mismo RIF que Armor Market. Es una sección dentro de la tienda**, no una
+   empresa aparte. Va dentro, en la unidad que ya existe.
 
-1. **¿ARMOR PETS tiene su propio RIF?** «Pertenece a Armor Market» habla de
-   quién es el dueño, y eso no es lo que decide aquí. Lo que decide es de quién
-   es la deuda: `facturas.sede_id` va en la clave única porque **una factura se
-   le debe a una empresa concreta**. Si Pets es otro contribuyente, sus facturas
-   y sus proveedores son suyos y mezclarlos es un problema contable, no de
-   pantalla. Si es el mismo RIF —una marca, una línea de negocio— entonces sí
-   va dentro y no pasa nada.
+   La pregunta era esa y no «de quién es», porque lo que decide en CONCIL es de
+   quién es la deuda: `facturas.sede_id` va en la clave única porque una factura
+   se le debe a un contribuyente concreto. Mismo RIF, misma unidad, y no hay
+   nada que separar después.
 2. ~~¿A nombre de quién están las dos cuentas de CASHEA?~~ **RESPONDIDA el
    08/09/2026: son de Armor Market y sí entran.** Auditoría lo explicó así: la
    **cuota inicial** que paga el cliente cae en las cuentas de siempre; **las
@@ -183,10 +181,11 @@ Bicentenario.
 
 ---
 
-## El escenario que se estaba considerando
+## Lo decidido
 
-**CASHEA dentro**, como dos cuentas más de Armor Market. **Armor Pets, en
-consulta**: depende de si tiene RIF propio.
+**Armor Pets y CASHEA van dentro de ARMOR MARKET**, como cuentas más de la
+misma unidad. Ni una ni otra es empresa aparte: Pets es una sección de la
+tienda con el mismo RIF, y CASHEA es un canal de cobro.
 
 | | Cuentas | Movimientos |
 |---|---|---|
@@ -195,11 +194,8 @@ consulta**: depende de si tiene RIF propio.
 | CASHEA (canal de cobro de AMK) | 2 | 438 |
 | **Total en la unidad AMK** | **24** | **32.319** |
 
-Dos consecuencias que conviene tener presentes:
+Una consecuencia que conviene tener presente:
 
-- **Las cifras de Pets y de Market quedan sumadas** en el panel y en los
-  reportes. Se pueden separar filtrando por cuenta, pero el total de arriba es
-  el de las dos operaciones juntas. Separarlas después sería volver a cargar.
 - El Tesoro y el Bicentenario aparecen **dos veces cada uno**, una cuenta de
   Market y otra de Pets. El sistema lo soporta desde la v2.4.2, pero los
   nombres tienen que dejar claro cuál es cuál: se usan los del libro
