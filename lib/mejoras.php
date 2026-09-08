@@ -41,6 +41,18 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7.1', 'tipo' => 'correccion',
+            'titulo' => 'El reporte estaba juntando renglones que no van juntos',
+            'resumen' => 'La pantalla de Reportes agrupaba mal: en vez de sumar por lo que usted elige '
+                       . '—categoría, cuenta, mes— agrupaba por el proveedor, y cuando los pagos no '
+                       . 'tenían proveedor los metía todos en un solo renglón. Los totales de abajo '
+                       . 'siempre estuvieron bien; lo que estaba mal era cómo se repartían.',
+            'detalles' => [
+                'Afectaba a todos los cortes del reporte y venía de antes.',
+                'Si sacó un reporte estos días y le extrañó ver un solo renglón, era esto.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7', 'tipo' => 'nuevo',
             'titulo' => 'Las comisiones del banco, desglosadas como las lleva contabilidad',
             'resumen' => 'Hasta ahora todo lo que cobraba el banco caía en un solo renglón. Ahora se '

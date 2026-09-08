@@ -27,7 +27,15 @@ $f = filtros();
 [$w, $p] = where_filtros($f);
 $monto = $f['tipo'] === 'C' ? 'm.credito' : 'm.debito';
 
-$sql = "SELECT COALESCE($exprSel, '— sin indicar —') clave, $exprColor color, $exprId clave_id,
+/* Se agrupa por la expresión y no por el alias `clave`. MySQL, en un GROUP BY,
+   busca primero una columna con ese nombre y solo después el alias: como aquí
+   se une `proveedores`, que tiene una columna `clave`, el reporte llevaba
+   agrupando por el proveedor —y con los movimientos sin proveedor los metía
+   todos en un solo renglón—. En ORDER BY el orden de búsqueda es el contrario,
+   pero se escribe igual para no depender de esa diferencia. */
+$claveExpr = "COALESCE($exprSel, '— sin indicar —')";
+
+$sql = "SELECT $claveExpr clave, $exprColor color, $exprId clave_id,
                COUNT(*) n, SUM($monto) total, MIN(m.fecha) f1, MAX(m.fecha) f2
           FROM movimientos m
           JOIN cuentas c ON c.id = m.cuenta_id
@@ -36,8 +44,8 @@ $sql = "SELECT COALESCE($exprSel, '— sin indicar —') clave, $exprColor color
      LEFT JOIN categorias abuela ON abuela.id = madre.padre_id
      LEFT JOIN proveedores prov ON prov.id = m.proveedor_id
          WHERE $w
-      GROUP BY clave
-      ORDER BY " . ($corte === 'mes' ? 'clave ASC' : 'total DESC');
+      GROUP BY $claveExpr
+      ORDER BY " . ($corte === 'mes' ? "$claveExpr ASC" : "SUM($monto) DESC");
 
 $s = db()->prepare($sql);
 $s->execute($p);

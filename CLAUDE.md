@@ -174,6 +174,15 @@ y todo `factura_id` que llegue de un formulario se comprueba con
 que comprobarlo contra la sede** antes de usarlo: el `cuenta_id` de la carga y
 el `movimiento_id` al anotar un proveedor permitían tocar otra unidad.
 
+**Nunca agrupes por el alias de la columna.** En un `GROUP BY`, MySQL busca
+**primero una columna** con ese nombre en el `FROM` y solo después el alias del
+`SELECT` (en `ORDER BY` es al revés). El reporte hacía `... COALESCE(cat.nombre,
+…) clave … GROUP BY clave` y une `proveedores`, que tiene una columna `clave`:
+llevaba agrupando por el proveedor, y con los pagos sin proveedor los metía
+todos en un solo renglón. Se agrupa por la **expresión**, no por el alias. Si
+añades un `GROUP BY`, comprueba antes que ninguna tabla unida tenga una columna
+con ese nombre.
+
 **Las categorías se anidan, y el desglose de comisiones vive en `seed.php`.**
 `categorias.padre_id` cuelga una categoría de otra; la madre sigue siendo una
 categoría normal, así que lo ya clasificado en ella no se mueve. El árbol lo
