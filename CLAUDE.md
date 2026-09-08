@@ -105,6 +105,16 @@ traza: por ahí viaja el PIN.
 
 ## Trampas conocidas
 
+**El servidor NO está en Venezuela, y encima cambia de horario.** Corre en el
+Pacífico (PDT/PST): son **tres horas menos** que Caracas en verano y **cuatro**
+en invierno, porque allá hay horario de verano y en Venezuela no. Todo lo que se
+programe por hora del sistema se corre solo una hora dos veces al año. El cron
+del respaldo va a las 03:45 del servidor a propósito, con el porqué escrito
+encima: **`CRON_TZ` no sirve**, este cron es Debian 3.0pl1 y no lo entiende —
+ponerlo lo dejaría corriendo tres horas más tarde—. Lo que sí funciona es
+`export TZ='America/Caracas'` **dentro** del guion, para que los nombres de
+archivo y las horas de los correos salgan en hora de Venezuela.
+
 **Todo va en hora de Venezuela.** `ZONA_HORARIA` en `lib/config.php` la fija
 para PHP, y `db()` hace `SET time_zone = '-04:00'` en cada conexión. Las dos
 cosas tienen que ir de acuerdo: el servidor está en otra zona, y mezclar
