@@ -41,6 +41,24 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7.8', 'tipo' => 'mejora',
+            'titulo' => 'Su trabajo del semestre ya está adentro',
+            'resumen' => 'Se cargó el libro de auditoría que lleva el departamento: 32.263 '
+                       . 'movimientos de julio al 7 de septiembre, en 22 cuentas, con la '
+                       . 'clasificación que ustedes ya le habían puesto a mano. No hubo que volver a '
+                       . 'explicar nada: nueve de cada diez pagos entraron ya justificados.',
+            'detalles' => [
+                'Las 22 cuentas se crearon con su número y su saldo de arranque, tal como están en '
+                . 'el libro.',
+                'IMPORTANTE: julio y agosto ya están cargados. No vuelvan a subir esos extractos, '
+                . 'porque entrarían por segunda vez.',
+                'Lo que entra —las ventas y los cobros— se guardó completo, pero todavía no se '
+                . 'clasifica: eso viene después.',
+                'Quedan 1.725 pagos por explicar, casi todos pagos sueltos a un proveedor. Se '
+                . 'explican una vez y el sistema aprende.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7.7', 'tipo' => 'correccion',
             'titulo' => 'Unir dos cuentas ahora dice cuáles se parecen, y por qué',
             'resumen' => 'Decía «tiene 4 cuentas del mismo banco» como si eso fuera un problema, y no '
