@@ -735,6 +735,18 @@ Restaurar en una instalación limpia: crear la base, importar el volcado y
 escribir `secrets.php`. Los extractos originales no hacen falta: los movimientos
 ya están dentro.
 
+```bash
+zcat concil-AAAAMMDD-HHMM.sql.gz | mysql -u USUARIO -p BASE
+```
+
+**El respaldo no se ha restaurado nunca.** Se comprueba en cada corrida que el
+archivo abre y que trae las tablas esperadas, y se verificó una vez que sus
+filas coinciden con las de la base viva — pero nadie lo ha devuelto todavía a un
+MySQL. Un respaldo sin restaurar es una hipótesis. La forma de cerrarlo, cuando
+haya un rato: crear una base aparte —`..._shadow`, como en los otros proyectos
+del servidor—, importar ahí el último volcado, comprobar que llegan las 15
+tablas con sus filas, y borrarla. Sin tocar producción.
+
 ## Rendimiento
 
 Medido sobre 6.496 movimientos, en PHP 8.3 con OPcache activo:
