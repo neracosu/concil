@@ -143,6 +143,14 @@ horas del 31/08/2026 y el usuario lo cambió: bloquear dejaba las cinco cuentas
 existentes sin poder cargar nada. Lo único imprescindible al crear una cuenta es
 el nombre.
 
+**Varias cuentas del mismo banco es lo NORMAL, no un aviso.** Desde que una
+empresa puede llevar cuatro cuentas en el mismo sitio, contar cuántas comparten
+banco no dice nada: la pantalla de Cuentas lo enseñaba como si fuera un
+problema. Lo que sí levanta sospecha de duplicado es que **a una le falte el
+número** —entonces no hay cómo distinguirlas— o que **los dos números terminen
+igual**. Y hay que decir *qué* dos cuentas y *por qué*: un aviso que no nombra
+al culpable no se puede atender.
+
 **El bloqueo compara número contra número, no nombres.** Los cuatro primeros
 dígitos de la cuenta del archivo contra los de `cuentas.numero`. Comparar por el
 nombre del banco dejaba pasar los archivos cuando la cuenta se creó sin él —el

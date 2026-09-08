@@ -41,6 +41,20 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7.7', 'tipo' => 'correccion',
+            'titulo' => 'Unir dos cuentas ahora dice cuáles se parecen, y por qué',
+            'resumen' => 'Decía «tiene 4 cuentas del mismo banco» como si eso fuera un problema, y no '
+                       . 'lo es: una empresa puede tener cuatro cuentas en el mismo banco. Encima no '
+                       . 'decía cuáles, y en las dos listas salía la misma. Ahora nombra las parejas '
+                       . 'que de verdad podrían ser la misma cuenta y explica por qué lo parecen.',
+            'detalles' => [
+                'Se sospecha cuando a una le falta el número —no hay cómo distinguirlas— o cuando '
+                . 'los dos números terminan igual.',
+                'Si no hay ninguna sospechosa, lo dice y deja la herramienta por si acaso.',
+                'En las listas ahora sale el número de cada cuenta, no solo el nombre.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7.6', 'tipo' => 'correccion',
             'titulo' => 'Los botones de cada renglón ya no se esconden al lado',
             'resumen' => 'Con muchas cuentas o muchas categorías, la tabla se hace más ancha que la '

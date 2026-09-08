@@ -192,17 +192,52 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
     </div>
   </div>
 
-  <?php /* Solo tiene sentido ofrecerlo si hay al menos dos del mismo banco. */
+  <?php
+  /* Tener varias cuentas del mismo banco es lo normal desde que una empresa
+     puede llevar cuatro en el mismo sitio: eso solo no es señal de nada. Lo
+     que sí levanta sospecha es no poder distinguirlas —una sin número— o que
+     los últimos cuatro dígitos coincidan, que es como se ve una cuenta
+     tecleada dos veces con el título que traía cada archivo. */
+  $sospechosas = [];
   $porBanco = [];
   foreach ($lista as $c) { if ($c['banco'] !== '') { $porBanco[$c['banco']][] = $c; } }
-  $repetidos = array_filter($porBanco, fn($g) => count($g) > 1);
-  if ($repetidos !== []): ?>
+  foreach ($porBanco as $banco => $g) {
+      for ($i = 0; $i < count($g); $i++) {
+          for ($j = $i + 1; $j < count($g); $j++) {
+              $a = preg_replace('/\D/', '', (string) $g[$i]['numero']);
+              $b = preg_replace('/\D/', '', (string) $g[$j]['numero']);
+              $razon = '';
+              if ($a === '' || $b === '') {
+                  $razon = 'una de las dos no tiene número, así que no hay cómo distinguirlas';
+              } elseif (substr($a, -4) === substr($b, -4)) {
+                  $razon = 'los dos números terminan en ' . substr($a, -4);
+              }
+              if ($razon !== '') { $sospechosas[] = [$g[$i], $g[$j], $razon]; }
+          }
+      }
+  }
+  if (count($lista) > 1): ?>
   <div class="tarjeta">
     <h2>Unir dos cuentas en una</h2>
+    <?php if ($sospechosas !== []): ?>
+      <p class="nota" style="margin:0 0 10px">
+        <b>Estas dos podrían ser la misma cuenta:</b>
+      </p>
+      <ul class="nota" style="margin:0 0 12px;padding-left:18px">
+        <?php foreach (array_slice($sospechosas, 0, 6) as [$a, $b, $razon]): ?>
+          <li><b><?= e($a['nombre']) ?></b> y <b><?= e($b['nombre']) ?></b> — <?= e($razon) ?>.</li>
+        <?php endforeach ?>
+      </ul>
+    <?php else: ?>
+      <p class="nota" style="margin:0 0 12px">
+        <b>No hay ninguna que parezca repetida.</b> Tener varias cuentas en el mismo banco es
+        normal. Si aun así sabe que dos son la misma —pasa cuando el banco escribe un título
+        distinto en cada archivo— únalas aquí.
+      </p>
+    <?php endif ?>
     <p class="nota" style="margin:0 0 12px">
-      Tiene <b><?= count(reset($repetidos)) ?> cuentas del mismo banco</b>. Si en realidad son la misma
-      —pasa cuando el banco escribe un título distinto en cada archivo— únalas aquí: los movimientos
-      se pasan a la que elija y la otra desaparece. Lo que ya estuviera repetido no se duplica.
+      Los movimientos se pasan a la que elija y la otra desaparece. Lo que ya estuviera repetido
+      no se duplica. <b>No se puede deshacer.</b>
     </p>
     <form method="post" class="par" style="align-items:end">
       <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
@@ -211,7 +246,7 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
         <label>Pasar los movimientos de</label>
         <select name="origen" required>
           <?php foreach ($lista as $c): ?>
-            <option value="<?= (int) $c['id'] ?>"><?= e($c['nombre']) ?> — <?= (int) $c['movs'] ?> movimientos</option>
+            <option value="<?= (int) $c['id'] ?>"><?= e(rotulo_cuenta($c)) ?></option>
           <?php endforeach ?>
         </select>
       </div>
@@ -219,7 +254,7 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
         <label>A esta cuenta</label>
         <select name="destino" required>
           <?php foreach ($lista as $c): ?>
-            <option value="<?= (int) $c['id'] ?>"><?= e($c['nombre']) ?> — <?= (int) $c['movs'] ?> movimientos</option>
+            <option value="<?= (int) $c['id'] ?>"><?= e(rotulo_cuenta($c)) ?></option>
           <?php endforeach ?>
         </select>
       </div>

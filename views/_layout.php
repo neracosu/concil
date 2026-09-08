@@ -260,6 +260,20 @@ function presente_html(array $g, string $ruta = '', int $ref = 0): string
         . '<span>' . e((string) $g['nombre']) . '</span></span>';
 }
 
+/**
+ * Cómo se nombra una cuenta en una lista desplegable.
+ *
+ * Con «Bancamiga — 131 movimientos» no hay forma de saber cuál de las cuatro
+ * del mismo banco es. El número es lo único que las distingue de verdad, así
+ * que va detrás; y los últimos cuatro dígitos son los que la gente reconoce.
+ */
+function rotulo_cuenta(array $c): string
+{
+    $num = preg_replace('/\D/', '', (string) ($c['numero'] ?? ''));
+    $cola = $num !== '' ? ' · nº …' . substr($num, -4) : ' · sin número';
+    return $c['nombre'] . $cola . ' — ' . (int) ($c['movs'] ?? 0) . ' movimientos';
+}
+
 /** Barra segmentada: cómo se reparte el dinero del período. */
 function cinta_html(array $reparto, float $total): void
 {
