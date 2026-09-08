@@ -337,8 +337,17 @@ function guardar_reparto(int $movimientoId, ?int $provId, array $post): string
         foreach ($conNumero as $i) {
             $suma += a_monto($campo('nf_aplicar', $i, '0'));
         }
-        $debito = (float) db()->query('SELECT debito FROM movimientos WHERE id = ' . $movimientoId)
-                              ->fetchColumn();
+        // Con el filtro de sede, como todo id que llega de un formulario: sin
+        // él se leía el monto de un pago de otra unidad de negocio y el aviso
+        // de error lo enseñaba. `repartir_pago()` acaba rechazándolo, pero
+        // para entonces la cifra ya se dijo.
+        $mv = db()->prepare('SELECT m.debito FROM movimientos m WHERE m.id = ? AND ' . filtro_sede());
+        $mv->execute([$movimientoId]);
+        $debito = $mv->fetchColumn();
+        if ($debito === false) {
+            throw new RuntimeException('Ese pago no es de esta unidad de negocio.');
+        }
+        $debito = (float) $debito;
         if (round($suma, 2) > $debito + 0.01) {
             throw new RuntimeException('El pago fue de Bs ' . bs($debito) . ' y se está repartiendo Bs '
                 . bs(round($suma, 2)) . '. No se puede repartir más de lo que salió del banco.');

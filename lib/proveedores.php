@@ -290,7 +290,10 @@ function buscar_proveedores(string $texto = '', bool $soloActivos = false,
                      WHERE f.proveedor_id = p.id AND f.sede_id = ' . $sede . ') facturas
               FROM proveedores p'
          . $where
-         . ' ORDER BY p.nombre LIMIT ' . (int) $porPagina . ' OFFSET ' . (int) $off;
+         // Con `p.id` detrás: dos proveedores que se llamaran igual dejarían el
+         // orden a merced de la base, y al pasar de página uno se repetiría y
+         // otro no saldría nunca.
+         . ' ORDER BY p.nombre, p.id LIMIT ' . (int) $porPagina . ' OFFSET ' . (int) $off;
     $s = db()->prepare($sql);
     $s->execute($args);
     return ['filas' => $s->fetchAll(), 'total' => $total, 'pagina' => $pagina, 'paginas' => $paginas];

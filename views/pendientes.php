@@ -249,6 +249,11 @@ if ($modo === 'grupos'):
         . ' GROUP BY ' . GRUPO_SQL . ') x')->fetchColumn();
     $paginas = max(1, (int) ceil($nGrupos / $porPagina));
 
+    /* Se agrupa y se ordena por la expresión, no por el alias: en un GROUP BY
+       MySQL busca primero una columna con ese nombre, y basta con que alguien
+       una `categorias` —que tiene `grupo`— para que esto cambie de sentido sin
+       avisar. Y el desempate por el propio grupo evita que dos bloques con el
+       mismo total se pisen al pasar de página. */
     $grupos = $pdo->query("SELECT " . GRUPO_SQL . " grupo, COUNT(*) n, SUM(m.debito) total,
                                   MIN(m.fecha) f1, MAX(m.fecha) f2,
                                   SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT m.concepto SEPARATOR '§'), '§', 1) ejemplo,
@@ -256,8 +261,8 @@ if ($modo === 'grupos'):
                                   GROUP_CONCAT(DISTINCT c.nombre SEPARATOR ', ') cuentas
                              FROM movimientos m JOIN cuentas c ON c.id = m.cuenta_id
                             WHERE m.tipo='D' AND m.categoria_id IS NULL AND " . filtro_sede() . "
-                         GROUP BY grupo
-                         ORDER BY total DESC
+                         GROUP BY " . GRUPO_SQL . "
+                         ORDER BY total DESC, " . GRUPO_SQL . "
                             LIMIT $porPagina OFFSET $off")->fetchAll();
 
     /* Los movimientos que hay detrás de cada grupo, para poder desplegarlos sin

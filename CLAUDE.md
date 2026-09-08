@@ -174,6 +174,14 @@ y todo `factura_id` que llegue de un formulario se comprueba con
 que comprobarlo contra la sede** antes de usarlo: el `cuenta_id` de la carga y
 el `movimiento_id` al anotar un proveedor permitían tocar otra unidad.
 
+**Toda consulta con `LIMIT … OFFSET` necesita un orden total.** Si el `ORDER BY`
+puede empatar —una fecha al segundo, un total en bolívares, un nombre— la base
+no promete nada entre una página y la siguiente: un renglón sale dos veces y
+otro no sale nunca. Se remata con algo único, normalmente `id`. Ya mordió tres
+veces: el rastro de auditoría, los grupos de Pendientes y el listado de
+proveedores. `orden_sql()` en `consultas.php` lo hace bien desde el principio;
+cópiala.
+
 **Nunca agrupes por el alias de la columna.** En un `GROUP BY`, MySQL busca
 **primero una columna** con ese nombre en el `FROM` y solo después el alias del
 `SELECT` (en `ORDER BY` es al revés). El reporte hacía `... COALESCE(cat.nombre,
