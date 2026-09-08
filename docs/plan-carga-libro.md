@@ -16,7 +16,8 @@ cualquiera**. Está en `DATA_DIR/muestras/` con permisos 600.
 |---|---|---|---|
 | Hoja «AMK» | 30.126 | 01/07 – 07/09/2026 | 18 bloques |
 | Hoja «PETS/CASHEA» | 2.193 | 01/07 – 07/09/2026 | 7 bloques |
-| **Total** | **32.319** | | **25** |
+| **Total del archivo** | **32.319** | | **25** |
+| **Lo que se carga** (sin CASHEA) | **31.881** | | **22** |
 
 No son hojas por cuenta: cada cuenta es un **bloque de columnas** al lado del
 anterior. Cada bloque trae fecha, referencia, descripción del banco, sucursal,
@@ -135,13 +136,42 @@ Todo en un guion de una sola pasada, que se pueda correr en seco primero.
 
 ---
 
-## Lo que falta decidir
+## Decidido el 08/09/2026
 
-1. **¿ARMOR PETS es una unidad aparte o parte de ARMOR MARKET?** Auditoría dice
-   que pertenece a Armor Market. Si va aparte, sus cifras se leen solas; si va
-   dentro, se suman a las de AMK y ya no se pueden separar sin volver a cargar.
-2. **¿CASHEA entra?** Son 438 movimientos en dos cuentas que arrancan el 25/08.
-   Si no es de la empresa, meterlas ensucia las cifras de Armor Market.
-3. **Las cinco categorías que faltan**, y a dónde van los traspasos a otras
-   empresas del grupo.
-4. **Los cuatro números de cuenta** enmascarados o incompletos.
+**ARMOR PETS va dentro de ARMOR MARKET** — una sola unidad de negocio, la que
+ya existe. **CASHEA no entra.**
+
+| | Cuentas | Movimientos |
+|---|---|---|
+| Armor Market (hoja 1) | 18 | 30.126 |
+| Armor Pets (hoja 2) | 4 | 1.755 |
+| **Total en la unidad AMK** | **22** | **31.881** |
+| ~~CASHEA~~ (fuera) | ~~2~~ | ~~438~~ |
+
+Dos consecuencias que conviene tener presentes:
+
+- **Las cifras de Pets y de Market quedan sumadas** en el panel y en los
+  reportes. Se pueden separar filtrando por cuenta, pero el total de arriba es
+  el de las dos operaciones juntas. Separarlas después sería volver a cargar.
+- El Tesoro y el Bicentenario aparecen **dos veces cada uno**, una cuenta de
+  Market y otra de Pets. El sistema lo soporta desde la v2.4.2, pero los
+  nombres tienen que dejar claro cuál es cuál: se usan los del libro
+  (`TESORO ARMORPETS`, `BICENTENARIO ARMORPETS`).
+
+De las 22 cuentas, **18 traen su número completo** y 4 hay que completarlas. La
+`BICENTENARIO ARMORMARKET 2025` no se crea: no tiene número ni movimientos.
+
+---
+
+## Lo que todavía falta decidir
+
+1. **Las cinco categorías que faltan**: `MATERIA PRIMA` (66),
+   `LICENCIAS/PERMISOLOGIA` (12), `EXPACION Y MEJORAS` (10),
+   `MATERIALES DE ALMACEN` (9), `HHPP` (15).
+2. **A dónde van los ~100 traspasos a otras empresas del grupo** (VIP PLAY,
+   ELEMENTECH, CPWC, HOTEL VIP, BRANIC, TERRAZAS, OJO, DESARROLLO T.). No son
+   cuentas propias de Armor Market, así que «Traspaso entre cuentas propias» no
+   les sirve.
+3. **Los cuatro números de cuenta** enmascarados o incompletos:
+   `BANCRECER 1856` (201 movs), `BANCO DE VENEZUELA AMKPETS` (238),
+   `BANESCO PETS` (3), y la de Bicentenario 2025 que no se va a crear.
