@@ -30,7 +30,7 @@ function db(): PDO
  * aquí**, o la migración no llegará a correr en el servidor: se salta cuando la
  * base ya dice tener esta versión.
  */
-const ESQUEMA_VERSION = 5;
+const ESQUEMA_VERSION = 6;
 
 function migrar(): void
 {
@@ -412,13 +412,20 @@ function migrar(): void
         KEY idx_vis_sesion (sesion, id)
     ) $t");
 
-    // Un índice por usuario parecía obvio y no lo era: medido con 100.000
-    // visitas, la pantalla de auditoría siempre parte del rango de fechas y el
-    // optimizador escoge `idx_vis_fecha` incluso filtrando por persona. El de
-    // usuario no lo usaba ninguna consulta y esta tabla recibe una escritura
-    // por página, que es justo donde un índice de más se paga.
+    // El primer índice por usuario era `(usuario_id, id)` y no lo usaba nadie:
+    // mientras la única pantalla fue la auditoría, toda consulta partía del
+    // rango de fechas y ganaba `idx_vis_fecha`.
     if (indice_existe($pdo, 'visitas', 'idx_vis_usuario')) {
         $pdo->exec('ALTER TABLE visitas DROP INDEX idx_vis_usuario');
+    }
+    // La ficha de una persona trajo una forma de consulta que antes no existía
+    // —filtrar por alguien **sin** rango de fechas— y ahí sí hace falta, con la
+    // fecha dentro para que sirva también de orden. Medido con 100.000 visitas:
+    // agrupar sus visitas pasa de 160 ms a 55, y la auditoría filtrando por
+    // persona mira 533 filas en vez de 3.200. Las consultas que solo llevan
+    // fechas siguen escogiendo `idx_vis_fecha`, así que no estorba.
+    if (!indice_existe($pdo, 'visitas', 'idx_vis_persona')) {
+        $pdo->exec('ALTER TABLE visitas ADD KEY idx_vis_persona (usuario_id, creado_en)');
     }
 
     // Qué movimiento o qué proveedor está mirando, no solo en qué pantalla:

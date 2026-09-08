@@ -147,7 +147,7 @@ encabezado_html('Rastro y auditoría', 'auditoria',
       <?php foreach ($r['filas'] as $f): $esPantalla = $f['clase'] === 'pantalla'; ?>
         <tr<?= $esPantalla ? ' class="fila-suave"' : '' ?>>
           <td class="fecha"><?= e(date('d/m/y H:i:s', strtotime((string) $f['creado_en']))) ?></td>
-          <td><b><?= e((string) $f['usuario']) ?></b></td>
+          <td><?= persona_enlace($f) ?></td>
           <td><?= $esPantalla
               ? '<span class="etq vacia">abrió</span>'
               : '<span class="etq">' . e(str_replace('_', ' ', (string) $f['accion'])) . '</span>' ?></td>

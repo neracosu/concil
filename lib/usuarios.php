@@ -335,6 +335,7 @@ function nombre_pantalla(string $ruta): string
         'sede'           => 'las unidades de negocio',
         'ajustes'        => 'los ajustes',
         'usuarios'       => 'los usuarios',
+        'persona'        => 'la ficha de una persona',
         'auditoria'      => 'el rastro y la auditoría',
         'mejoras'        => 'las mejoras',
         'perfil'         => 'su perfil',
@@ -477,7 +478,7 @@ function presencia_por_ruta(array $gente): array
 function ultimo_rastro(int $limite = 12): array
 {
     return db()->query("SELECT b.accion, b.detalle, b.creado_en, b.ip, b.dispositivo, b.sesion,
-                               COALESCE(u.nombre, '—') usuario
+                               b.usuario_id, COALESCE(u.nombre, '—') usuario
                           FROM bitacora b
                      LEFT JOIN usuarios u ON u.id = b.usuario_id
                       ORDER BY b.id DESC LIMIT $limite")->fetchAll();
@@ -576,6 +577,106 @@ function rastro_filtrado(array $f, int $pagina = 1, int $porPagina = 60): array
     unset($fila);
 
     return ['filas' => $filas, 'total' => $total, 'paginas' => $paginas, 'pagina' => $pagina];
+}
+
+/* ------------------------------------------------------------------ */
+/* La ficha de una persona: todo lo suyo, en un sitio.                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Las dos tablas del rastro tienen las mismas columnas para esto, así que se
+ * agrupan juntas: si no, «desde cuántas conexiones ha entrado» contaría solo
+ * la mitad de las veces.
+ */
+function resumen_persona(int $id): array
+{
+    // Los cinco «?» son el mismo id repetido: con `EMULATE_PREPARES` en false,
+    // MySQL no deja reutilizar un parámetro con nombre en varios sitios.
+    $s = db()->prepare("SELECT
+            (SELECT COUNT(*) FROM bitacora WHERE usuario_id = ?) acciones,
+            (SELECT COUNT(*) FROM bitacora WHERE usuario_id = ? AND accion = 'acceso') entradas,
+            (SELECT MIN(creado_en) FROM bitacora WHERE usuario_id = ?) primera,
+            (SELECT COUNT(*) FROM visitas  WHERE usuario_id = ?) pantallas,
+            (SELECT COUNT(DISTINCT sesion) FROM visitas WHERE usuario_id = ? AND sesion <> '') visitas");
+    $s->execute(array_fill(0, 5, $id));
+    return $s->fetch() ?: [];
+}
+
+/**
+ * Desde qué conexiones y con qué equipos, contando las dos tablas.
+ * `$campo` es 'ip' o 'dispositivo'; no viene de fuera, sale de esta misma
+ * función, que es por lo que se puede interpolar.
+ */
+function origenes_persona(int $id, string $campo): array
+{
+    $campo = $campo === 'ip' ? 'ip' : 'dispositivo';
+    $s = db()->prepare("SELECT dato, SUM(n) veces, MAX(u) ultima FROM (
+              SELECT $campo dato, COUNT(*) n, MAX(creado_en) u FROM bitacora
+               WHERE usuario_id = ? AND $campo <> '' GROUP BY $campo
+              UNION ALL
+              SELECT $campo dato, COUNT(*) n, MAX(creado_en) u FROM visitas
+               WHERE usuario_id = ? AND $campo <> '' GROUP BY $campo
+            ) x GROUP BY dato ORDER BY veces DESC LIMIT 12");
+    $s->execute([$id, $id]);
+    return $s->fetchAll();
+}
+
+/** Qué tipo de cosas hace: cargar, corregir, exportar. */
+function labores_persona(int $id): array
+{
+    $s = db()->prepare('SELECT accion, COUNT(*) veces, MAX(creado_en) ultima
+                          FROM bitacora WHERE usuario_id = ?
+                      GROUP BY accion ORDER BY veces DESC');
+    $s->execute([$id]);
+    return $s->fetchAll();
+}
+
+/**
+ * Sus visitas, una por sesión, de la más reciente a la más antigua.
+ *
+ * Sale de `visitas`, así que si alguien apagó el rastro de navegación no habrá
+ * ninguna: eso lo dice la pantalla en vez de enseñar un hueco.
+ */
+function visitas_persona(int $id, int $limite = 25): array
+{
+    $s = db()->prepare("SELECT sesion, MIN(creado_en) inicio, MAX(creado_en) fin,
+                               COUNT(*) pantallas, MAX(ip) ip, MAX(dispositivo) dispositivo,
+                               TIMESTAMPDIFF(MINUTE, MIN(creado_en), MAX(creado_en)) minutos
+                          FROM visitas
+                         WHERE usuario_id = ? AND sesion <> ''
+                      GROUP BY sesion ORDER BY inicio DESC LIMIT $limite");
+    $s->execute([$id]);
+    return $s->fetchAll();
+}
+
+/**
+ * Todo lo suyo en una línea de tiempo, sin rango de fechas.
+ *
+ * La pantalla de auditoría siempre parte de un rango porque mira a todo el
+ * mundo; aquí el filtro es la persona, que ya es estrecho, y lo que se viene a
+ * ver es justamente «todo lo que ha hecho desde que entró la primera vez».
+ */
+function historial_persona(int $id, int $pagina = 1, int $porPagina = 40): array
+{
+    $total = 0;
+    foreach (['bitacora', 'visitas'] as $t) {
+        $c = db()->prepare("SELECT COUNT(*) FROM $t WHERE usuario_id = ?");
+        $c->execute([$id]);
+        $total += (int) $c->fetchColumn();
+    }
+    $paginas = max(1, (int) ceil($total / $porPagina));
+    $pagina  = max(1, min($pagina, $paginas));
+
+    $s = db()->prepare("(SELECT 'accion' clase, creado_en, accion, detalle, ip, dispositivo, ruta, sesion, sede_id
+                           FROM bitacora WHERE usuario_id = ?)
+                        UNION ALL
+                        (SELECT 'pantalla', creado_en, 'pantalla', ruta, ip, dispositivo, ruta, sesion, sede_id
+                           FROM visitas WHERE usuario_id = ?)
+                        ORDER BY creado_en DESC, clase
+                        LIMIT $porPagina OFFSET " . (($pagina - 1) * $porPagina));
+    $s->execute([$id, $id]);
+
+    return ['filas' => $s->fetchAll(), 'total' => $total, 'paginas' => $paginas, 'pagina' => $pagina];
 }
 
 /** Las visitas de una sesión, para reconstruirla de principio a fin. */

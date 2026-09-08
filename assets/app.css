@@ -588,6 +588,14 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
 .presente-aqui{border-color:rgba(127,209,139,.45);color:var(--texto)}
 .presente-aqui i{background:var(--entrada);color:var(--tinta);box-shadow:0 0 0 2px rgba(127,209,139,.2)}
 
+/* Ficha de una persona: listas cortas de dos o tres columnas —desde dónde
+   entra, con qué trabaja— que no merecen el marco de una tabla entera. */
+.tabla-lista{width:100%;border-collapse:collapse}
+.tabla-lista td{padding:0.4375rem 0;border-bottom:1px solid var(--linea-suave);font-size:0.875rem}
+.tabla-lista tr:last-child td{border-bottom:0}
+.etiquetas{display:flex;gap:0.4375rem;flex-wrap:wrap}
+.etq-cuenta b{color:var(--texto);font-weight:700}
+
 /* En el rastro, las pantallas abiertas van más apagadas que lo que alguien
    cambió: lo importante de una auditoría es lo segundo, y lo primero es el
    contexto que lo rodea. */

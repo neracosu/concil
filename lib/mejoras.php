@@ -41,6 +41,20 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.6.1', 'tipo' => 'mejora',
+            'titulo' => 'Haga clic en un nombre y vea todo lo de esa persona',
+            'resumen' => 'El registro decía qué se hizo pero no siempre quién. Ahora el nombre está en '
+                       . 'todas las tablas y, al hacerle clic, se abre la ficha de esa persona: desde qué '
+                       . 'conexiones entra, con qué computadoras trabaja, en qué se le va el tiempo y todo '
+                       . 'lo que ha hecho, de lo más reciente a lo más viejo.',
+            'detalles' => [
+                'Cada visita suya se puede abrir y ver paso a paso, minuto a minuto.',
+                'Si aparece una conexión que esa persona no reconoce, es la señal de que alguien más '
+                . 'está usando su clave.',
+                'La bitácora de Ajustes ya dice quién hizo cada cosa y con qué equipo.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.6', 'tipo' => 'nuevo',
             'titulo' => 'Quién está trabajando, y todo lo que pasa queda anotado',
             'resumen' => 'Ahora se ve quién más está dentro y en qué pantalla está parado, con un ojito '

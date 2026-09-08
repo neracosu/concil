@@ -59,7 +59,7 @@ $stats = $pdo->query("SELECT COUNT(*) movs,
         MIN(m.fecha) f1, MAX(m.fecha) f2 FROM movimientos m WHERE " . filtro_sede())->fetch();
 $peso = $pdo->query("SELECT ROUND(SUM(data_length + index_length)/1048576, 2) mb
                        FROM information_schema.TABLES WHERE table_schema = DATABASE()")->fetchColumn();
-$log = $pdo->query('SELECT * FROM bitacora ORDER BY id DESC LIMIT 25')->fetchAll();
+$log = ultimo_rastro(25);
 $fallos = fallos_recientes(25);
 $pendInicial = ajuste('pin_inicial_pendiente') === '1';
 
@@ -217,17 +217,19 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
 <div class="marco-tabla" style="margin-top:16px">
   <div class="tabla-scroll">
     <table>
-      <thead><tr><th>Cuándo</th><th>Acción</th><th>Detalle</th><th>Origen</th></tr></thead>
+      <thead><tr><th>Cuándo</th><th>Quién</th><th>Acción</th><th>Detalle</th><th>Desde</th><th>Equipo</th></tr></thead>
       <tbody>
       <?php foreach ($log as $l): ?>
         <tr>
           <td class="fecha"><?= e(date('d/m/Y H:i', strtotime($l['creado_en']))) ?></td>
-          <td><span class="etq"><?= e($l['accion']) ?></span></td>
-          <td style="font-size:13px;color:var(--suave)"><?= e($l['detalle']) ?></td>
-          <td class="ref"><?= e($l['ip']) ?></td>
+          <td><?= persona_enlace($l) ?></td>
+          <td><span class="etq"><?= e(str_replace('_', ' ', (string) $l['accion'])) ?></span></td>
+          <td style="font-size:0.8125rem;color:var(--suave)"><?= e($l['detalle']) ?></td>
+          <td class="ref"><?= e((string) $l['ip']) ?></td>
+          <td class="ref"><?= e((string) $l['dispositivo']) ?></td>
         </tr>
       <?php endforeach ?>
-      <?php if ($log === []): ?><tr><td colspan="4" class="vacio">Sin registros todavía.</td></tr><?php endif ?>
+      <?php if ($log === []): ?><tr><td colspan="6" class="vacio">Sin registros todavía.</td></tr><?php endif ?>
       </tbody>
     </table>
   </div>

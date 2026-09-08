@@ -299,6 +299,9 @@ function ayuda_pantalla(string $ruta): string
         'ajustes'     => 'Su clave de entrada y el estado del sistema.',
         'usuarios'    => 'Quién puede entrar y <b>qué está haciendo cada quien ahora mismo</b>. '
                        . 'Cada persona entra con sus propios seis dígitos, así todo lo que se hace queda a su nombre.',
+        'persona'     => 'Todo lo de esta persona: <b>desde dónde entra, con qué trabaja y todo lo que '
+                       . 'ha hecho</b>, de lo más reciente a lo más antiguo. Si aquí ve una conexión que no '
+                       . 'reconoce, es señal de que alguien más está usando su clave.',
         'auditoria'   => 'Todo lo que ha pasado en el sistema, paso a paso: <b>quién, cuándo, desde qué '
                        . 'computadora y desde qué conexión</b>. Es para el día que haya que revisar algo a fondo; '
                        . 'para el día a día basta con la pantalla de Usuarios.',

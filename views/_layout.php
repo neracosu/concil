@@ -18,7 +18,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
 <meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=21">
+<link rel="stylesheet" href="assets/app.css?v=22">
 </head>
 <body>
 <div class="app">
@@ -82,7 +82,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <a href="?r=cuentas"    data-ruta="cuentas" class="<?= $ruta === 'cuentas' ? 'on' : '' ?>">Cuentas<?= ojito_html($porRuta, 'cuentas') ?></a>
       <a href="?r=sede"       data-ruta="sede" class="<?= $ruta === 'sede' ? 'on' : '' ?>">Unidades de negocio<?= ojito_html($porRuta, 'sede') ?></a>
       <?php if (es_maestro()): ?>
-        <a href="?r=usuarios" data-ruta="usuarios" class="<?= $ruta === 'usuarios' ? 'on' : '' ?>">Usuarios<?= ojito_html($porRuta, 'usuarios') ?></a>
+        <a href="?r=usuarios" data-ruta="usuarios" class="<?= $ruta === 'usuarios' || $ruta === 'persona' ? 'on' : '' ?>">Usuarios<?= ojito_html($porRuta, 'usuarios', 'persona') ?></a>
         <a href="?r=auditoria" data-ruta="auditoria" class="<?= $ruta === 'auditoria' ? 'on' : '' ?>">Rastro y auditoría<?= ojito_html($porRuta, 'auditoria') ?></a>
       <?php endif ?>
       <a href="?r=ajustes"    data-ruta="ajustes" class="<?= $ruta === 'ajustes' ? 'on' : '' ?>">Ajustes<?= ojito_html($porRuta, 'ajustes') ?></a>
@@ -179,7 +179,7 @@ window.PRESENCIA = <?= json_encode([
     'ref'  => referencia_pantalla(),
 ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
-<script src="assets/app.js?v=13"></script>
+<script src="assets/app.js?v=14"></script>
 <script src="assets/guia.js?v=12"></script>
 </body>
 </html>
@@ -218,6 +218,25 @@ function quien_esta(array $nombres): string
     $ultimo = array_pop($nombres);
     $lista  = $nombres === [] ? $ultimo : implode(', ', $nombres) . ' y ' . $ultimo;
     return $lista . ($nombres === [] ? ' está aquí' : ' están aquí');
+}
+
+/**
+ * El nombre de quien hizo algo, enlazado a su ficha.
+ *
+ * Solo el maestro llega a la ficha, así que a los demás se les enseña el
+ * nombre pelado: un enlace que rebota con «no puede» es peor que no tenerlo.
+ * Las líneas viejas del rastro no tienen autor —se anotaban antes de que
+ * hubiera usuarios—; ahí queda la raya.
+ */
+function persona_enlace(array $fila): string
+{
+    $id = (int) ($fila['usuario_id'] ?? 0);
+    $nombre = (string) ($fila['usuario'] ?? '—');
+    if ($id <= 0 || !es_maestro()) {
+        return '<b>' . e($nombre) . '</b>';
+    }
+    return '<a href="?r=persona&amp;id=' . $id . '" title="Ver todo lo de esta persona"><b>'
+        . e($nombre) . '</b></a>';
 }
 
 /** La pastilla de una persona conectada: su inicial y en qué anda. */

@@ -119,3 +119,9 @@ function strftime_es(string $ym): string
     [$a, $m] = array_pad(explode('-', $ym), 2, '01');
     return ($meses[$m] ?? $m) . ' ' . $a;
 }
+
+/** «1 vez», «14 veces». Escribir «1 veces» delata que lo hizo una máquina. */
+function veces(int $n): string
+{
+    return $n === 1 ? '1 vez' : number_format($n, 0, ',', '.') . ' veces';
+}

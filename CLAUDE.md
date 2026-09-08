@@ -247,6 +247,17 @@ Guardar por `effective_date` deja el fin de semana sin fila; se guarda por
 paso correspondiente se salta en silencio. Al añadir una sección nueva, añade su
 ancla y su paso.
 
+**Cada nombre del rastro lleva a su ficha.** `?r=persona&id=N`, solo para el
+maestro (quien no lo es, y pide la suya, cae en Mi perfil). `persona_enlace()`
+en `_layout.php` decide si pinta enlace o nombre pelado, así que úsala en vez
+de escribir el nombre a mano en una tabla nueva del rastro. Las líneas viejas
+sin `usuario_id` —anotadas antes de que hubiera usuarios— salen con una raya.
+
+**`EMULATE_PREPARES` está en false.** Un parámetro con nombre **no se puede
+repetir** en varios sitios de la misma consulta: MySQL responde «Invalid
+parameter number». Si el mismo valor va cinco veces, van cinco `?` y
+`array_fill()`. Pasó estrenando `resumen_persona()`.
+
 **El rastro no guarda nunca el PIN, ni su forma.** `bitacora()` anota acción,
 autor, IP, navegador, ruta, método, sede y una huella de la sesión. De un
 intento fallido se anota **cuántos dígitos llegaron y por qué intento iba**,
@@ -270,10 +281,16 @@ una visita real: por la ruta `presencia` conserva la pantalla que manda el
 navegador en `en` y **no** anota la visita.
 
 **`visitas` recibe una escritura por página.** Es la tabla que más rápido va a
-crecer. Medido con 100.000 filas: la pantalla de auditoría siempre parte del
-rango de fechas y el optimizador escoge `idx_vis_fecha` incluso filtrando por
-persona, así que el índice por usuario se quitó —era el «índice de más» de
-siempre, pagado en cada escritura—. Filtrar por una visita concreta **no lleva
+crecer, así que cada índice se paga en cada página. Medido con 100.000 filas:
+mientras la única pantalla fue la auditoría, toda consulta partía del rango de
+fechas y ganaba `idx_vis_fecha`, así que el índice `(usuario_id, id)` no lo
+usaba nadie y se quitó. La **ficha de una persona** trajo después una forma que
+antes no existía —filtrar por alguien *sin* rango de fechas— y ahí sí hace
+falta: `idx_vis_persona (usuario_id, creado_en)`, con la fecha dentro para que
+sirva también de orden; agrupar sus visitas pasó de 160 ms a 55, y la auditoría
+filtrando por persona mira 533 filas en vez de 3.200. La moraleja no es «índice
+sí» o «índice no», es que **el índice lo decide la forma de la consulta, y esa
+cambia cuando añades una pantalla**. Filtrar por una visita concreta **no lleva
 fechas**: la huella ya es estrecha y va por `idx_vis_sesion`; si le pusieras el
 rango por defecto, «ver esta visita» de algo de hace un mes no enseñaría nada.
 Se puede apagar entero desde Auditoría (`ajustes.rastro_navegacion`); lo que

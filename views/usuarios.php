@@ -65,7 +65,7 @@ encabezado_html('Usuarios', 'usuarios',
         <div class="presencia-uno">
           <span class="presencia-punto"></span>
           <div>
-            <b><?= e($a['nombre']) ?></b><?= $a['maestro'] ? ' <span class="etq">maestro</span>' : '' ?>
+            <a href="?r=persona&amp;id=<?= (int) $a['id'] ?>"><b><?= e($a['nombre']) ?></b></a><?= $a['maestro'] ? ' <span class="etq">maestro</span>' : '' ?>
             <span class="nota">Está en <?= e(nombre_pantalla((string) $a['pantalla'])) ?> ·
               <?= (int) $a['hace'] <= 0 ? 'ahora mismo' : 'visto hace ' . (int) $a['hace'] . ' min' ?></span>
           </div>
@@ -82,7 +82,7 @@ encabezado_html('Usuarios', 'usuarios',
       <tbody>
       <?php foreach ($lista as $u): $act = $enPantalla[(int) $u['id']] ?? null; ?>
         <tr>
-          <td><b><?= e($u['nombre']) ?></b>
+          <td><a href="?r=persona&amp;id=<?= (int) $u['id'] ?>" title="Ver todo lo de esta persona"><b><?= e($u['nombre']) ?></b></a>
             <?php if ($u['maestro']): ?><span class="etq">maestro</span><?php endif ?></td>
           <td style="font-size:12.5px;color:var(--mudo)">
             <?= $act ? 'En ' . e(nombre_pantalla((string) $act['pantalla'])) : '—' ?></td>
@@ -170,7 +170,7 @@ encabezado_html('Usuarios', 'usuarios',
       <?php foreach ($rastro as $r): ?>
         <tr>
           <td class="fecha"><?= e(date('d/m/y H:i', strtotime((string) $r['creado_en']))) ?></td>
-          <td><b><?= e((string) $r['usuario']) ?></b></td>
+          <td><?= persona_enlace($r) ?></td>
           <td><?= e(str_replace('_', ' ', (string) $r['accion'])) ?></td>
           <td class="concepto"><span class="txt"><?= e((string) $r['detalle']) ?></span></td>
           <td class="ref"><?= e((string) $r['ip']) ?></td>

@@ -98,7 +98,10 @@ if (autenticado() && ($_POST['accion'] ?? '') === 'cambiar_sede') {
 
     // El detalle de un movimiento no existe en la unidad a la que se entra,
     // así que se cae al listado en vez de dar «ese movimiento ya no existe».
-    redirigir('?r=' . ($ruta === 'movimiento' ? 'movimientos' : $ruta));
+    // La ficha de una persona se pierde por otra razón: el id viaja en la
+    // dirección y la redirección no lo lleva.
+    $caidas = ['movimiento' => 'movimientos', 'proveedor' => 'proveedores', 'persona' => 'usuarios'];
+    redirigir('?r=' . ($caidas[$ruta] ?? $ruta));
 }
 
 // Lo primero de cada sesión es decir en qué unidad se va a trabajar.

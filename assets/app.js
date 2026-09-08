@@ -374,7 +374,7 @@
       /* Los ojitos: se agrupa por pantalla y se enciende el renglón que toca.
          El detalle de un movimiento cuenta como la lista, y la ficha de un
          proveedor como Proveedores: quien lo mira está en esa sección. */
-      var mismo = { movimiento: 'movimientos', proveedor: 'proveedores' };
+      var mismo = { movimiento: 'movimientos', proveedor: 'proveedores', persona: 'usuarios' };
       var porRuta = {};
       datos.gente.forEach(function (g) {
         var r = mismo[g.ruta] || g.ruta;
