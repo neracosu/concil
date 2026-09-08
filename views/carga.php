@@ -316,10 +316,30 @@ encabezado_html('Cargar extractos', 'carga',
                   // imprime el banco cambia de un archivo a otro y por eso una
                   // misma cuenta acababa registrada dos veces.
                   $sug = null;
-                  if (($a['numero'] ?? '') !== '' && !str_contains($a['numero'], '*')) {
+                  $numArch = preg_replace('/\D/', '', (string) ($a['numero'] ?? ''));
+                  $tapado  = str_contains((string) ($a['numero'] ?? ''), '*');
+                  if ($numArch !== '' && !$tapado) {
                       foreach ($cuentasLista as $c) {
-                          if ($c['numero'] !== '' && $c['numero'] === $a['numero']) { $sug = (int) $c['id']; }
+                          if (preg_replace('/\D/', '', (string) $c['numero']) === $numArch) { $sug = (int) $c['id']; }
                       }
+                  }
+                  // El Exterior tapa el medio del número y deja ver la punta y
+                  // la cola («0115****0907»). Con eso basta para reconocer la
+                  // cuenta, y hace falta ahora que una empresa puede tener
+                  // varias en el mismo banco: sin esto habría que elegirla a
+                  // mano cada mes, que es como se cargan en la cuenta que no es.
+                  if ($sug === null && $tapado) {
+                      $ini = substr($numArch, 0, 4);
+                      $fin = substr($numArch, -4);
+                      $candidatas = [];
+                      foreach ($cuentasLista as $c) {
+                          $n = preg_replace('/\D/', '', (string) $c['numero']);
+                          if ($n !== '' && strlen($ini) === 4 && strlen($fin) === 4
+                              && str_starts_with($n, $ini) && str_ends_with($n, $fin)) {
+                              $candidatas[] = (int) $c['id'];
+                          }
+                      }
+                      if (count($candidatas) === 1) { $sug = $candidatas[0]; }
                   }
                   if ($sug === null) {
                       foreach ($cuentasLista as $c) {
@@ -329,17 +349,17 @@ encabezado_html('Cargar extractos', 'carga',
                   // Y si no, la única cuenta que haya de ese banco. Con dos del
                   // mismo banco no se propone ninguna: elegir por el usuario
                   // cuál de las dos es sería adivinar.
-                  if ($sug === null && $a['banco'] !== '') {
-                      $mismas = array_values(array_filter($cuentasLista,
-                          fn($c) => norm((string) $c['banco']) === norm($a['banco'])));
-                      if (count($mismas) === 1) { $sug = (int) $mismas[0]['id']; }
-                  }
+                  $mismoBanco = $a['banco'] === '' ? [] : array_values(array_filter($cuentasLista,
+                      fn($c) => norm((string) $c['banco']) === norm($a['banco'])));
+                  if ($sug === null && count($mismoBanco) === 1) { $sug = (int) $mismoBanco[0]['id']; }
                   if (isset($prevCuenta[$i])) {
                       $sug = $prevCuenta[$i] === 'nueva' ? null : (int) $prevCuenta[$i];
                   }
                   foreach ($cuentasLista as $c): ?>
+                    <?php $ult = preg_replace('/\D/', '', (string) $c['numero']); ?>
                     <option value="<?= $c['id'] ?>" <?= $sug === (int) $c['id'] ? 'selected' : '' ?>>
-                      <?= e($c['nombre']) ?><?= $c['banco'] ? ' — ' . e($c['banco']) : '' ?></option>
+                      <?= e($c['nombre']) ?><?= $c['banco'] ? ' — ' . e($c['banco']) : '' ?><?=
+                        strlen($ult) >= 4 ? ' · termina en ' . e(substr($ult, -4)) : '' ?></option>
                   <?php endforeach ?>
                   <option value="nueva" <?= $sug === null ? 'selected' : '' ?>>➕ Crear cuenta nueva</option>
                 </select>
@@ -350,6 +370,14 @@ encabezado_html('Cargar extractos', 'carga',
                        value="<?= e($prevNombre[$i] ?? $a['cuenta']) ?>" placeholder="Ej.: BANESCO corriente">
               </div>
             </div>
+            <?php if (count($mismoBanco) > 1): ?>
+              <div class="aviso aviso-nota" style="margin-top:14px">
+                <b>Hay <?= count($mismoBanco) ?> cuentas suyas en <?= e($a['banco']) ?>.</b>
+                El sistema no adivina cuál es: la misma empresa, con el mismo RIF, puede tener
+                varias cuentas en un banco y solo el número las distingue. Revise que sea la correcta
+                antes de importar.
+              </div>
+            <?php endif ?>
             <?php if (isset($errFila[$i])): ?>
               <div class="aviso aviso-mal" style="margin-top:14px"><b>Falta un dato.</b> <?= e($errFila[$i]) ?></div>
             <?php endif ?>

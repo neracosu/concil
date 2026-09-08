@@ -24,6 +24,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('mal', 'Elige primero una unidad de negocio.');
             redirigir('?r=sede');
         }
+        // Dos cuentas con el mismo número son la misma cuenta escrita dos
+        // veces, y eso sí hay que impedirlo. Repetir el titular o el RIF no:
+        // una misma empresa puede tener varias cuentas en el mismo banco, y es
+        // el número —no el nombre ni el RIF— lo único que las distingue.
+        $numClave = preg_replace('/\D/', '', $numero);
+        if ($numClave !== '') {
+            $s = $pdo->prepare('SELECT id, nombre, numero FROM cuentas WHERE sede_id = ? AND id <> ?');
+            $s->execute([(int) sede_actual(), $id]);
+            foreach ($s->fetchAll() as $otra) {
+                if (preg_replace('/\D/', '', (string) $otra['numero']) === $numClave) {
+                    flash('mal', 'Ese número de cuenta ya está registrado como «' . $otra['nombre']
+                        . '». Si son la misma cuenta, únalas desde esta pantalla en vez de crearla otra vez.');
+                    redirigir('?r=cuentas');
+                }
+            }
+        }
         try {
             if ($id > 0) {
                 // El sede_id del WHERE evita editar una cuenta de otra unidad
@@ -205,6 +221,11 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
       <div><label>Titular</label>
         <input type="text" name="titular" maxlength="160" value="<?= e($editar['titular'] ?? '') ?>"
                placeholder="Nombre de la empresa dueña de la cuenta"></div>
+      <p class="nota" style="margin:0">
+        La misma empresa, con el mismo RIF, puede tener varias cuentas en un mismo banco.
+        Eso está bien: regístrelas todas. Lo que no puede repetirse es el número, porque es
+        lo único que las distingue y sin él el sistema no sabe a cuál pertenece cada extracto.
+      </p>
       <div class="par" data-guia="saldoinicial">
         <div><label>Saldo de arranque</label>
           <input type="text" name="saldo_inicial" inputmode="decimal"

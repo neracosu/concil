@@ -527,6 +527,52 @@ function comparar_totales(array $dec, float $sumaD, float $sumaC, int $nD, int $
 }
 
 /**
+ * Impide guardar cuando el extracto dice, con todas sus letras, que es de otra
+ * cuenta distinta a la elegida.
+ *
+ * Hace falta desde que se sabe que una misma empresa, con el mismo RIF, puede
+ * tener **varias cuentas en el mismo banco**: comparar solo el código de banco
+ * —los cuatro primeros dígitos— las da todas por buenas, y un extracto de una
+ * cuenta del Banco de Venezuela entraba tan campante en otra del mismo banco.
+ *
+ * Solo bloquea lo concluyente: el número completo, sin enmascarar, que imprime
+ * el propio banco dentro del archivo. Si viene tapado con asteriscos no se
+ * decide nada aquí.
+ */
+function choque_de_cuenta(int $cuentaId, array $c, array $a): string
+{
+    $crudo = (string) ($a['numero'] ?? '');
+    if ($crudo === '' || str_contains($crudo, '*')) {
+        return '';                  // enmascarado o ausente: no identifica nada
+    }
+    $delArchivo = preg_replace('/\D/', '', $crudo);
+    if (strlen($delArchivo) < 15) {
+        return '';                  // demasiado corto para ser un número de cuenta
+    }
+    $suyo = preg_replace('/\D/', '', (string) $c['numero']);
+    if ($suyo === '' || $suyo === $delArchivo) {
+        return '';                  // sin número anotado no hay contradicción
+    }
+
+    // ¿Y de cuál de las cuentas de esta unidad es entonces? Decirlo por su
+    // nombre ahorra que alguien tenga que ir a compararlos a mano.
+    $duena = '';
+    $s = db()->prepare('SELECT nombre, numero FROM cuentas WHERE sede_id = ? AND id <> ?');
+    $s->execute([(int) sede_actual(), $cuentaId]);
+    foreach ($s->fetchAll() as $otra) {
+        if (preg_replace('/\D/', '', (string) $otra['numero']) === $delArchivo) {
+            $duena = (string) $otra['nombre'];
+            break;
+        }
+    }
+
+    return 'este extracto es de la cuenta ' . $delArchivo
+         . ($duena !== '' ? ', que en el sistema es «' . $duena . '»' : ', que todavía no está registrada')
+         . ', y se estaba guardando en «' . $c['nombre'] . '», que es la cuenta ' . $c['numero']
+         . '. Las dos son del mismo banco, así que solo el número las distingue. No se guardó nada.';
+}
+
+/**
  * Impide guardar cuando la evidencia contradice la cuenta elegida.
  *
  * Solo bloquea lo concluyente: que el número de cuenta impreso en el archivo
@@ -545,6 +591,11 @@ function choque_de_banco(int $cuentaId, array $a): string
     $c = $s->fetch();
     if ($c === false) {
         return '';
+    }
+
+    $choque = choque_de_cuenta($cuentaId, $c, $a);
+    if ($choque !== '') {
+        return $choque;
     }
 
     // Lo primero es comparar número contra número: los cuatro primeros dígitos
