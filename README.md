@@ -676,7 +676,24 @@ correcto aunque la suma falle. Al quinto fallo sigue el bloqueo de 15 minutos.
 
 ## Respaldo y restauración
 
-Todo el estado está en MySQL. Respaldar es exportar la base:
+Todo el estado está en MySQL. **Hay un respaldo automático diario** a las 06:45
+(hora de Venezuela), en `DATA_DIR/respaldos/`, con 30 días de retención:
+
+```
+45 3 * * * /home/mardenli/conciliacion_data/respaldar.sh >> …/respaldos/registro.log 2>&1
+```
+
+El guion vive fuera de `public_html` —un `.sh` dentro de la aplicación se sirve
+por HTTP— y lee las credenciales de `secrets.php`, nunca las escribe. Usa
+`--single-transaction`, así que no bloquea a quien esté cargando un extracto.
+Después comprueba que el archivo se descomprime y que trae las tablas
+esperadas: un dump truncado pesa poco y pasa desapercibido durante meses. Si
+algo falla, manda un correo; si sale bien, deja una línea en el registro.
+
+**Lo que todavía no cubre:** la copia no sale del servidor, así que protege de
+un borrado pero no de que se dañe el disco.
+
+También se puede exportar a mano:
 
 ```bash
 mysqldump -u USUARIO -p BASE | gzip > concil-$(date +%F).sql.gz
