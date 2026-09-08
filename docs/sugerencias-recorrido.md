@@ -139,7 +139,11 @@ lados, y se construyeron de una vez.
 - **Estado**: `hecha` — Fase 5, **v1.9**, commit `4e74689` (06/09/2026).
 - **Cómo quedó**: un pago puede anotar **varias facturas de un tirón** (campos
   `nf_*[]` y el botón «Anotar otra factura» en `assets/app.js`), sin salir de la
-  pantalla. Pasos de guía `data-guia="factura-nueva"` y `data-guia="pagadas"`.
+  pantalla. Paso de guía `data-guia="factura-nueva"`, cuya nota es la que
+  explica también las ya pagadas. El ancla `data-guia="pagadas"` está puesta en
+  `views/_facturas.php` pero **sin paso propio, a propósito**: ese bloque solo
+  existe cuando hay facturas cubiertas y llega plegado, así que un paso suyo se
+  saltaría casi siempre.
 
 ### 5 · Enlazar los dos lados de un traspaso entre cuentas propias
 
