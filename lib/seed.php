@@ -156,7 +156,7 @@ function sembrar_desglose_comisiones(PDO $pdo): void
     $hijas = [
         'Cobro por servicios'        => [$padre, '#e0c48a'],
         'Pago móvil'                 => [$padre, '#f0d9a8'],
-        'Traspaso entre cuentas'     => [$padre, '#c9a25e'],
+        'Comisión por traspaso'      => [$padre, '#c9a25e'],
         'Transferencia de fondos'    => [$padre, '#b8935a'],
         'Intervención cambiaria'     => [$padre, '#a67c3d'],
         'Punto de venta · electrónico' => [$pos, '#d9b877'],
