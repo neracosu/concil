@@ -25,11 +25,25 @@ $cuentasLista = cuentas();
 /* Solo las cargas de esta unidad de negocio, y solo las que dejaron
    movimientos vivos: si después se borró la cuenta y se recargó, la fila vieja
    sigue en el historial y mostrarla hace creer que algo entró dos veces. */
-$ultimas = db()->query("SELECT i.*, c.nombre cuenta FROM importaciones i
-                          JOIN cuentas c ON c.id = i.cuenta_id
-                         WHERE c.sede_id = " . (int) sede_actual() . "
-                           AND EXISTS (SELECT 1 FROM movimientos m WHERE m.importacion_id = i.id)
-                      ORDER BY i.id DESC LIMIT 6")->fetchAll();
+/* El EXISTS se comprueba aparte y sobre un puñado de ids. Dentro del SELECT,
+   MySQL lo convertía en un recorrido de la tabla entera de movimientos: 327 ms
+   con medio millón de filas, y creciendo. */
+$candidatas = db()->query("SELECT i.*, c.nombre cuenta FROM importaciones i
+                             JOIN cuentas c ON c.id = i.cuenta_id
+                            WHERE c.sede_id = " . (int) sede_actual() . "
+                         ORDER BY i.id DESC LIMIT 20")->fetchAll();
+$ultimas = [];
+if ($candidatas !== []) {
+    $ids = implode(',', array_map(fn($x) => (int) $x['id'], $candidatas));
+    $vivas = db()->query("SELECT DISTINCT importacion_id FROM movimientos
+                           WHERE importacion_id IN ($ids)")->fetchAll(PDO::FETCH_COLUMN);
+    $vivas = array_flip(array_map('intval', $vivas));
+    foreach ($candidatas as $c) {
+        if (isset($vivas[(int) $c['id']]) && count($ultimas) < 6) {
+            $ultimas[] = $c;
+        }
+    }
+}
 
 // Justificar es lo que se hace todos los días; cargar, una vez al mes. Manda
 // el trabajo pendiente, y en el tamaño grande, que es el que se encuentra.
@@ -80,7 +94,11 @@ encabezado_html('Panel', 'panel',
     <div class="pie">Bs <?= bs((float) ($res['pend_bs'] ?? 0), 0) ?></div>
     <?php if (($res['pend'] ?? 0) > 0): ?><span class="llamada">Justificarlos ahora →</span><?php endif ?>
   </a>
-  <?php $dispon = 0.0; foreach ($cuentasLista as $cc) { $dispon += saldo_cuenta((int) $cc['id'], $f['hasta'] ?: null)['saldo']; } ?>
+  <?php /* De una sola consulta, no una por cuenta: ver saldos_de_cuentas(). */
+  $dispon = 0.0;
+  foreach (saldos_de_cuentas(array_column($cuentasLista, 'id'), $f['hasta'] ?: null) as $s) {
+      $dispon += $s['saldo'];
+  } ?>
   <div class="cifra">
     <div class="rotulo">Disponible en <?= count($cuentasLista) ?> cuentas</div>
     <div class="valor" style="color:<?= $dispon < 0 ? 'var(--salida)' : 'var(--texto)' ?>">Bs <?= bs($dispon, 0) ?></div>
@@ -88,7 +106,7 @@ encabezado_html('Panel', 'panel',
   </div>
 </div>
 
-<?php $repes = montos_repetidos(null, 8); ?>
+<?php $repes = montos_repetidos(null, 8);   // últimos 180 días: ver la función ?>
 <div class="tarjeta" style="margin-bottom:16px" data-guia="repetidos">
   <h2>Pagos que podrían estar repetidos</h2>
   <?php if ($repes === []): ?>

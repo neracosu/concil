@@ -96,15 +96,32 @@ if (($id = (int) ($_GET['editar'] ?? 0)) > 0) {
     $editar = $s->fetch() ?: null;
 }
 
-$lista = $pdo->query("SELECT c.*, COUNT(m.id) movs,
-                             COALESCE(SUM(m.debito),0) deb, COALESCE(SUM(m.credito),0) cre,
-                             MIN(m.fecha) f1, MAX(m.fecha) f2,
-                             SUM(m.tipo='D' AND m.categoria_id IS NULL) pend
-                        FROM cuentas c
-                   LEFT JOIN movimientos m ON m.cuenta_id = c.id
-                       WHERE c.sede_id = " . (int) sede_actual() . "
-                    GROUP BY c.id ORDER BY c.nombre")->fetchAll();
+/* En dos pasadas y no en una. Juntas, ningún índice las cubre —los totales
+   necesitan débito y crédito, los pendientes necesitan tipo y categoría— y
+   MySQL acaba leyendo fila por fila: 1,2 s con medio millón de movimientos.
+   Separadas, cada una se resuelve dentro de su propio índice. */
+$lista = $pdo->query('SELECT * FROM cuentas WHERE sede_id = ' . (int) sede_actual()
+                   . ' ORDER BY nombre')->fetchAll();
+if ($lista !== []) {
+    $ids = implode(',', array_map(fn($c) => (int) $c['id'], $lista));
+    $tot = $pdo->query("SELECT cuenta_id, COUNT(*) movs, COALESCE(SUM(debito),0) deb,
+                               COALESCE(SUM(credito),0) cre, MIN(fecha) f1, MAX(fecha) f2
+                          FROM movimientos WHERE cuenta_id IN ($ids)
+                      GROUP BY cuenta_id")->fetchAll(PDO::FETCH_UNIQUE | PDO::FETCH_ASSOC);
+    $pen = $pdo->query("SELECT cuenta_id, COUNT(*) pend FROM movimientos
+                         WHERE cuenta_id IN ($ids) AND tipo = 'D' AND categoria_id IS NULL
+                      GROUP BY cuenta_id")->fetchAll(PDO::FETCH_KEY_PAIR);
+    foreach ($lista as &$c) {
+        $id = (int) $c['id'];
+        $c += $tot[$id] ?? ['movs' => 0, 'deb' => 0, 'cre' => 0, 'f1' => null, 'f2' => null];
+        $c['pend'] = (int) ($pen[$id] ?? 0);
+    }
+    unset($c);
+}
 
+// Los saldos de todas las cuentas de una sola consulta: uno por cuenta dentro
+// del bucle era lo que hacía lenta esta pantalla al crecer la tabla.
+$saldos = saldos_de_cuentas(array_column($lista, 'id'));
 encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
 ?>
 <div class="rejilla" style="grid-template-columns:minmax(0,1fr) 320px;align-items:start">
@@ -145,7 +162,7 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
             <td class="fecha"><?= $c['f1'] ? e(date('d/m/Y', strtotime($c['f1'])) . ' → ' . date('d/m/Y', strtotime($c['f2']))) : '—' ?></td>
             <td class="der num" style="color:var(--entrada)"><?= bs((float) $c['cre'], 0) ?></td>
             <td class="der num" style="color:var(--salida)"><?= bs((float) $c['deb'], 0) ?></td>
-            <?php $sal = saldo_cuenta((int) $c['id']); ?>
+            <?php $sal = $saldos[(int) $c['id']] ?? ['saldo' => 0.0, 'fuente' => 'parcial']; ?>
             <td class="der num" style="color:<?= $sal['saldo'] < 0 ? 'var(--salida)' : 'var(--texto)' ?>">
               <?= bs($sal['saldo']) ?>
               <span class="origen" style="display:block"><?= $sal['fuente'] === 'banco' ? 'según el banco'

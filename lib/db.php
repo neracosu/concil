@@ -25,10 +25,30 @@ function db(): PDO
 }
 
 /** Crea el esquema si no existe. Idempotente. */
+/**
+ * Número del esquema. **Súbelo cada vez que añadas una columna o un índice
+ * aquí**, o la migración no llegará a correr en el servidor: se salta cuando la
+ * base ya dice tener esta versión.
+ */
+const ESQUEMA_VERSION = 3;
+
 function migrar(): void
 {
     $pdo = db();
     $t = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+
+    // Sigue siendo idempotente; lo que cambia es que además es barata. Las 55
+    // comprobaciones contra information_schema costaban 80 ms en **cada**
+    // petición —medido el 08/09/2026— y crecen con cada columna que se añada.
+    // El try es por la instalación nueva, donde la tabla ajustes todavía no
+    // existe y la consulta revienta: ahí hay que migrar de todas formas.
+    try {
+        if ((int) ajuste('esquema', '0') === ESQUEMA_VERSION) {
+            return;
+        }
+    } catch (Throwable) {
+        // base recién creada: seguir y crearlo todo
+    }
 
     // Unidades de negocio del consorcio. Cada cuenta pertenece a una.
     $pdo->exec("CREATE TABLE IF NOT EXISTS sedes (
@@ -196,6 +216,49 @@ function migrar(): void
     }
     if (!indice_existe($pdo, 'movimientos', 'idx_mov_concepto')) {
         $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_concepto (cuenta_id, concepto(60))');
+    }
+
+    // Índices pensados para cuando la tabla sea grande. Medidos el 08/09/2026
+    // sobre 500.000 movimientos sintéticos, que son unos cinco años al ritmo
+    // actual: sin ellos el panel tardaba 18 segundos.
+    //
+    // El contador de pendientes y la búsqueda del último mes con datos recorrían
+    // los dos la tabla entera. Este índice sirve a ambos: cuenta_id va primero
+    // porque el filtro por sede es lo primero que se aplica siempre, y fecha
+    // antes que categoria_id para que MIN/MAX salgan del propio índice.
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_ctf')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_ctf (cuenta_id, tipo, fecha, categoria_id)');
+    }
+    // idx_mov_estado (tipo, estado) no lo usa ninguna consulta: la columna estado
+    // se escribe pero nunca se lee —el filtro «pendiente/conciliado» de la
+    // interfaz mira categoria_id, no esta columna—. Y además hacía daño: el
+    // optimizador lo prefería para «tipo='D' AND cuenta_id IN (...)», y como no
+    // lleva cuenta_id, terminaba leyendo 251.000 filas una a una. Quitándolo,
+    // esas consultas pasan a resolverse dentro de idx_mov_ctf.
+    if (indice_existe($pdo, 'movimientos', 'idx_mov_estado')) {
+        $pdo->exec('ALTER TABLE movimientos DROP INDEX idx_mov_estado');
+    }
+
+    // Y este va aparte, no fundido con el anterior. Se probó a juntarlos y el
+    // contador de pendientes pasó de 6 ms a 479: con fecha en medio, MySQL deja
+    // de poder saltar directamente a las filas sin categoría y recorre todos
+    // los débitos de la cuenta. Dos índices con prefijo parecido cuestan poco
+    // al insertar; esa diferencia se paga en cada pantalla.
+    // Tres columnas, no cuatro. Se probó a añadirle debito para que el resumen
+    // de Movimientos saliera entero del índice: el reparto por categoría bajó de
+    // 617 a 345 ms, pero resumen() subió de 373 a 1.449 y la pantalla salió
+    // perdiendo. Medido el 08/09/2026 sobre 500.000 movimientos.
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_pend')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_pend (cuenta_id, tipo, categoria_id)');
+    }
+    // Los saldos: el último saldo informado por el banco y la suma de la
+    // cuenta salen los dos de aquí sin tocar una sola fila de datos.
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_saldos')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_saldos (cuenta_id, fecha, debito, credito, saldo)');
+    }
+    // El aviso de montos repetidos agrupa por proveedor y monto.
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_prov_monto')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_prov_monto (proveedor_id, debito)');
     }
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS bitacora (
@@ -391,6 +454,9 @@ function migrar(): void
 
     sembrar_comisiones($pdo);
     sembrar_maestro($pdo);
+
+    // Al final del todo: si algo de arriba falló, la próxima petición reintenta.
+    guardar_ajuste('esquema', (string) ESQUEMA_VERSION);
 }
 
 /**

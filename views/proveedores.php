@@ -165,7 +165,9 @@ if (($id = (int) ($_GET['editar'] ?? 0)) > 0) {
     $editar = proveedor($id);
 }
 $busca = mb_substr(limpiar((string) ($_GET['q'] ?? '')), 0, 60);
-$lista = $paso === 'listar' ? buscar_proveedores($busca) : [];
+$pagina = max(1, (int) ($_GET['p'] ?? 1));
+$pag = $paso === 'listar' ? buscar_proveedores($busca, false, $pagina) : ['filas' => [], 'total' => 0, 'pagina' => 1, 'paginas' => 1];
+$lista = $pag['filas'];
 
 if ($paso === 'listar') {
     purgar_prov_lote();
@@ -361,10 +363,11 @@ encabezado_html('Proveedores', 'proveedores',
           </tbody>
         </table>
       </div>
+      <?php paginas_html($pag['pagina'], $pag['paginas'], $pag['total'], 'proveedores') ?>
       <?php endif ?>
     </div>
 
-    <?php if (count($lista) > 1): ?>
+    <?php $todosProv = $paso === 'listar' ? proveedores() : []; if (count($todosProv) > 1): ?>
       <div class="tarjeta" style="margin-top:18px">
         <h2>Unir dos fichas del mismo proveedor</h2>
         <p style="color:var(--mudo);font-size:13.5px;margin:0 0 14px">
@@ -377,14 +380,14 @@ encabezado_html('Proveedores', 'proveedores',
           <div><label>Esta ficha desaparece</label>
             <select name="origen" required>
               <option value="">Elegir…</option>
-              <?php foreach ($lista as $p): ?>
+              <?php foreach ($todosProv as $p): ?>
                 <option value="<?= $p['id'] ?>"><?= e($p['nombre']) ?><?= $p['movs'] > 0 ? ' · ' . (int) $p['movs'] . ' pagos' : '' ?></option>
               <?php endforeach ?>
             </select></div>
           <div><label>Y todo pasa a esta</label>
             <select name="destino" required>
               <option value="">Elegir…</option>
-              <?php foreach ($lista as $p): ?>
+              <?php foreach ($todosProv as $p): ?>
                 <option value="<?= $p['id'] ?>"><?= e($p['nombre']) ?></option>
               <?php endforeach ?>
             </select></div>

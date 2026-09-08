@@ -41,6 +41,28 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.5.2', 'tipo' => 'mejora',
+            'titulo' => 'Preparado para cuando haya años de movimientos',
+            'resumen' => 'Hoy el sistema va rápido porque lleva pocos meses cargados. Se probó con '
+                       . '500.000 movimientos —unos cinco años al ritmo actual— y el panel tardaba 18 '
+                       . 'segundos en abrir. Ya no: abre en menos de uno.',
+            'detalles' => [
+                'El panel pasó de 18 segundos a menos de 1.',
+                'La pantalla de Cuentas, de 15 segundos a medio segundo.',
+                'El aviso de pagos repetidos mira los últimos seis meses, que es lo que se puede reclamar.',
+            ],
+        ],
+        [
+            'fecha' => '2026-09-08', 'version' => '2.5.1', 'tipo' => 'mejora',
+            'titulo' => 'El listado de proveedores ya no sale todo de una vez',
+            'resumen' => 'Con 136 proveedores la página se hacía larga, y va a crecer. Ahora sale por '
+                       . 'páginas, y el buscador sigue mirando el listado completo.',
+            'detalles' => [
+                'Cuarenta por página, con el total siempre a la vista.',
+                'Unir dos fichas repetidas sigue viendo a todos los proveedores, no solo a los de la página.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.5', 'tipo' => 'nuevo',
             'titulo' => 'Si la letra le queda chica, agrándela',
             'resumen' => 'Al final del menú, junto a los colores, hay tres letras A. Elija la que le '

@@ -224,6 +224,12 @@ añadir una columna usa `columna_si_falta()`, nunca un `ALTER TABLE` directo. Si
 tienes que cambiar una clave única, crea antes el índice suelto de la columna que
 sostiene la foránea: MySQL no deja soltar el índice del que depende una FK.
 
+**Y si tocas el esquema, sube `ESQUEMA_VERSION`.** Desde el 08/09/2026 `migrar()`
+se salta entero cuando `ajustes.esquema` ya dice esa versión: las 55 consultas a
+`information_schema` costaban 80 ms en **cada** petición y crecían con cada
+columna. **Si añades una columna o un índice y no subes el número, tu migración
+no llega a correr en el servidor.**
+
 **Solo débitos.** Casi todas las consultas filtran `tipo = 'D'` por decisión de
 producto, no por omisión. Los créditos se guardan completos. Si te piden
 activarlos, es quitar ese filtro, no volver a importar.
@@ -259,6 +265,35 @@ Lo pidió el equipo: a la gente del departamento le costaba ubicar los botones.
 como pastilla sólida y enciende su renglón con `.tiene-pendientes` mientras
 quede algo. Antes eran 11 px sobre un fondo casi transparente y había que
 acercarse a leerlo. Si tocas eso, acuérdate de por qué está así.
+
+## Cuando la tabla crezca
+
+Medido el 08/09/2026 con **500.000 movimientos** sintéticos —unos cinco años al
+ritmo actual— en una sede de usar y tirar. El panel tardaba **18 s**; quedó en
+0,8. Lo que se aprendió, por si vuelve a pasar:
+
+- **Un índice de más hace daño.** `idx_mov_estado (tipo, estado)` no lo usaba
+  ninguna lectura —la columna `estado` se escribe y nunca se consulta; el filtro
+  «pendiente/conciliado» mira `categoria_id`— y el optimizador lo prefería para
+  `tipo='D' AND cuenta_id IN (...)`, leyendo 251.000 filas una a una. Quitándolo,
+  esas consultas bajaron 15×. **Antes de añadir un índice, comprueba con
+  `EXPLAIN` que el que ya hay no se vuelve la mala opción.**
+- **Nada de una consulta por cuenta.** `saldo_cuenta()` en un bucle costaba 9 s;
+  `saldos_de_cuentas()` hace lo mismo en una pasada y en 0,4. Lo mismo en la
+  lista de Cuentas y en el reporte por cuenta.
+- **Ordenar y unir no se mezclan.** `listar_movimientos()` juntaba cuatro tablas
+  y ordenaba 300.000 filas para enseñar 60. Ahora pide primero los ids de la
+  página —sin una sola unión, todo dentro del índice— y después los datos: 13×.
+- **`saldo IS NOT NULL` con `ORDER BY ... LIMIT 1` es una trampa.** Si ninguna
+  fila cumple, MySQL recorre el índice entero convencido de que va a encontrar
+  algo enseguida. Solo Bancamiga y Bicentenario traen saldo, así que era el caso
+  normal. Se resuelve preguntando antes, en la pasada agrupada, si esa cuenta
+  tiene alguno.
+- **Lo que no se puede reclamar, no se calcula.** `montos_repetidos()` mira los
+  últimos 180 días en la vista general: 2,1 s → 0,16.
+- **Cuidado al medir.** El hosting compartido mete varios segundos de ruido: la
+  misma pantalla dio 1,1 s y 6,4 s seguidas. Toma la mediana de varias, y
+  distingue frío de caliente.
 
 ## La marca
 

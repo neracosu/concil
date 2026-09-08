@@ -251,7 +251,8 @@ function guardar_proveedor(array $d, int $id = 0): int
  * el consorcio entero—, pero las cifras y las facturas son de la unidad activa,
  * que es como se lee todo lo demás en la aplicación.
  */
-function buscar_proveedores(string $texto = '', bool $soloActivos = false): array
+function buscar_proveedores(string $texto = '', bool $soloActivos = false,
+                            int $pagina = 1, int $porPagina = 40): array
 {
     $sede = (int) sede_actual();
     $donde = [];
@@ -267,6 +268,19 @@ function buscar_proveedores(string $texto = '', bool $soloActivos = false): arra
         $plano = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $texto));
         $args = ['%' . norm($texto) . '%', '%' . $plano . '%', '%' . mb_strtoupper($texto) . '%'];
     }
+    $where = $donde !== [] ? ' WHERE ' . implode(' AND ', $donde) : '';
+
+    // Cuántos hay en total, antes de recortar la página. La cuenta va sola y no
+    // arrastra las tres subconsultas: contar 136 proveedores no tiene por qué
+    // sumarle a cada uno sus pagos y sus facturas.
+    $c = db()->prepare('SELECT COUNT(*) FROM proveedores p' . $where);
+    $c->execute($args);
+    $total = (int) $c->fetchColumn();
+
+    $paginas = max(1, (int) ceil($total / $porPagina));
+    $pagina = max(1, min($pagina, $paginas));
+    $off = ($pagina - 1) * $porPagina;
+
     $sql = 'SELECT p.*,
                    (SELECT COUNT(*) FROM movimientos m
                      WHERE m.proveedor_id = p.id AND m.tipo = \'D\' AND ' . filtro_sede() . ') movs,
@@ -275,11 +289,11 @@ function buscar_proveedores(string $texto = '', bool $soloActivos = false): arra
                    (SELECT COUNT(*) FROM facturas f
                      WHERE f.proveedor_id = p.id AND f.sede_id = ' . $sede . ') facturas
               FROM proveedores p'
-         . ($donde !== [] ? ' WHERE ' . implode(' AND ', $donde) : '')
-         . ' ORDER BY p.nombre';
+         . $where
+         . ' ORDER BY p.nombre LIMIT ' . (int) $porPagina . ' OFFSET ' . (int) $off;
     $s = db()->prepare($sql);
     $s->execute($args);
-    return $s->fetchAll();
+    return ['filas' => $s->fetchAll(), 'total' => $total, 'pagina' => $pagina, 'paginas' => $paginas];
 }
 
 /**
@@ -616,9 +630,17 @@ function pagos_repetidos(int $movId, int $provId, float $monto, string $fecha, i
  * Con $provId se mira uno solo; sin él, la unidad entera, que es lo que
  * necesita el panel para avisar sin que nadie vaya a buscarlo.
  */
-function montos_repetidos(?int $provId = null, int $tope = 20): array
+function montos_repetidos(?int $provId = null, int $tope = 20, int $dias = 180): array
 {
     $extra = $provId !== null ? ' AND m.proveedor_id = ' . (int) $provId : '';
+    // Mirando un proveedor concreto se revisa su historial entero, que es
+    // barato. En la vista general hay que poner un techo: agrupar por proveedor
+    // y monto sobre todo lo que se ha cargado costaba 2,1 s con medio millón de
+    // movimientos, y solo iba a crecer. Además, un pago repetido de hace tres
+    // años ya no se puede hacer nada con él; lo que sirve es lo reciente.
+    if ($provId === null && $dias > 0) {
+        $extra .= ' AND m.fecha >= DATE_SUB(CURDATE(), INTERVAL ' . (int) $dias . ' DAY)';
+    }
     return db()->query('SELECT m.proveedor_id, p.nombre proveedor, m.debito,
                                COUNT(*) veces, MIN(m.fecha) f1, MAX(m.fecha) f2,
                                COUNT(DISTINCT m.cuenta_id) cuentas,

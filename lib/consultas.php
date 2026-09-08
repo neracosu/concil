@@ -82,6 +82,20 @@ function listar_movimientos(array $f, int $pagina, int $porPagina = POR_PAGINA):
     $pagina = max(1, min($pagina, $paginas));
     $off = ($pagina - 1) * $porPagina;
 
+    // Primero los ids de esta página, sin una sola unión. Con las cuatro uniones
+    // dentro, MySQL juntaba los 300.000 movimientos que casan con el filtro y
+    // los ordenaba enteros para enseñar sesenta: 3 segundos con medio millón de
+    // filas. Así el orden se resuelve dentro del índice y se para al llegar a
+    // los sesenta.
+    $ids = $pdo->prepare("SELECT m.id FROM movimientos m WHERE $w
+                        ORDER BY " . orden_sql($f) . "
+                           LIMIT $porPagina OFFSET $off");
+    $ids->execute($p);
+    $pagIds = $ids->fetchAll(PDO::FETCH_COLUMN);
+    if ($pagIds === []) {
+        return ['filas' => [], 'total' => $total, 'pagina' => $pagina, 'paginas' => $paginas];
+    }
+
     // La tasa se ata por la fecha del movimiento, que es la del extracto: un
     // archivo de julio cargado en septiembre se sigue leyendo con las de julio.
     $sql = "SELECT m.*, c.nombre AS cuenta, c.banco, cat.nombre AS categoria, cat.color, t.tasa AS tasa_bcv,
@@ -91,11 +105,9 @@ function listar_movimientos(array $f, int $pagina, int $porPagina = POR_PAGINA):
          LEFT JOIN categorias cat ON cat.id = m.categoria_id
          LEFT JOIN usuarios u ON u.id = m.usuario_id
          LEFT JOIN tasas t ON t.fecha = m.fecha
-             WHERE $w
-          ORDER BY " . orden_sql($f) . "
-             LIMIT $porPagina OFFSET $off";
-    $s = $pdo->prepare($sql);
-    $s->execute($p);
+             WHERE m.id IN (" . implode(',', array_map('intval', $pagIds)) . ")
+          ORDER BY " . orden_sql($f);
+    $s = $pdo->query($sql);
 
     return ['filas' => $s->fetchAll(), 'total' => $total, 'pagina' => $pagina, 'paginas' => $paginas];
 }
@@ -206,28 +218,84 @@ function url(array $cambios = [], ?string $ruta = null): string
  */
 function saldo_cuenta(int $cuentaId, ?string $hasta = null): array
 {
+    return saldos_de_cuentas([$cuentaId], $hasta)[$cuentaId]
+        ?? ['saldo' => 0.0, 'fuente' => 'parcial', 'fecha' => null];
+}
+
+/**
+ * El saldo de varias cuentas de una vez, indexado por id de cuenta.
+ *
+ * Va agrupado a propósito. Preguntarlo cuenta por cuenta costaba nueve segundos
+ * con medio millón de movimientos —medido el 08/09/2026—, y no por la suma: la
+ * consulta que busca «el último saldo que informó el banco» recorría el índice
+ * de fechas **entero** en las cuentas donde ninguna fila trae saldo, que son la
+ * mayoría, porque solo Bancamiga y Bicentenario lo imprimen. Aquí esa búsqueda
+ * ni se lanza si la pasada agrupada dice que esa cuenta no tiene ninguno.
+ */
+function saldos_de_cuentas(array $ids, ?string $hasta = null): array
+{
+    $ids = array_values(array_unique(array_map('intval', $ids)));
+    if ($ids === []) {
+        return [];
+    }
     $pdo = db();
+    $en   = implode(',', $ids);
     $tope = $hasta ? ' AND fecha <= ' . $pdo->quote($hasta) : '';
 
-    $s = $pdo->query("SELECT saldo, fecha FROM movimientos
-                       WHERE cuenta_id = $cuentaId AND saldo IS NOT NULL $tope
-                    ORDER BY fecha DESC, id DESC LIMIT 1")->fetch();
-    if ($s) {
-        return ['saldo' => (float) $s['saldo'], 'fuente' => 'banco', 'fecha' => $s['fecha']];
+    // Una sola pasada, y sin tocar una fila de datos: todo lo que se pide está
+    // dentro de idx_mov_saldos.
+    $agr = $pdo->query("SELECT cuenta_id,
+                               COALESCE(SUM(credito),0) cre, COALESCE(SUM(debito),0) deb,
+                               MAX(fecha) f,
+                               MAX(CASE WHEN saldo IS NOT NULL THEN fecha END) f_saldo
+                          FROM movimientos
+                         WHERE cuenta_id IN ($en) $tope
+                      GROUP BY cuenta_id")->fetchAll(PDO::FETCH_ASSOC);
+
+    $fichas = $pdo->query("SELECT id, saldo_inicial, saldo_fecha FROM cuentas WHERE id IN ($en)")
+                  ->fetchAll(PDO::FETCH_UNIQUE | PDO::FETCH_ASSOC);
+
+    $r = [];
+    foreach ($agr as $a) {
+        $cid = (int) $a['cuenta_id'];
+        // Si el banco informó saldo, ese manda: es el saldo real, no uno
+        // reconstruido. Se busca solo en las cuentas que lo tienen.
+        if ($a['f_saldo'] !== null) {
+            $s = $pdo->prepare('SELECT saldo FROM movimientos
+                                 WHERE cuenta_id = ? AND fecha = ? AND saldo IS NOT NULL
+                              ORDER BY id DESC LIMIT 1');
+            $s->execute([$cid, $a['f_saldo']]);
+            $v = $s->fetchColumn();
+            if ($v !== false) {
+                $r[$cid] = ['saldo' => (float) $v, 'fuente' => 'banco', 'fecha' => $a['f_saldo']];
+                continue;
+            }
+        }
+        $ficha = $fichas[$cid] ?? [];
+        $desde = $ficha['saldo_fecha'] ?? null;
+        $cre = (float) $a['cre'];
+        $deb = (float) $a['deb'];
+        if ($desde !== null) {
+            // El arranque vale desde su fecha: lo anterior no se suma.
+            $p = $pdo->prepare("SELECT COALESCE(SUM(credito),0) cre, COALESCE(SUM(debito),0) deb
+                                  FROM movimientos WHERE cuenta_id = ? AND fecha >= ?" . $tope);
+            $p->execute([$cid, $desde]);
+            $x = $p->fetch(PDO::FETCH_ASSOC);
+            $cre = (float) $x['cre'];
+            $deb = (float) $x['deb'];
+        }
+        $r[$cid] = [
+            'saldo'  => (float) ($ficha['saldo_inicial'] ?? 0) + $cre - $deb,
+            'fuente' => $desde ? 'calculado' : 'parcial',
+            'fecha'  => $a['f'],
+        ];
     }
-
-    $c = $pdo->query("SELECT saldo_inicial, saldo_fecha FROM cuentas WHERE id = $cuentaId")->fetch();
-    $desde = $c['saldo_fecha'] ?? null;
-    $filtroDesde = $desde ? ' AND fecha >= ' . $pdo->quote($desde) : '';
-
-    $m = $pdo->query("SELECT COALESCE(SUM(credito),0) cre, COALESCE(SUM(debito),0) deb, MAX(fecha) f
-                        FROM movimientos WHERE cuenta_id = $cuentaId $filtroDesde $tope")->fetch();
-
-    return [
-        'saldo'  => (float) ($c['saldo_inicial'] ?? 0) + (float) $m['cre'] - (float) $m['deb'],
-        'fuente' => $desde ? 'calculado' : 'parcial',
-        'fecha'  => $m['f'],
-    ];
+    // Las cuentas sin un solo movimiento no salen del GROUP BY.
+    foreach ($ids as $cid) {
+        $r[$cid] ??= ['saldo' => (float) ($fichas[$cid]['saldo_inicial'] ?? 0),
+                      'fuente' => 'parcial', 'fecha' => null];
+    }
+    return $r;
 }
 
 /** Entradas, salidas y saldo de cada cuenta en el período filtrado. */
@@ -244,8 +312,9 @@ function saldos_por_cuenta(array $f): array
                       GROUP BY c.id ORDER BY c.nombre");
     $s->execute($p);
     $filas = $s->fetchAll();
+    $saldos = saldos_de_cuentas(array_column($filas, 'id'), $f['hasta'] ?: null);
     foreach ($filas as &$r) {
-        $r['saldo'] = saldo_cuenta((int) $r['id'], $f['hasta'] ?: null);
+        $r['saldo'] = $saldos[(int) $r['id']] ?? ['saldo' => 0.0, 'fuente' => 'parcial', 'fecha' => null];
         $r['neto'] = (float) $r['entradas'] - (float) $r['salidas'];
     }
     return $filas;
