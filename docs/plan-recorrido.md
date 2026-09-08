@@ -6,9 +6,21 @@ Aquí está **en qué orden se construyen y por qué en ese orden**.
 Total estimado: **siete a nueve días de trabajo**, repartidos en siete entregas
 que se pueden usar en cuanto salen. Nada de esperar al final.
 
+> **Terminado el 06/09/2026, el mismo día.** Las siete fases, de la v1.5 a la
+> v2.1. La estimación se quedó larga porque las fichas 2, 3 y 4 resultaron ser
+> **la misma pantalla vista desde tres lados** y salieron de una vez. Lo que
+> quedó de cada una está en [el cuaderno](sugerencias-recorrido.md), ficha por
+> ficha, con su commit.
+
 ---
 
 ## El reinicio manda el calendario
+
+> **Ya pasó.** La base se vació el 31/08, se volvió a vaciar el 07/09 y se
+> limpió por última vez el **08/09/2026 a las 14:51**, con las siete fases
+> dentro y ya para el arranque real. Se conservaron usuarios, proveedores,
+> categorías, reglas, tasas, la unidad de negocio y los formatos aprendidos.
+> Lo que sigue abajo es cómo se razonó entonces.
 
 **Lo que hay cargado hoy son pruebas.** Los 1.100 movimientos, las dos
 importaciones y lo poco justificado a mano se van a **borrar antes de que el
@@ -226,26 +238,27 @@ meses distintos: Banesco de julio y Tesoro solo del 27 de agosto.
 
 ---
 
-## Lo que necesito de ustedes
+## Lo que necesitaba de ustedes — todo respondido
 
-Cuatro decisiones. Ninguna urgente hoy, pero cada una frena su fase:
+Las cuatro decisiones se tomaron y están construidas. Quedan aquí con su
+respuesta; el detalle, en [el cuaderno](sugerencias-recorrido.md).
 
-1. **(Fase 3)** La tasa corregida, ¿vale para el día entero o solo para ese
-   movimiento?
-2. **(Fase 4)** ¿Con qué margen salta la alerta de pago repetido? ¿Monto
-   exacto? ¿Dentro de cuántos días?
-3. **(Fase 5)** Pagar una factura que ya está cubierta: ¿se bloquea o se avisa?
-4. **(Fase 5)** ¿Qué hace que dos facturas sean la misma cuando el número está
-   tecleado distinto?
+1. **(Fase 3)** La tasa corregida → **vale para el día entero**.
+2. **(Fase 4)** Margen de la alerta → **mismo proveedor, monto exacto, 30 días,
+   todas las cuentas**.
+3. **(Fase 5)** Factura ya cubierta → **se avisa** enseñando quién la pagó y
+   desde qué banco, y **se bloquea** repartir más de lo que salió del banco.
+4. **(Fase 5)** Dos facturas son la misma → **por el número normalizado**, sin
+   ceros a la izquierda ni signos.
 
-Y dos cosas que no son decisiones:
+Y las dos que no eran decisiones:
 
-- **Qué se conserva en el reinicio.** Se borran movimientos e importaciones.
-  Deberían quedarse las 5 cuentas, las 20 categorías, las 37 reglas, los 136
-  proveedores y las 1.831 tasas del BCV: volver a cargarlos es trabajo tirado.
-  Confírmenlo antes de borrar.
-- **Cuándo arrancan de verdad.** De esa fecha depende cuánto del plan entra en
-  el paquete de antes y cuánto sobre la marcha.
+- **Qué se conservó en el reinicio**: los 8 usuarios, los 136 proveedores, las
+  30 categorías, las 61 reglas, las 1.835 tasas del BCV, la unidad de negocio y
+  los 6 formatos aprendidos. Las cuentas **no**: tenían la ficha vacía y el
+  equipo las registra de nuevo con su número, su titular y su saldo de arranque.
+- **Cuándo arrancan**: el reinicio definitivo fue el 08/09/2026. Todo el plan
+  entró antes, así que no hizo falta el paquete de «sobre la marcha».
 
 ---
 
