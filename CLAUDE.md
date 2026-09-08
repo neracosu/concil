@@ -119,11 +119,19 @@ nombre del banco dejaba pasar los archivos cuando la cuenta se creó sin él —
 caso de los cinco bancos que no dicen quiénes son—, y así se coló un extracto de
 Venezuela en una cuenta del BNC durante el recorrido de prueba.
 
-**Solo bloquea lo concluyente.** El código de banco del número de cuenta
-(primeros 4 dígitos) y los totales del pie del archivo detienen la importación;
-la cadena del saldo solo confirma. Banplus no entrega las filas en orden de
-saldo y Provincial las entrega al revés, así que **nunca** conviertas esa
-comprobación en un rechazo.
+**Solo bloquea lo concluyente.** Únicamente el código de banco del número de
+cuenta (primeros 4 dígitos) detiene la importación. La cadena del saldo solo
+confirma: Banplus no entrega las filas en orden de saldo y Provincial las
+entrega al revés, así que **nunca** conviertas esa comprobación en un rechazo.
+
+**Los totales del pie del archivo no mandan.** Totalizamos nosotros, fila por
+fila, y esa es la cifra que se guarda y se muestra. El resumen que el banco
+imprime al pie se compara y, si difiere, se avisa —nunca se rechaza la carga—.
+Lo decidió el equipo el 08/09/2026: hay historial de extractos que llegan con su
+propio total mal calculado, y mientras ese pie mandaba, un archivo bueno se
+perdía entero. `comparar_totales()` devuelve `propio` (lo nuestro) y `discrepa`
+(el aviso); las sumas quedan en `importaciones.suma_debito/suma_credito` y la
+diferencia en `descuadre`.
 
 **`sede_elegida()` no es lo mismo que `sede_actual()`.** La primera dice si se
 eligió unidad en esta sesión; la segunda devuelve una igualmente —la única que

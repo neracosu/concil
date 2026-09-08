@@ -446,14 +446,12 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     }
     $descargar();
 
-    // Verificación final contra lo que el propio archivo declara.
+    // Lo que suma el archivo de verdad, fila por fila. Esta es la cifra buena.
+    // El resumen que el banco imprime en el pie se compara, pero no manda: hay
+    // extractos que llegan con su propio total mal calculado, y antes eso
+    // tumbaba una importación correcta.
     $declarado = totales_declarados($pie, $m);
     $cuadre = comparar_totales($declarado, $sumaD, $sumaC, $nD, $nC);
-    if ($cuadre['falla'] !== '') {
-        $pdo->rollBack();
-        throw new RuntimeException('El archivo no cuadra con su propio resumen: ' . $cuadre['falla']
-            . ' No se guardó nada. Vuelve a descargarlo del banco y súbelo de nuevo.');
-    }
 
     $pdo->commit();
 
@@ -470,8 +468,10 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
 
     $duplicados = $filas - $insertados;
     $automaticos = min($automaticos, $insertados);
-    $pdo->prepare('UPDATE importaciones SET filas = ?, insertados = ?, duplicados = ?, auto_map = ? WHERE id = ?')
-        ->execute([$filas, $insertados, $duplicados, $automaticos, $impId]);
+    $pdo->prepare('UPDATE importaciones SET filas = ?, insertados = ?, duplicados = ?, auto_map = ?,
+                          suma_debito = ?, suma_credito = ?, descuadre = ? WHERE id = ?')
+        ->execute([$filas, $insertados, $duplicados, $automaticos,
+                   $sumaD, $sumaC, mb_substr($cuadre['discrepa'], 0, 255), $impId]);
 
     return [
         'importacion' => $impId,
@@ -486,29 +486,42 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
 }
 
 /**
- * Contrasta lo contado con lo que el archivo declara en su pie.
- * Devuelve el detalle para mostrarlo, y en 'falla' el motivo si no cuadra.
+ * Totaliza el archivo por nuestra cuenta y, aparte, mira qué dice el resumen
+ * que el banco imprime al pie.
+ *
+ * La cifra que vale es la nuestra, sumada fila por fila. El pie del banco es
+ * una opinión: hay historial de extractos que llegan con su propio total mal
+ * calculado, y mientras ese pie mandaba, un archivo bueno se rechazaba entero.
+ * Ahora la carga entra siempre y la diferencia, si la hay, se avisa.
  */
 function comparar_totales(array $dec, float $sumaD, float $sumaC, int $nD, int $nC): array
 {
-    $r = ['aplica' => false, 'falla' => '', 'detalle' => []];
+    $r = [
+        'aplica'   => false,        // ¿el archivo traía resumen al pie?
+        'discrepa' => '',           // en qué se diferencia del nuestro
+        'detalle'  => [],           // nuestras cifras, para mostrarlas
+        'propio'   => ['debito' => $sumaD, 'credito' => $sumaC, 'n_debito' => $nD, 'n_credito' => $nC],
+    ];
     $tol = 0.5;     // céntimos de redondeo acumulados en miles de filas
+    $dif = [];
 
     foreach ([['debito', 'n_debito', $sumaD, $nD, 'salidas'],
               ['credito', 'n_credito', $sumaC, $nC, 'entradas']] as [$k, $kn, $suma, $n, $etq]) {
+        $r['detalle'][] = ucfirst($etq) . ': ' . bs($suma) . " en $n movimientos";
         if ($dec[$k] === null) {
             continue;
         }
         $r['aplica'] = true;
         if (abs($dec[$k] - $suma) > $tol) {
-            $r['falla'] = "el resumen dice $etq por " . bs($dec[$k]) . ' y se leyeron ' . bs($suma) . '.';
-            return $r;
+            $dif[] = "en $etq el banco dice " . bs($dec[$k]) . ' y el archivo suma ' . bs($suma);
         }
         if ($dec[$kn] !== null && $dec[$kn] !== $n) {
-            $r['falla'] = "el resumen dice {$dec[$kn]} $etq y se leyeron $n.";
-            return $r;
+            $dif[] = "el banco dice {$dec[$kn]} $etq y en el archivo hay $n";
         }
-        $r['detalle'][] = ucfirst($etq) . ': ' . bs($suma) . ($dec[$kn] !== null ? " en {$dec[$kn]} movimientos" : '');
+    }
+    if ($dif !== []) {
+        $r['discrepa'] = 'El resumen del propio banco no coincide con lo que trae el archivo: '
+                       . implode('; ', $dif) . '. Se guardó lo que dicen las filas, que es lo real.';
     }
     return $r;
 }

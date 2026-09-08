@@ -371,7 +371,10 @@ encabezado_html('Cargar extractos', 'carga',
               <span class="nota" style="color:var(--salida);display:block;font-size:12px"><?= e($r['error']) ?></span>
               <?php else: ?>
                 <?php if (!empty($r['cuadre']['detalle'])): ?>
-                  <span class="nota" style="color:var(--entrada);display:block;font-size:12px">Cuadra con el resumen del banco · <?= e(implode(' · ', $r['cuadre']['detalle'])) ?></span>
+                  <span class="nota" style="color:var(--entrada);display:block;font-size:12px">Sumado por el sistema · <?= e(implode(' · ', $r['cuadre']['detalle'])) ?></span>
+                <?php endif ?>
+                <?php if (!empty($r['cuadre']['discrepa'])): ?>
+                  <span class="nota" style="color:var(--pendiente);display:block;font-size:12px"><?= e($r['cuadre']['discrepa']) ?></span>
                 <?php endif ?>
                 <?php if (!empty($r['aviso'])): ?>
                   <span class="nota" style="color:var(--pendiente);display:block;font-size:12px"><?= e($r['aviso']) ?></span>

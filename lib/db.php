@@ -118,6 +118,13 @@ function migrar(): void
         CONSTRAINT fk_imp_cuenta FOREIGN KEY (cuenta_id) REFERENCES cuentas(id) ON DELETE SET NULL
     ) $t");
 
+    // Lo que suma el archivo según nosotros, y en qué se diferenciaba del
+    // resumen que el banco imprime al pie. Se guarda porque el pie del banco
+    // falla a veces y conviene poder mirar atrás qué se leyó ese día.
+    columna_si_falta($pdo, 'importaciones', 'suma_debito',  'DECIMAL(18,2) NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'importaciones', 'suma_credito', 'DECIMAL(18,2) NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'importaciones', 'descuadre',    "VARCHAR(255) NOT NULL DEFAULT ''");
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS movimientos (
         id             BIGINT AUTO_INCREMENT PRIMARY KEY,
         cuenta_id      INT NOT NULL,
