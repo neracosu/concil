@@ -17,7 +17,7 @@ cualquiera**. Está en `DATA_DIR/muestras/` con permisos 600.
 | Hoja «AMK» | 30.126 | 01/07 – 07/09/2026 | 18 bloques |
 | Hoja «PETS/CASHEA» | 2.193 | 01/07 – 07/09/2026 | 7 bloques |
 | **Total del archivo** | **32.319** | | **25** |
-| **Lo que se carga** (sin CASHEA) | **31.881** | | **22** |
+| **Lo que se carga** | **32.319** | | **24** |
 
 No son hojas por cuenta: cada cuenta es un **bloque de columnas** al lado del
 anterior. Cada bloque trae fecha, referencia, descripción del banco, sucursal,
@@ -151,8 +151,14 @@ sigue es el escenario que se estaba considerando, no una decisión.
    y sus proveedores son suyos y mezclarlos es un problema contable, no de
    pantalla. Si es el mismo RIF —una marca, una línea de negocio— entonces sí
    va dentro y no pasa nada.
-2. **¿A nombre de quién están las dos cuentas de CASHEA?** Esa es la pregunta,
-   no si CASHEA es una empresa. **Los números dicen que son de Armor Market**:
+2. ~~¿A nombre de quién están las dos cuentas de CASHEA?~~ **RESPONDIDA el
+   08/09/2026: son de Armor Market y sí entran.** Auditoría lo explicó así: la
+   **cuota inicial** que paga el cliente cae en las cuentas de siempre; **las
+   cuotas que el cliente le paga a CASHEA** caen en estas dos —Banesco y BNC,
+   «dos por ahora»—. Y lo pidieron con todas sus letras: *«esto también hay que
+   meterlo, para nosotros verificar allí todo lo que entra por banco de
+   CASHEA»*. No es un tercero: es **un canal de cobro** de la empresa.
+   Los números ya lo decían:
 
    ```
    BNC     Armor Market   0191-0166-54-2100058875
@@ -162,10 +168,14 @@ sigue es el escenario que se estaba considerando, no una decisión.
    ```
 
    Y sus movimientos vienen marcados con **las sucursales de Armor Market**
-   —`AMKCH`, `AMKB`, `AMKLG`—, las mismas de la hoja 1, con cobros por pago
-   móvil. Todo apunta a que CASHEA no es un tercero: es **un canal de venta**, y
-   esas son dos cuentas de la empresa dedicadas a él. Si es así, dejarlas fuera
-   le quita a la empresa 438 movimientos de dinero suyo.
+   —`AMKCH`, `AMKB`, `AMKLG`—, las mismas de la hoja 1.
+
+   **Ojo con lo que van a ver.** De los 436 movimientos de CASHEA, **274 son
+   ingresos (63 %)**: entran Bs 7.611.474,72 y salen Bs 2.603.819,88. Lo que
+   ellos quieren verificar —«todo lo que entra»— es justamente **la mitad que
+   CONCIL no clasifica todavía**. Las cuentas se cargan completas y el dinero
+   queda registrado, pero mientras los créditos no se activen, esas dos cuentas
+   se van a ver casi vacías en el panel. Hay que decírselo antes, no después.
 
 Mismo razonamiento para Pets: `TESORO 0163-0903-65-…` (Market) y
 `0163-0903-63-…` (Pets) comparten banco y oficina, igual que las dos del
@@ -175,15 +185,15 @@ Bicentenario.
 
 ## El escenario que se estaba considerando
 
-**ARMOR PETS dentro de ARMOR MARKET** — una sola unidad, la que ya existe.
-**CASHEA fuera.**
+**CASHEA dentro**, como dos cuentas más de Armor Market. **Armor Pets, en
+consulta**: depende de si tiene RIF propio.
 
 | | Cuentas | Movimientos |
 |---|---|---|
 | Armor Market (hoja 1) | 18 | 30.126 |
 | Armor Pets (hoja 2) | 4 | 1.755 |
-| **Total en la unidad AMK** | **22** | **31.881** |
-| ~~CASHEA~~ (fuera) | ~~2~~ | ~~438~~ |
+| CASHEA (canal de cobro de AMK) | 2 | 438 |
+| **Total en la unidad AMK** | **24** | **32.319** |
 
 Dos consecuencias que conviene tener presentes:
 
