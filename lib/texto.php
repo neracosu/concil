@@ -147,6 +147,9 @@ function correcciones_nombre(): array
         'NACONAL' => 'Nacional',   'GREDITOS' => 'Créditos',
         'EXPACION' => 'Expansión', 'EXPANCION' => 'Expansión',
         'TARIFAPOR' => 'Tarifa por',
+        // Nombres propios de la casa, que se escriben pegados y en mayúsculas
+        'ARMORMARKET' => 'Armor Market', 'ARMORPETS' => 'Armor Pets',
+        'AMKPETS' => 'AMK Pets',
         // acentos que se pierden al teclear en mayúsculas
         'CREDITO' => 'Crédito',       'CREDITOS' => 'Créditos',
         'COMISION' => 'Comisión',     'COMISIONES' => 'Comisiones',
@@ -243,4 +246,22 @@ function aviso_correccion(array $r, string $antes): string
         return '';
     }
     return ' Se guardó como «' . $r['texto'] . '»: ' . implode(', ', $r['cambios']) . '.';
+}
+
+/**
+ * El número de la pastilla del menú.
+ *
+ * Estaba topado en «999+», y con un semestre cargado de golpe eso deja a la
+ * gente sin saber si le faltan mil o veinte mil: justo el número que viene a
+ * mirar. Se enseña entero mientras quepa, y en miles cuando ya no.
+ */
+function cuenta_pastilla(int $n): string
+{
+    if ($n < 10000) {
+        return number_format($n, 0, ',', '.');
+    }
+    if ($n < 1000000) {
+        return rtrim(rtrim(number_format($n / 1000, 1, ',', '.'), '0'), ',') . ' mil';
+    }
+    return rtrim(rtrim(number_format($n / 1000000, 1, ',', '.'), '0'), ',') . ' mill.';
 }

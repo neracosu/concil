@@ -41,6 +41,20 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7.5', 'tipo' => 'correccion',
+            'titulo' => 'El panel abría en un mes futuro, y el contador se quedaba en 999+',
+            'resumen' => 'Al cargar el semestre aparecieron cinco cargos del punto de venta fechados '
+                       . 'en octubre y noviembre. Como el panel abría en el último mes con '
+                       . 'movimientos, se iba a noviembre y se veía casi vacío. Ahora nunca abre más '
+                       . 'allá de hoy. Y el número de pagos por justificar, que se quedaba en «999+», '
+                       . 'ahora dice cuántos son de verdad.',
+            'detalles' => [
+                'Una sola fecha mal tecleada mandaba a todo el equipo a un mes sin nada.',
+                'Con 1.725 pendientes, «999+» no dice si le faltan mil o veinte mil.',
+                'De diez mil en adelante se lee como «12,3 mil», que se entiende de un vistazo.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7.4', 'tipo' => 'mejora',
             'titulo' => 'El sistema arregla lo que se escribe mal, y le dice qué arregló',
             'resumen' => 'Al escribir el nombre de una categoría, de una cuenta o de una unidad de '

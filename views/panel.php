@@ -9,8 +9,14 @@ $hoy = date('Y-m-d');
 if (!isset($_GET['desde']) && !isset($_GET['hasta'])) {
     $r = db()->query("SELECT MIN(m.fecha) a, MAX(m.fecha) b FROM movimientos m
                        WHERE m.tipo='D' AND " . filtro_sede())->fetch();
-    $_GET['desde'] = $r['b'] ? date('Y-m-01', strtotime($r['b'])) : date('Y-m-01');
-    $_GET['hasta'] = $r['b'] ?: $hoy;
+    // El último mes con movimientos, pero **nunca más allá de hoy**: basta una
+    // fecha mal tecleada en un extracto —o un cargo que el banco adelanta— para
+    // que el panel abra en un mes futuro y vacío, y quien entre crea que se
+    // perdió su trabajo. Pasó al cargar el libro: cinco cargos del punto de
+    // venta venían fechados en octubre y noviembre.
+    $ultima = $r['b'] && $r['b'] < $hoy ? $r['b'] : $hoy;
+    $_GET['desde'] = date('Y-m-01', strtotime($ultima));
+    $_GET['hasta'] = $ultima;
 }
 $f = filtros();
 $res = resumen($f);

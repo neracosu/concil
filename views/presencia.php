@@ -40,6 +40,10 @@ $datos = ['gente' => $gente];
 if (($_GET['cuentas'] ?? '') === '1') {
     $datos['pend'] = sede_elegida() ? pendientes_total() : 0;
     $datos['rep']  = sede_elegida() ? contar_repetidos() : 0;
+    // El texto ya formateado: el navegador no tiene que saber cuándo pasar a
+    // «mil», y así la regla vive en un solo sitio.
+    $datos['pend_txt'] = cuenta_pastilla($datos['pend']);
+    $datos['rep_txt']  = cuenta_pastilla($datos['rep']);
 }
 
 header('Content-Type: application/json; charset=utf-8');

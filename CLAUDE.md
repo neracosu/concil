@@ -403,10 +403,18 @@ accesibilidad (WCAG 2.5.5) y lo que usan Apple y Material. Los renglones del
 menú van a 46 y `.btn-grande` a 48, para la acción principal de cada pantalla.
 Lo pidió el equipo: a la gente del departamento le costaba ubicar los botones.
 
+**El panel no abre nunca más allá de hoy.** Por defecto muestra el último mes
+con movimientos, pero acotado a la fecha de hoy: basta una fecha mal tecleada en
+un extracto para que abra en un mes futuro y vacío, y quien entre va a creer que
+se perdió su trabajo. Pasó al cargar el libro de auditoría, con cinco cargos del
+punto de venta fechados en octubre y noviembre.
+
 **El número de pendientes es el corazón de la pantalla.** Va en `.nav .cuenta`
 como pastilla sólida y enciende su renglón con `.tiene-pendientes` mientras
 quede algo. Antes eran 11 px sobre un fondo casi transparente y había que
-acercarse a leerlo. Si tocas eso, acuérdate de por qué está así.
+acercarse a leerlo. Si tocas eso, acuérdate de por qué está así. **El número va
+por `cuenta_pastilla()`**, no crudo: estaba topado en «999+» y con un semestre
+cargado de golpe eso deja a la gente sin saber si le faltan mil o veinte mil.
 
 ## Cuando la tabla crezca
 

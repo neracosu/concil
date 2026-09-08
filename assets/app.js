@@ -397,14 +397,14 @@
       if (typeof datos.pend !== 'number') return;
       var pend = document.querySelector('[data-pend]');
       if (pend) {
-        pend.textContent = datos.pend > 999 ? '999+' : datos.pend;
+        pend.textContent = datos.pend_txt || datos.pend;
         pend.hidden = datos.pend === 0;
         var renglon = pend.closest('a');
         if (renglon) renglon.classList.toggle('tiene-pendientes', datos.pend > 0);
       }
       var rep = document.querySelector('[data-rep]');
       if (rep) {
-        rep.textContent = datos.rep > 999 ? '999+' : datos.rep;
+        rep.textContent = datos.rep_txt || datos.rep;
         /* El renglón entero se enciende y se apaga: si otra persona resuelve
            el último repetido, aquí desaparece; y si aparecen cinco nuevos, el
            renglón sale sin recargar, que es para lo que sirve el latido. */

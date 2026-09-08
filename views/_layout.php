@@ -67,14 +67,14 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
                enciende y el número va en grande: no hay que acercarse a la
                pantalla para saber cuánto trabajo queda. */ ?>
       <a href="?r=pendientes" data-ruta="pendientes" class="<?= $ruta === 'pendientes' ? 'on' : '' ?><?= $pend > 0 ? ' tiene-pendientes' : '' ?>">Por justificar
-        <span class="nav-marcas"><?= ojito_html($porRuta, 'pendientes') ?><span class="cuenta" data-pend<?= $pend > 0 ? '' : ' hidden' ?>><?= $pend > 999 ? '999+' : $pend ?></span></span></a>
+        <span class="nav-marcas"><?= ojito_html($porRuta, 'pendientes') ?><span class="cuenta" data-pend<?= $pend > 0 ? '' : ' hidden' ?>><?= e(cuenta_pastilla($pend)) ?></span></span></a>
       <a href="?r=movimientos" data-ruta="movimientos" class="<?= $ruta === "movimientos" || $ruta === "movimiento" ? "on" : "" ?>">Movimientos<?= ojito_html($porRuta, 'movimientos', 'movimiento') ?></a>
       <?php /* Solo aparece cuando hay algo que revisar: un enlace que casi
                siempre lleva a «no hay nada» enseña a no mirarlo. */
       $rep = contar_repetidos(); ?>
         <a href="?r=repetidos" data-ruta="repetidos" class="<?= $ruta === 'repetidos' ? 'on' : '' ?>"
            data-rep-renglon<?= $rep > 0 || $ruta === 'repetidos' ? '' : ' hidden' ?>>Repetidos
-          <span class="nav-marcas"><?= ojito_html($porRuta, 'repetidos') ?><span class="cuenta cuenta-aviso" data-rep><?= $rep > 999 ? '999+' : $rep ?></span></span></a>
+          <span class="nav-marcas"><?= ojito_html($porRuta, 'repetidos') ?><span class="cuenta cuenta-aviso" data-rep><?= e(cuenta_pastilla($rep)) ?></span></span></a>
       <a href="?r=reportes"    data-ruta="reportes" class="<?= $ruta === "reportes" ? "on" : "" ?>">Reportes<?= ojito_html($porRuta, 'reportes') ?></a>
       <div class="nav-titulo">Configuración</div>
       <a href="?r=reglas"     data-ruta="reglas" class="<?= $ruta === 'reglas' ? 'on' : '' ?>">Reglas de mapeo<?= ojito_html($porRuta, 'reglas') ?></a>
@@ -180,7 +180,7 @@ window.PRESENCIA = <?= json_encode([
     'ref'  => referencia_pantalla(),
 ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
-<script src="assets/app.js?v=15"></script>
+<script src="assets/app.js?v=16"></script>
 <script src="assets/guia.js?v=12"></script>
 </body>
 </html>
