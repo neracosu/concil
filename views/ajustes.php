@@ -59,12 +59,12 @@ $stats = $pdo->query("SELECT COUNT(*) movs,
         MIN(m.fecha) f1, MAX(m.fecha) f2 FROM movimientos m WHERE " . filtro_sede())->fetch();
 $peso = $pdo->query("SELECT ROUND(SUM(data_length + index_length)/1048576, 2) mb
                        FROM information_schema.TABLES WHERE table_schema = DATABASE()")->fetchColumn();
-$log = $soyMaestro ? ultimo_rastro(25) : [];
 /* Los fallos, la bitácora y las rutas del servidor son cosa de quien lleva el
    sistema: un código de fallo enseña en qué archivo y en qué línea se rompió, y
    la bitácora dice desde qué conexión trabaja cada quien. Lo demás de esta
    pantalla —el PIN de uno, las tasas, el estado— lo puede ver cualquiera. */
 $soyMaestro = es_maestro();
+$log    = $soyMaestro ? ultimo_rastro(25) : [];
 $fallos = $soyMaestro ? fallos_recientes(25) : [];
 $pendInicial = ajuste('pin_inicial_pendiente') === '1';
 

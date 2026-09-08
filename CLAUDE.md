@@ -41,10 +41,25 @@ for f in index.php lib/*.php views/*.php; do php -l "$f" > /dev/null || echo "ER
 
 # Servidor local, sin tocar producción
 php -S 127.0.0.1:8787 -t .
-
-# Recorrer las rutas buscando errores de PHP
-curl -s -b cookies.txt "http://127.0.0.1:8787/index.php?r=panel" | grep -c "Fatal error\|Warning:"
 ```
+
+**Buscar «Warning:» en el HTML no sirve, y engaña.** `vigilar_fallos()` engancha
+los avisos y los manda al archivo de registro en vez de imprimirlos, así que la
+página sale limpia mientras el registro se llena. La comprobación buena es
+contar las líneas del registro antes y después de recorrer las rutas:
+
+```bash
+LOG=$DATA_DIR/registro/fallos-$(date +%Y-%m).log
+ANTES=$(wc -l < $LOG)
+for r in panel carga pendientes movimientos reportes usuarios auditoria ajustes; do
+  curl -s -o /dev/null -b "CONCILSESS=$SES" "$BASE/?r=$r"
+done
+[ "$(wc -l < $LOG)" = "$ANTES" ] || tail -n +$((ANTES+1)) $LOG
+```
+
+Y **recorre con dos usuarios**, uno maestro y otro no: media aplicación cambia
+según quién mire, y un `$soyMaestro` sin definir devuelve null en silencio —lo
+que le pasó a la bitácora de Ajustes el 08/09—.
 
 `lib/carga.php` es un incluidor de conveniencia: `require` ese único archivo y
 tienes todo el núcleo disponible para un script CLI.
