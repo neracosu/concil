@@ -149,13 +149,14 @@ function pantalla_de_fallo(string $codigo): void
 }
 
 /** Últimos fallos anotados, del más reciente al más antiguo. */
-function fallos_recientes(int $limite = 40): array
+function fallos_recientes(int $limite = 40, bool $todosAunqueRevisados = false): array
 {
+    $desde = $todosAunqueRevisados ? '' : fallos_revisados_hasta();
     $todos = [];
     foreach (glob(registro_dir() . '/fallos-*.log') ?: [] as $f) {
         foreach (array_reverse(file($f, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []) as $l) {
             $d = json_decode($l, true);
-            if (is_array($d)) {
+            if (is_array($d) && ($desde === '' || ($d['cuando'] ?? '') > $desde)) {
                 $todos[] = $d;
             }
             if (count($todos) >= $limite * 3) {
@@ -165,6 +166,27 @@ function fallos_recientes(int $limite = 40): array
     }
     usort($todos, fn($a, $b) => strcmp($b['cuando'] ?? '', $a['cuando'] ?? ''));
     return array_slice($todos, 0, $limite);
+}
+
+/**
+ * Hasta cuándo está revisado el registro.
+ *
+ * Un fallo que ya se arregló no se borra —el código que le dieron a la persona
+ * tiene que seguir encontrándose— pero tampoco tiene sentido que siga a la
+ * vista para siempre. Se guarda la marca de agua: lo anterior a esa fecha ya
+ * se miró, y la pantalla lo deja de enseñar salvo que se pida.
+ */
+function fallos_revisados_hasta(): string
+{
+    return (string) ajuste('fallos_revisados_hasta', '');
+}
+
+/** Deja por revisado todo lo anotado hasta ahora. No borra nada. */
+function dar_fallos_por_revisados(): int
+{
+    $antes = count(fallos_recientes(500, true));
+    guardar_ajuste('fallos_revisados_hasta', date('c'));
+    return $antes;
 }
 
 /** Cuántos fallos van este mes, para avisar sin tener que entrar a mirar. */

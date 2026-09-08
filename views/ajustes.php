@@ -40,6 +40,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirigir('?r=ajustes');
     }
 
+    if ($accion === 'fallos_revisados') {
+        if (!es_maestro()) {
+            flash('mal', 'Solo el maestro puede dar los fallos por revisados.');
+            redirigir('?r=ajustes');
+        }
+        $n = dar_fallos_por_revisados();
+        bitacora('fallos_revisados', "$n fallos dados por revisados");
+        flash('ok', $n === 1
+            ? 'Listo. Ese fallo deja de salir en la lista; el registro sigue guardado.'
+            : "Listo. Esos $n fallos dejan de salir en la lista; el registro sigue guardado.");
+        redirigir('?r=ajustes');
+    }
+
     if ($accion === 'purgar') {
         // Esconder el botón no es cerrar la puerta: el formulario se puede
         // mandar a mano. Borrar el rastro es justo lo que querría hacer quien
@@ -72,7 +85,13 @@ $peso = $pdo->query("SELECT ROUND(SUM(data_length + index_length)/1048576, 2) mb
    pantalla —el PIN de uno, las tasas, el estado— lo puede ver cualquiera. */
 $soyMaestro = es_maestro();
 $log    = $soyMaestro ? ultimo_rastro(25) : [];
-$fallos = $soyMaestro ? fallos_recientes(25) : [];
+/* Por defecto solo los que no se han dado por revisados: un fallo que ya se
+   arregló no se borra —su código tiene que seguir encontrándose— pero tampoco
+   tiene sentido que siga a la vista para siempre. */
+$verTodos = ($_GET['fallos'] ?? '') === 'todos';
+$fallos   = $soyMaestro ? fallos_recientes(25, $verTodos) : [];
+$revisados = $soyMaestro && !$verTodos
+    ? count(fallos_recientes(500, true)) - count(fallos_recientes(500)) : 0;
 $pendInicial = ajuste('pin_inicial_pendiente') === '1';
 
 encabezado_html('Ajustes', 'ajustes',
@@ -167,16 +186,29 @@ encabezado_html('Ajustes', 'ajustes',
     <h2>Si algo falla</h2>
     <?php if ($fallos === []): ?>
       <p class="nota" style="margin:0">
-        <b>No se ha registrado ningún fallo.</b>
+        <b><?= $revisados > 0 ? 'Nada nuevo que revisar.' : 'No se ha registrado ningún fallo.' ?></b>
         Cuando el sistema no pueda continuar, mostrará un código a quien lo esté usando
         y aquí quedará anotado qué ocurrió, en qué pantalla y en qué punto del programa.
+        <?php if ($revisados > 0): ?>
+          Hay <b><?= $revisados ?></b> ya revisados, guardados por si alguien le da su código:
+          <a href="?r=ajustes&fallos=todos">verlos igual</a>.
+        <?php endif ?>
       </p>
     <?php else: ?>
       <p class="nota" style="margin:0 0 12px">
         <b><?= count($fallos) ?> <?= count($fallos) === 1 ? 'fallo anotado' : 'fallos anotados' ?>.</b>
         Si alguien le da un código, búsquelo aquí. Los registros se guardan fuera de la web,
         en <?= e(DATA_DIR) ?>/registro.
+        <?php if ($verTodos): ?><a href="?r=ajustes">Ver solo los pendientes</a>.<?php endif ?>
       </p>
+      <?php /* Cuando algo ya se arregló, esto lo quita de la vista sin borrarlo:
+               el código que se le dio a la persona tiene que seguir sirviendo. */ ?>
+      <form method="post" style="margin:0 0 12px">
+        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+        <input type="hidden" name="accion" value="fallos_revisados">
+        <button class="btn btn-sm" data-confirmar="¿Dar por revisados los fallos que están a la vista? Se siguen guardando, solo dejan de aparecer.">
+          Ya están resueltos: quitarlos de la lista</button>
+      </form>
       <div class="tabla-scroll" style="border:1px solid var(--linea);border-radius:var(--r-sm)">
         <table>
           <thead><tr><th>Código</th><th>Cuándo</th><th>Qué pasó</th><th>Dónde</th><th>Pantalla</th></tr></thead>
