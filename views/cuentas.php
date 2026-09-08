@@ -122,7 +122,7 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
            lento y se equivoca uno. Se busca escribiendo, y busca en todo:
            nombre, banco, número y titular. */ ?>
   <div class="filtros" style="margin-bottom:12px">
-    <div style="flex:1;min-width:240px">
+    <div style="grid-column:1/-1">
       <label for="buscarCuenta">Buscar una cuenta</label>
       <input type="text" id="buscarCuenta" data-filtra-tabla="tablaCuentas"
              placeholder="Escriba el banco, el número o el nombre. Ej.: Venezuela, 2539, nómina">

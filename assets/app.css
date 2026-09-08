@@ -289,7 +289,7 @@ td.monto.c .barra{background:rgba(127,209,139,.12)}
 .filtros-pie{display:flex;gap:8px;align-items:end}
 
 /* ---------- Avisos ---------- */
-.aviso{padding:11px 14px;border-radius:var(--r-sm);font-size:0.8438rem;margin-bottom:16px;border:1px solid}
+.aviso{padding:13px 16px;border-radius:var(--r-sm);font-size:0.9375rem;margin-bottom:16px;border:1px solid}
 .aviso-ok{background:rgba(127,209,139,.09);border-color:rgba(127,209,139,.3);color:var(--entrada)}
 .aviso-mal{background:rgba(255,143,107,.09);border-color:rgba(255,143,107,.32);color:var(--salida)}
 .aviso-nota{background:rgba(255,209,102,.08);border-color:rgba(255,209,102,.28);color:var(--pendiente)}
