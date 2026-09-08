@@ -475,6 +475,19 @@ El público incluye personas que no trabajan con sistemas. Evita «conciliar»,
 en la visita guiada y en la ayuda de cada pantalla. Di qué gana quien lo usa, no
 qué hace el programa. Frases cortas.
 
+**Lo que la gente teclea se corrige, y se le dice.** `normalizar_nombre()` en
+`lib/texto.php` arregla los acentos que se caen al escribir en mayúsculas y las
+erratas de la casa, y devuelve **qué cambió**; `aviso_correccion()` arma la
+frase que se le añade al `flash()`. Está puesto en Categorías, Cuentas y
+Unidades de negocio, que es donde se escriben nombres a mano. **Corregir en
+silencio no vale**: quien escribió tiene que ver qué quedó guardado. Si añades
+una pantalla donde se teclee un nombre, pásalo por ahí; y si aparece una errata
+nueva que se repite, va al diccionario de `correcciones_nombre()`.
+
+**Cuidado con `"«$var»"` en PHP.** Los bytes del guillemet cuentan como parte
+del nombre de la variable, así que eso busca una variable que no existe y sale
+vacío sin avisar. Va con llaves: `"«{$var}»"`. Mordió estrenando el corrector.
+
 **Se trata de usted, siempre.** Toda la aplicación, de la pantalla de acceso a
 la última ayuda de la visita guiada. Estuvo mezclado hasta el 08/09/2026 —la
 pantalla de carga decía «Arrastra los archivos» arriba y «Arrástrelo hasta este

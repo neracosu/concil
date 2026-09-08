@@ -41,6 +41,20 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7.4', 'tipo' => 'mejora',
+            'titulo' => 'El sistema arregla lo que se escribe mal, y le dice qué arregló',
+            'resumen' => 'Al escribir el nombre de una categoría, de una cuenta o de una unidad de '
+                       . 'negocio, el sistema corrige los acentos que se pierden al teclear en '
+                       . 'mayúsculas y las erratas de siempre. Y no lo hace callado: le dice qué le '
+                       . 'cambió, para que usted vea lo que quedó guardado y pueda volver atrás.',
+            'detalles' => [
+                'Escriba «GASTOS DE COMISION Y NOMINA» y queda «Gastos de Comisión y Nómina», '
+                . 'con el aviso de qué se corrigió.',
+                'Las siglas se respetan: AMK, BNC, POS, IVSS y las demás no se tocan.',
+                'Si usted ya lo escribió bien, no se le cambia nada.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7.3', 'tipo' => 'mejora',
             'titulo' => 'El sistema le habla de usted en todas las pantallas',
             'resumen' => 'Unas pantallas trataban de usted y otras tuteaban, a veces en el mismo '

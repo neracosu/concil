@@ -125,3 +125,122 @@ function veces(int $n): string
 {
     return $n === 1 ? '1 vez' : number_format($n, 0, ',', '.') . ' veces';
 }
+
+/* ====================================================================== */
+/* Corrección de lo que la gente teclea                                    */
+/* ====================================================================== */
+
+/**
+ * Palabras que en esta casa se escriben mal una y otra vez.
+ *
+ * Sale de mirar lo que hay escrito de verdad: el libro de auditoría, las
+ * categorías que crearon a mano y los nombres de las cuentas. Casi todo son
+ * acentos que se caen al escribir en mayúsculas —el teclado no los pone— y
+ * cuatro erratas que se repiten.
+ *
+ * La clave va en MAYÚSCULAS y sin acentos, que es como se compara.
+ */
+function correcciones_nombre(): array
+{
+    return [
+        // erratas vistas en el sistema
+        'NACONAL' => 'Nacional',   'GREDITOS' => 'Créditos',
+        'EXPACION' => 'Expansión', 'EXPANCION' => 'Expansión',
+        'TARIFAPOR' => 'Tarifa por',
+        // acentos que se pierden al teclear en mayúsculas
+        'CREDITO' => 'Crédito',       'CREDITOS' => 'Créditos',
+        'COMISION' => 'Comisión',     'COMISIONES' => 'Comisiones',
+        'NOMINA' => 'Nómina',         'MOVIL' => 'Móvil',
+        'INTERVENCION' => 'Intervención', 'LOGISTICA' => 'Logística',
+        'ELECTRICO' => 'Eléctrico',   'TELEFONICA' => 'Telefónica',
+        'PERMISOLOGIA' => 'Permisología', 'ALMACEN' => 'Almacén',
+        'DEVOLUCION' => 'Devolución', 'DEVOLUCIONES' => 'Devoluciones',
+        'LIQUIDACION' => 'Liquidación', 'DOMICILIACION' => 'Domiciliación',
+        'RECAUDACION' => 'Recaudación', 'EMISION' => 'Emisión',
+        'GESTION' => 'Gestión',       'ADMINISTRACION' => 'Administración',
+        'OPERACION' => 'Operación',   'TRANSACCION' => 'Transacción',
+        'MANTENIMIENTO' => 'Mantenimiento',
+        // abreviaturas que no dicen nada en una lista
+        'CTA' => '', 'CTA.' => '', 'BCO' => 'Banco',
+    ];
+}
+
+/** Siglas que se quedan en mayúsculas: no son palabras. */
+function siglas_conocidas(): array
+{
+    return ['AMK','AMKB','AMKCH','AMKLG','BNC','BDV','POS','PDV','CASHEA','IVSS',
+            'BANAVIH','SENIAT','RIF','CA','SA','SRL','USD','IVA','ISLR','UVCC','P2C'];
+}
+
+/**
+ * Arregla un nombre escrito a mano y dice qué le cambió.
+ *
+ * Devuelve `['texto' => …, 'cambios' => ['NACONAL → Nacional', …]]`. Lo que
+ * importa tanto como corregir es **decir qué se corrigió**: quien lo escribió
+ * tiene que poder ver que el sistema le tocó lo que puso, y volver atrás si no
+ * era eso. Corregir en silencio es como no preguntar.
+ */
+function normalizar_nombre(string $texto): array
+{
+    $original = $texto;
+    $cambios = [];
+    $t = trim(preg_replace('/\s+/u', ' ', $texto));
+    if ($t !== trim($texto)) {
+        $cambios[] = 'se quitaron espacios de más';
+    }
+    if ($t === '') {
+        return ['texto' => '', 'cambios' => []];
+    }
+
+    // Las llaves en «{$p}» no son estilo: en PHP, los bytes del guillemet
+    // cuentan como parte del nombre de la variable, así que "«$p»" busca una
+    // variable que no existe y el aviso sale vacío.
+    $dicc = correcciones_nombre();
+    $siglas = siglas_conocidas();
+    $menores = ['de','del','y','la','el','en','por','a','con','para','los','las'];
+    // Solo se recapitaliza si venía TODO en mayúsculas: si la persona ya se
+    // tomó el trabajo de escribirlo bien, no se le toca.
+    $todoMayus = $t === mb_strtoupper($t, 'UTF-8') && preg_match('/\p{L}{3,}/u', $t);
+
+    $salida = [];
+    foreach (explode(' ', $t) as $i => $p) {
+        $limpia = mb_strtoupper(norm($p), 'UTF-8');
+        if (isset($dicc[$limpia])) {
+            $nueva = $dicc[$limpia];
+            if ($nueva === '') {
+                $cambios[] = "se quitó «{$p}»";
+                continue;
+            }
+            if (mb_strtolower($nueva, 'UTF-8') !== mb_strtolower($p, 'UTF-8')) {
+                $cambios[] = "«{$p}» → «{$nueva}»";
+            }
+            $salida[] = $nueva;
+            continue;
+        }
+        if (in_array($limpia, $siglas, true)) {
+            $salida[] = mb_strtoupper($p, 'UTF-8');
+            continue;
+        }
+        if ($todoMayus) {
+            $salida[] = $i > 0 && in_array(mb_strtolower($p, 'UTF-8'), $menores, true)
+                ? mb_strtolower($p, 'UTF-8')
+                : mb_convert_case($p, MB_CASE_TITLE, 'UTF-8');
+            continue;
+        }
+        $salida[] = $p;
+    }
+    $final = trim(preg_replace('/\s+/u', ' ', implode(' ', $salida)));
+    if ($todoMayus && $final !== $t) {
+        $cambios[] = 'se pasó de mayúsculas sostenidas a texto normal';
+    }
+    return ['texto' => $final !== '' ? $final : $original, 'cambios' => $cambios];
+}
+
+/** El aviso que se le enseña a quien escribió, si hubo algo que corregir. */
+function aviso_correccion(array $r, string $antes): string
+{
+    if ($r['cambios'] === [] || $r['texto'] === $antes) {
+        return '';
+    }
+    return ' Se guardó como «' . $r['texto'] . '»: ' . implode(', ', $r['cambios']) . '.';
+}

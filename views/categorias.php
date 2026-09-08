@@ -9,8 +9,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($accion === 'guardar') {
         $id     = (int) ($_POST['id'] ?? 0);
-        $nombre = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
-        $grupo  = mb_substr(limpiar((string) ($_POST['grupo'] ?? 'General')), 0, 60) ?: 'General';
+        $escrito = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
+        // Se corrige lo que se escribió mal y se le dice a quien lo escribió:
+        // corregir en silencio deja a la persona sin saber qué quedó guardado.
+        $arreglo = normalizar_nombre($escrito);
+        $nombre  = $arreglo['texto'];
+        $aviso   = aviso_correccion($arreglo, $escrito);
+        $grupo   = normalizar_nombre(mb_substr(limpiar((string) ($_POST['grupo'] ?? 'General')), 0, 60))['texto'] ?: 'General';
         $color  = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($_POST['color'] ?? '')) ? $_POST['color'] : '#d4a857';
         $padre  = max(0, (int) ($_POST['padre'] ?? 0));
         if ($nombre === '') {
@@ -31,11 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($id > 0) {
                 $pdo->prepare('UPDATE categorias SET nombre=?, grupo=?, color=?, padre_id=? WHERE id=?')
                     ->execute([$nombre, $grupo, $color, $padre ?: null, $id]);
-                flash('ok', 'Categoría actualizada.');
+                flash('ok', 'Categoría actualizada.' . $aviso);
             } else {
                 $pdo->prepare('INSERT INTO categorias (nombre, grupo, color, padre_id) VALUES (?,?,?,?)')
                     ->execute([$nombre, $grupo, $color, $padre ?: null]);
-                flash('ok', 'Categoría creada.');
+                flash('ok', 'Categoría creada.' . $aviso);
             }
         } catch (PDOException $ex) {
             flash('mal', 'Ya existe una categoría con ese nombre.');

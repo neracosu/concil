@@ -15,7 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
     if ($accion === 'crear') {
-        $nombre = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
+        $escrito = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
+        $arreglo = normalizar_nombre($escrito);
+        $nombre  = $arreglo['texto'];
+        $aviso   = aviso_correccion($arreglo, $escrito);
         if ($nombre === '') {
             flash('mal', 'Escriba el nombre de la unidad de negocio.');
             redirigir('?r=sede');
@@ -28,18 +31,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         fijar_sede($id);
         bitacora('sede_creada', $nombre);
-        flash('ok', 'Unidad «' . $nombre . '» creada. Ya estás trabajando en ella: '
-                  . 'lo primero es cargar sus extractos.');
+        flash('ok', 'Unidad «' . $nombre . '» creada. Ya está trabajando en ella: '
+                  . 'lo primero es cargar sus extractos.' . $aviso);
         redirigir('?r=carga');
     }
 
     if ($accion === 'renombrar') {
         $id = (int) ($_POST['id'] ?? 0);
-        $nombre = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
+        $escrito = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
+        $arreglo = normalizar_nombre($escrito);
+        $nombre  = $arreglo['texto'];
+        $aviso   = aviso_correccion($arreglo, $escrito);
         if ($id > 0 && $nombre !== '') {
             try {
                 $pdo->prepare('UPDATE sedes SET nombre = ? WHERE id = ?')->execute([$nombre, $id]);
-                flash('ok', 'Nombre actualizado.');
+                flash('ok', 'Nombre actualizado.' . $aviso);
                 bitacora('sede_renombrada', "id=$id → $nombre");
             } catch (PDOException $ex) {
                 flash('mal', 'Ya hay otra unidad de negocio con ese nombre.');

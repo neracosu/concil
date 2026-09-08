@@ -9,8 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($accion === 'guardar') {
         $id     = (int) ($_POST['id'] ?? 0);
-        $nombre = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
-        $banco  = mb_substr(limpiar((string) ($_POST['banco'] ?? '')), 0, 120);
+        $escrito = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
+        // Se arregla lo que se escribió mal y se avisa de qué se arregló.
+        $arreglo = normalizar_nombre($escrito);
+        $nombre  = $arreglo['texto'];
+        $aviso   = aviso_correccion($arreglo, $escrito);
+        $banco  = normalizar_nombre(mb_substr(limpiar((string) ($_POST['banco'] ?? '')), 0, 120))['texto'];
         $numero  = mb_substr(limpiar((string) ($_POST['numero'] ?? '')), 0, 60);
         $titular = mb_substr(limpiar((string) ($_POST['titular'] ?? '')), 0, 160);
         $rif     = mb_substr(limpiar((string) ($_POST['rif'] ?? '')), 0, 20);
@@ -48,12 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                       saldo_inicial=?, saldo_fecha=?
                                 WHERE id=? AND sede_id=?')
                     ->execute([$nombre, $banco, $numero, $titular, $rif, $sIni, $sFecha, $id, (int) sede_actual()]);
-                flash('ok', 'Cuenta actualizada.');
+                flash('ok', 'Cuenta actualizada.' . $aviso);
             } else {
                 $pdo->prepare('INSERT INTO cuentas (nombre, banco, numero, titular, rif, saldo_inicial, saldo_fecha, sede_id)
                                VALUES (?,?,?,?,?,?,?,?)')
                     ->execute([$nombre, $banco, $numero, $titular, $rif, $sIni, $sFecha, (int) sede_actual()]);
-                flash('ok', 'Cuenta creada.');
+                flash('ok', 'Cuenta creada.' . $aviso);
             }
         } catch (PDOException $ex) {
             flash('mal', 'Ya existe una cuenta con ese nombre en esta unidad de negocio.');
