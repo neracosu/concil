@@ -136,10 +136,47 @@ Todo en un guion de una sola pasada, que se pueda correr en seco primero.
 
 ---
 
-## Decidido el 08/09/2026
+## En consulta con el departamento (08/09/2026)
 
-**ARMOR PETS va dentro de ARMOR MARKET** — una sola unidad de negocio, la que
-ya existe. **CASHEA no entra.**
+**Nada de esto está cerrado todavía.** La primera respuesta fue «Pets dentro,
+CASHEA fuera», pero se volvió a abrir para confirmarlo con auditoría. Lo que
+sigue es el escenario que se estaba considerando, no una decisión.
+
+**Lo que hay que preguntarles, y por qué esas dos preguntas y no otras:**
+
+1. **¿ARMOR PETS tiene su propio RIF?** «Pertenece a Armor Market» habla de
+   quién es el dueño, y eso no es lo que decide aquí. Lo que decide es de quién
+   es la deuda: `facturas.sede_id` va en la clave única porque **una factura se
+   le debe a una empresa concreta**. Si Pets es otro contribuyente, sus facturas
+   y sus proveedores son suyos y mezclarlos es un problema contable, no de
+   pantalla. Si es el mismo RIF —una marca, una línea de negocio— entonces sí
+   va dentro y no pasa nada.
+2. **¿A nombre de quién están las dos cuentas de CASHEA?** Esa es la pregunta,
+   no si CASHEA es una empresa. **Los números dicen que son de Armor Market**:
+
+   ```
+   BNC     Armor Market   0191-0166-54-2100058875
+   BNC     CASHEA         0191-0166-54-2100060271   ← mismo banco, misma oficina
+   Banesco Armor Market   0134-0363-51-3631307492
+   Banesco CASHEA         0134-0363-59-3631311858   ← mismo banco, misma oficina
+   ```
+
+   Y sus movimientos vienen marcados con **las sucursales de Armor Market**
+   —`AMKCH`, `AMKB`, `AMKLG`—, las mismas de la hoja 1, con cobros por pago
+   móvil. Todo apunta a que CASHEA no es un tercero: es **un canal de venta**, y
+   esas son dos cuentas de la empresa dedicadas a él. Si es así, dejarlas fuera
+   le quita a la empresa 438 movimientos de dinero suyo.
+
+Mismo razonamiento para Pets: `TESORO 0163-0903-65-…` (Market) y
+`0163-0903-63-…` (Pets) comparten banco y oficina, igual que las dos del
+Bicentenario.
+
+---
+
+## El escenario que se estaba considerando
+
+**ARMOR PETS dentro de ARMOR MARKET** — una sola unidad, la que ya existe.
+**CASHEA fuera.**
 
 | | Cuentas | Movimientos |
 |---|---|---|
