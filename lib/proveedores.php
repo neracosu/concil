@@ -826,7 +826,7 @@ function guardar_factura(array $d, int $id = 0): int
 {
     $sede = (int) sede_actual();
     if ($sede <= 0) {
-        throw new RuntimeException('Elige primero una unidad de negocio.');
+        throw new RuntimeException('Elija primero una unidad de negocio.');
     }
     $proveedorId = (int) ($d['proveedor_id'] ?? 0);
     if ($proveedorId <= 0 || proveedor($proveedorId) === null) {

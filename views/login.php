@@ -4,7 +4,7 @@ $espera = bloqueado();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($espera > 0) {
-        $error = 'Acceso bloqueado. Vuelve a intentar en ' . ceil($espera / 60) . ' minutos.';
+        $error = 'Acceso bloqueado. Vuelva a intentar en ' . ceil($espera / 60) . ' minutos.';
     } else {
         $pin = preg_replace('/\D/', '', implode('', (array) ($_POST['d'] ?? [])));
         // La suma se comprueba antes que el PIN: si no, un robot sabría por el
@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . ($espera > 0 ? ' · quedó bloqueado' : ''));
             $error = $espera > 0
                 ? 'Demasiados intentos. Acceso bloqueado por ' . ceil($espera / 60) . ' minutos.'
-                : 'La suma no es correcta. Inténtalo otra vez.';
+                : 'La suma no es correcta. Inténtelo otra vez.';
         } else {
             $usuario = verificar_pin((string) $pin);
             if ($usuario !== null) {
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . ($conSuma ? ' · con suma de por medio' : ''));
             $error = $espera > 0
                 ? 'Demasiados intentos. Acceso bloqueado por ' . ceil($espera / 60) . ' minutos.'
-                : 'PIN incorrecto. Te quedan ' . (MAX_INTENTOS - (int) ajuste('intentos', '0')) . ' intentos.';
+                : 'PIN incorrecto. Le quedan ' . (MAX_INTENTOS - (int) ajuste('intentos', '0')) . ' intentos.';
         }
     }
 }
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h1 class="acceso-logo"><?= e(APP_NOMBRE) ?></h1>
     <div class="acceso-marca">by <?= e(APP_MARCA) ?></div>
     <p class="acceso-lema"><?= e(APP_LEMA) ?></p>
-    <p>Escribe tu PIN de 6 dígitos.</p>
+    <p>Escriba su PIN de 6 dígitos.</p>
 
     <?php if ($error !== ''): ?>
       <div class="aviso aviso-mal"><?= e($error) ?></div>
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if (ajuste('pin_inicial_pendiente') === '1' && $espera <= 0): ?>
       <div class="aviso aviso-nota" style="margin-top:20px;text-align:left">
         Sigue activo el PIN de instalación. Está en el archivo
-        <b class="num" style="font-size:12px">PIN-INICIAL.txt</b> del servidor. Cámbialo en Mi perfil al entrar.
+        <b class="num" style="font-size:12px">PIN-INICIAL.txt</b> del servidor. Cámbielo en Mi perfil al entrar.
       </div>
     <?php endif ?>
 

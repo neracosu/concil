@@ -158,7 +158,7 @@ function exigir_csrf(): void
     $t = $_POST['csrf'] ?? '';
     if (!is_string($t) || !hash_equals($_SESSION['csrf'] ?? '', $t)) {
         http_response_code(419);
-        exit('Sesión expirada. Vuelve a cargar la página.');
+        exit('Sesión expirada. Vuelva a cargar la página.');
     }
 }
 

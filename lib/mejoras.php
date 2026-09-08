@@ -41,6 +41,18 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7.3', 'tipo' => 'mejora',
+            'titulo' => 'El sistema le habla de usted en todas las pantallas',
+            'resumen' => 'Unas pantallas trataban de usted y otras tuteaban, a veces en el mismo '
+                       . 'renglón: la de cargar extractos decía «Arrastra los archivos» arriba y '
+                       . '«Arrástrelo hasta este recuadro» dos líneas más abajo. Ya no: el trato es '
+                       . 'el mismo de la pantalla de acceso a la última ayuda.',
+            'detalles' => [
+                'Son 21 textos en once pantallas, incluidas la de acceso y la visita guiada.',
+                'No cambia nada de lo que el sistema hace: solo cómo se lo dice.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7.2', 'tipo' => 'correccion',
             'titulo' => 'Al pasar de página ya no se repite ni se pierde nada',
             'resumen' => 'Cuando dos grupos de pagos sumaban exactamente lo mismo, o dos proveedores se '

@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $justif  = mb_substr(limpiar((string) ($_POST['justificacion'] ?? '')), 0, 1000);
 
     if ($catId <= 0) {
-        flash('mal', 'Elige una categoría antes de guardar.');
+        flash('mal', 'Elija una categoría antes de guardar.');
         redirigir(url([], 'pendientes'));
     }
 

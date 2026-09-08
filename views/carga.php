@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
     if ($accion === 'analizar' && empty($_FILES['archivos']['name'][0])) {
-        flash('mal', 'No elegiste ningún archivo. Haz clic en «Elegir archivos» y busca los del banco en tu computadora.');
+        flash('mal', 'No eligió ningún archivo. Haga clic en «Elegir archivos» y busque los del banco en su computadora.');
         redirigir('?r=carga');
     }
 
@@ -211,7 +211,7 @@ function procesar_lote(array $lote, array $elegidas, array $nuevas, array $omiti
                     if ($nombre === '') {
                         // Lo único imprescindible es cómo se va a llamar: una
                         // cuenta sin nombre no se puede ni elegir después.
-                        throw new RuntimeException('escribe un nombre para la cuenta y vuelve a intentarlo.');
+                        throw new RuntimeException('escriba un nombre para la cuenta y vuelva a intentarlo.');
                     }
                     // El banco puede venir escrito a mano: cinco de los once
                     // extractos no dicen de qué banco son.
@@ -298,7 +298,7 @@ function purgar_subidas(int $horas = 6): void
 
 $cuentasLista = cuentas();
 encabezado_html('Cargar extractos', 'carga',
-    'Arrastra los archivos del banco. Se reconoce el formato solo y las líneas repetidas no se duplican.');
+    'Arrastre los archivos del banco. Se reconoce el formato solo y las líneas repetidas no se duplican.');
 ?>
 
 <?php if ($paso === 'subir'): ?>
@@ -475,7 +475,7 @@ encabezado_html('Cargar extractos', 'carga',
               <input type="checkbox" name="omitir[<?= $i ?>]" value="1" style="width:auto"> Omitir este archivo
             </label>
           <?php else: ?>
-            <p style="color:var(--salida);margin:0">No se encontró la columna de fecha o la de montos. Revisa que el archivo sea el extracto del banco sin filas de resumen arriba.</p>
+            <p style="color:var(--salida);margin:0">No se encontró la columna de fecha o la de montos. Revise que el archivo sea el extracto del banco sin filas de resumen arriba.</p>
           <?php endif ?>
         </div>
       <?php endforeach ?>

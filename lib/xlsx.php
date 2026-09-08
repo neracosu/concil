@@ -304,7 +304,7 @@ function formato_archivo(string $ruta): string
     // tratarlo como CSV produciría un error incomprensible sobre columnas.
     if (str_starts_with($cabeza, "\xD0\xCF\x11\xE0")) {
         throw new RuntimeException('Este archivo es un Excel antiguo (.xls de Excel 97-2003). '
-            . 'Ábrelo en Excel y guárdalo como «Libro de Excel (.xlsx)», o vuelve a descargarlo del banco en ese formato.');
+            . 'Ábralo en Excel y guárdelo como «Libro de Excel (.xlsx)», o vuelva a descargarlo del banco en ese formato.');
     }
     return 'csv';
 }

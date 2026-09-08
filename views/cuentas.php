@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirigir('?r=cuentas');
         }
         if (sede_actual() === null) {
-            flash('mal', 'Elige primero una unidad de negocio.');
+            flash('mal', 'Elija primero una unidad de negocio.');
             redirigir('?r=sede');
         }
         // Dos cuentas con el mismo número son la misma cuenta escrita dos

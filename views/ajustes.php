@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('mal', 'El PIN nuevo y su repetición no coinciden.');
         } else {
             $err = cambiar_pin((string) $nuevo);
-            flash($err === null ? 'ok' : 'mal', $err ?? 'PIN actualizado. Úsalo en el próximo ingreso.');
+            flash($err === null ? 'ok' : 'mal', $err ?? 'PIN actualizado. Úselo la próxima vez que entre.');
         }
         redirigir('?r=ajustes');
     }
@@ -115,7 +115,7 @@ encabezado_html('Ajustes', 'ajustes',
     <p class="nota" style="margin:0 0 12px">Cambia <b>su</b> PIN, el de <?= e(nombre_usuario()) ?>.
       Los de las demás personas se cambian en <a href="?r=usuarios">Usuarios</a>.</p>
     <?php if ($pendInicial): ?>
-      <div class="aviso aviso-nota">Sigue activo el PIN inicial. Cámbialo ahora.</div>
+      <div class="aviso aviso-nota">Sigue activo el PIN inicial. Cámbielo ahora.</div>
     <?php endif ?>
     <form method="post" class="pila">
       <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">

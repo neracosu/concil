@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($ruta === '' || !is_file($ruta)) {
-            flash('mal', 'El archivo ya no está. Vuelve a subirlo.');
+            flash('mal', 'El archivo ya no está. Vuelva a subirlo.');
             redirigir('?r=proveedores');
         }
 
@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'importar') {
         $analisis = $_SESSION['prov_lote'] ?? null;
         if ($analisis === null) {
-            flash('mal', 'La revisión caducó. Vuelve a subir el archivo.');
+            flash('mal', 'La revisión caducó. Vuelva a subir el archivo.');
             redirigir('?r=proveedores');
         }
         try {

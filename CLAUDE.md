@@ -465,6 +465,14 @@ El público incluye personas que no trabajan con sistemas. Evita «conciliar»,
 en la visita guiada y en la ayuda de cada pantalla. Di qué gana quien lo usa, no
 qué hace el programa. Frases cortas.
 
+**Se trata de usted, siempre.** Toda la aplicación, de la pantalla de acceso a
+la última ayuda de la visita guiada. Estuvo mezclado hasta el 08/09/2026 —la
+pantalla de carga decía «Arrastra los archivos» arriba y «Arrástrelo hasta este
+recuadro» dos líneas más abajo— y se unificó de una vez. Al escribir un mensaje
+nuevo, imperativo en usted: «haga», «elija», «vuelva», «escriba», «revise»,
+nunca «haz», «elige», «vuelve». Ojo con los mensajes de `flash()` y con los de
+`RuntimeException`, que es donde se colaron casi todos.
+
 **Español de Venezuela, no de España.** Un texto que suena importado desentona
 y le quita autoridad al producto delante de quien lo va a aprobar. No: «echar en
 falta», «abajo del todo», «de sitio», «el ratón», «pulsar», «ordenador»,

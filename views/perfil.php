@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($accion === 'nombre') {
         $err = renombrar_usuario((int) $yo['id'], (string) ($_POST['nombre'] ?? ''));
-        flash($err === null ? 'ok' : 'mal', $err ?? 'Listo. Así aparecerás en el rastro de ahora en adelante.');
+        flash($err === null ? 'ok' : 'mal', $err ?? 'Listo. Así aparecerá en el rastro de ahora en adelante.');
         if ($err === null) {
             bitacora('perfil', 'Cambió su nombre');
         }
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'pin') {
         $nuevo = preg_replace('/\D/', '', implode('', (array) ($_POST['d'] ?? [])));
         $err = cambiar_pin((string) $nuevo);
-        flash($err === null ? 'ok' : 'mal', $err ?? 'PIN cambiado. Úsalo la próxima vez que entres.');
+        flash($err === null ? 'ok' : 'mal', $err ?? 'PIN cambiado. Úselo la próxima vez que entre.');
         redirigir('?r=perfil');
     }
 }

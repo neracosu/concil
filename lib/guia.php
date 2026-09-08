@@ -64,7 +64,7 @@ function guia_pasos(): array
         [
             'ruta' => 'carga', 'sel' => '[data-guia="soltar"]',
             'titulo' => 'Aquí empieza todo: suelte los archivos',
-            'texto' => 'Descarga el movimiento de cada banco como siempre, y lo arrastra hasta aquí. '
+            'texto' => 'Descargue el movimiento de cada banco como siempre y arrástrelo hasta aquí. '
                      . 'Puede soltar los de <b>todos los bancos de una vez</b>.',
             'nota' => 'Si sube dos veces el mismo archivo no pasa nada: reconoce lo que ya tenía y no lo repite.',
         ],
@@ -269,8 +269,8 @@ function guia_pasos(): array
         [
             'ruta' => 'panel', 'sel' => '',
             'titulo' => 'Eso es todo. Su día a día son tres pasos',
-            'texto' => '<b>1.</b> Sube los archivos del banco. &nbsp; <b>2.</b> Explica lo poco que quedó pendiente. '
-                     . '&nbsp; <b>3.</b> Saca el reporte cuando lo necesite.',
+            'texto' => '<b>1.</b> Suba los archivos del banco. &nbsp; <b>2.</b> Explique lo poco que quedó pendiente. '
+                     . '&nbsp; <b>3.</b> Saque el reporte cuando lo necesite.',
             'nota' => 'Puede repetir esta visita cuando quiera, con el botón «Visita guiada» del menú. '
                     . 'CONCIL <i>by</i> VIP Soft.',
         ],

@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'crear') {
         $nombre = mb_substr(limpiar((string) ($_POST['nombre'] ?? '')), 0, 120);
         if ($nombre === '') {
-            flash('mal', 'Escribe el nombre de la unidad de negocio.');
+            flash('mal', 'Escriba el nombre de la unidad de negocio.');
             redirigir('?r=sede');
         }
         try {

@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nota = mb_substr(limpiar((string) ($_POST['nota'] ?? '')), 0, 255);
         $cat  = (int) ($_POST['categoria_id'] ?? 0);
         if ($nota === '' || $cat <= 0) {
-            flash('mal', 'Elige la categoría para esa nota.');
+            flash('mal', 'Elija la categoría para esa nota.');
             redirigir('?r=reglas');
         }
         $pdo->prepare('INSERT INTO reglas (nombre, campo, tipo, patron, categoria_id, prioridad) VALUES (?,?,?,?,?,50)')
@@ -146,7 +146,7 @@ encabezado_html('Reglas de mapeo', 'reglas',
 <?php if ($sugerencias !== []): ?>
   <div class="marco-tabla" style="margin-bottom:16px" data-guia="sugerencias">
     <div style="padding:14px 16px;border-bottom:1px solid var(--linea)">
-      <b>Reglas sugeridas por tus propias notas</b>
+      <b>Reglas sugeridas por sus propias notas</b>
       <span style="color:var(--mudo);font-size:13px;display:block;margin-top:3px">
         Estas notas ya venían escritas en los extractos. Asígnale una categoría a cada una y quedan clasificadas,
         hoy y en las próximas cargas.</span>
