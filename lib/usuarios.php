@@ -252,64 +252,6 @@ function activar_usuario(int $id, bool $activo): ?string
 /* ------------------------------------------------------------------ */
 
 /**
- * Qué navegador y qué sistema, en legible.
- *
- * A mano y con cuatro expresiones: meter una librería de reconocimiento por
- * esto sería traer mil reglas para leer una cadena. El orden importa —Edge y
- * Opera se anuncian además como Chrome, y Chrome como Safari—, así que se
- * mira de lo más específico a lo más general.
- */
-function dispositivo_de(string $ua): string
-{
-    if ($ua === '') {
-        return '';
-    }
-    $nav = 'Navegador desconocido';
-    foreach ([
-        'Edg/'            => 'Edge',
-        'OPR/'            => 'Opera',
-        'YaBrowser/'      => 'Yandex',
-        'SamsungBrowser/' => 'Samsung Internet',
-        'Firefox/'        => 'Firefox',
-        'CriOS/'          => 'Chrome',
-        'FxiOS/'          => 'Firefox',
-        'Chrome/'         => 'Chrome',
-        'Safari/'         => 'Safari',
-        'curl/'           => 'curl',
-    ] as $marca => $rotulo) {
-        if (str_contains($ua, $marca)) {
-            // Safari no pone su versión en «Safari/», que es el número de
-            // compilación del motor: la pone en «Version/».
-            $donde = $rotulo === 'Safari' ? 'Version/' : $marca;
-            $nav = $rotulo;
-            if (preg_match('~' . preg_quote($donde, '~') . '(\\d+)~', $ua, $m)) {
-                $nav .= ' ' . $m[1];
-            }
-            break;
-        }
-    }
-
-    $so = '';
-    foreach ([
-        'Windows NT 10' => 'Windows 10/11',
-        'Windows NT'    => 'Windows',
-        'iPhone'        => 'iPhone',
-        'iPad'          => 'iPad',
-        'Android'       => 'Android',
-        'Mac OS X'      => 'Mac',
-        'CrOS'          => 'Chromebook',
-        'Linux'         => 'Linux',
-    ] as $marca => $rotulo) {
-        if (str_contains($ua, $marca)) {
-            $so = $rotulo;
-            break;
-        }
-    }
-
-    return mb_substr($so === '' ? $nav : "$nav · $so", 0, 60);
-}
-
-/**
  * Nombre llano de cada pantalla, para que el seguimiento se lea sin traducir.
  *
  * Todos van en forma de lugar y no de acción —«los pagos por justificar», no
@@ -399,7 +341,45 @@ function borrar_presencia(): void
 /** ¿Se está guardando el recorrido, pantalla por pantalla? Se puede apagar. */
 function rastro_navegacion(): bool
 {
-    return ajuste('rastro_navegacion', '1') === '1';
+    return (ajustes_rastro()['rastro_navegacion'] ?? '1') !== '0';
+}
+
+/**
+ * Los dos ajustes del recorrido, leídos de una sola vez por petición.
+ *
+ * Son dos filas de una tabla de diez, pero esto corre en **cada página**: dos
+ * consultas donde cabe una es la clase de cosa que no se nota hasta que la
+ * base tiene años encima.
+ */
+function ajustes_rastro(): array
+{
+    static $cache = null;
+    return $cache ??= ajustes_varios(['rastro_navegacion', 'rastro_podado']);
+}
+
+/**
+ * Cuántos días se conservan las pantallas antes de que se vayan solas.
+ *
+ * Un año. La tabla crece una línea por página abierta, así que sin un tope se
+ * convierte sola en la más grande de la base; y guardar el recorrido de hace
+ * dos años no le sirve a nadie. Lo que alguien **cambió** no se toca nunca
+ * aquí: para eso está el botón de Auditoría, que decide una persona.
+ */
+const DIAS_RECORRIDO = 365;
+
+/** Una vez al día, se van las pantallas más viejas que el año. */
+function podar_recorrido(): void
+{
+    $hoy = date('Y-m-d');
+    if ((ajustes_rastro()['rastro_podado'] ?? '') === $hoy) {
+        return;
+    }
+    guardar_ajuste('rastro_podado', $hoy);
+    $s = db()->prepare('DELETE FROM visitas WHERE creado_en < DATE_SUB(NOW(), INTERVAL ? DAY)');
+    $s->execute([DIAS_RECORRIDO]);
+    if ($s->rowCount() > 0) {
+        bitacora('rastro_podado', $s->rowCount() . ' pantallas de más de ' . DIAS_RECORRIDO . ' días');
+    }
 }
 
 /**
@@ -412,6 +392,7 @@ function anotar_visita(string $ruta, int $ref = 0): void
     if (!rastro_navegacion()) {
         return;
     }
+    podar_recorrido();
     db()->prepare('INSERT INTO visitas (usuario_id, ruta, ref, sede_id, ip, dispositivo, sesion)
                    VALUES (?, ?, ?, ?, ?, ?, ?)')
         ->execute([
@@ -446,15 +427,23 @@ function usuarios_activos(int $minutos = 10): array
 /**
  * Quién está trabajando ahora mismo, para los avisos en vivo.
  *
- * Cuatro minutos: el navegador avisa cada veinte segundos mientras la pestaña
- * está abierta y alguien la está usando, así que quien siga ahí no se cae de
- * la lista, y quien se levantó de la silla desaparece solo.
+ * `MINUTOS_PRESENCIA` es la única definición de «ahora mismo»: el navegador
+ * avisa cada veinte segundos mientras la pestaña está abierta y alguien la
+ * está usando, así que quien siga ahí no se cae de la lista, y quien se
+ * levantó de la silla desaparece solo. Cuando la pantalla de Usuarios usaba
+ * diez minutos por su cuenta, su tarjeta y la barra de arriba se
+ * contradecían.
  */
 function presencia_viva(bool $incluirme = false): array
 {
+    // El armazón la pinta en cada página y alguna vista vuelve a preguntar:
+    // es la misma respuesta dentro de la misma petición, así que se guarda.
+    static $cache = null;
+    $cache ??= usuarios_activos(MINUTOS_PRESENCIA);
+
     $yo = (int) ($_SESSION['uid'] ?? 0);
     $gente = [];
-    foreach (usuarios_activos(4) as $a) {
+    foreach ($cache as $a) {
         if (!$incluirme && (int) $a['id'] === $yo) {
             continue;
         }
@@ -510,7 +499,9 @@ function rastro_filtrado(array $f, int $pagina = 1, int $porPagina = 60): array
     } else {
         $desde = $f['desde'] ?: date('Y-m-d', strtotime('-7 days'));
         $hasta = $f['hasta'] ?: date('Y-m-d');
-        $cond  = ['b.creado_en >= ?', 'b.creado_en < ?'];
+        // `<=` y no `<`: con `<` se perdía lo anotado en el último segundo
+        // del día elegido, y las visitas llegan en ráfagas.
+        $cond  = ['b.creado_en >= ?', 'b.creado_en <= ?'];
         $arg   = [$desde . ' 00:00:00', $hasta . ' 23:59:59'];
     }
 
@@ -529,13 +520,13 @@ function rastro_filtrado(array $f, int $pagina = 1, int $porPagina = 60): array
     // sin que la base tenga que mirar el texto de la fecha.
     if ($f['que'] !== 'pantallas') {
         $partes[] = "SELECT 'accion' clase, b.creado_en, b.usuario_id, b.accion, b.detalle,
-                            b.ip, b.dispositivo, b.agente, b.ruta, b.sesion, b.sede_id
+                            b.ip, b.dispositivo, b.agente, b.ruta, b.sesion, b.sede_id, b.id
                        FROM bitacora b WHERE $where";
     }
     // El recorrido. Se disfraza de acción «pantalla» para poder unirlas.
     if ($f['que'] !== 'acciones') {
         $partes[] = "SELECT 'pantalla' clase, b.creado_en, b.usuario_id, 'pantalla' accion,
-                            b.ruta detalle, b.ip, b.dispositivo, '' agente, b.ruta, b.sesion, b.sede_id
+                            b.ruta detalle, b.ip, b.dispositivo, '' agente, b.ruta, b.sesion, b.sede_id, b.id
                        FROM visitas b WHERE $where";
     }
     if ($partes === []) {
@@ -553,8 +544,12 @@ function rastro_filtrado(array $f, int $pagina = 1, int $porPagina = 60): array
     $pagina  = max(1, min($pagina, $paginas));
     $salto   = ($pagina - 1) * $porPagina;
 
+    // El desempate por `id` no es cosmético: `creado_en` va al segundo y las
+    // dos mitades empatan a menudo. Sin él, dos páginas seguidas pueden
+    // repetir un renglón y saltarse otro, en la única pantalla donde lo que
+    // se promete es que no falta nada.
     $sql = '(' . implode(') UNION ALL (', $partes) . ')
-            ORDER BY creado_en DESC, clase LIMIT ' . $porPagina . ' OFFSET ' . $salto;
+            ORDER BY creado_en DESC, clase, id DESC LIMIT ' . $porPagina . ' OFFSET ' . $salto;
     $s = db()->prepare($sql);
     $s->execute(count($partes) === 2 ? array_merge($arg, $arg) : $arg);
     $filas = $s->fetchAll();
@@ -667,12 +662,12 @@ function historial_persona(int $id, int $pagina = 1, int $porPagina = 40): array
     $paginas = max(1, (int) ceil($total / $porPagina));
     $pagina  = max(1, min($pagina, $paginas));
 
-    $s = db()->prepare("(SELECT 'accion' clase, creado_en, accion, detalle, ip, dispositivo, ruta, sesion, sede_id
+    $s = db()->prepare("(SELECT 'accion' clase, creado_en, accion, detalle, ip, dispositivo, ruta, sesion, sede_id, id
                            FROM bitacora WHERE usuario_id = ?)
                         UNION ALL
-                        (SELECT 'pantalla', creado_en, 'pantalla', ruta, ip, dispositivo, ruta, sesion, sede_id
+                        (SELECT 'pantalla', creado_en, 'pantalla', ruta, ip, dispositivo, ruta, sesion, sede_id, id
                            FROM visitas WHERE usuario_id = ?)
-                        ORDER BY creado_en DESC, clase
+                        ORDER BY creado_en DESC, clase, id DESC
                         LIMIT $porPagina OFFSET " . (($pagina - 1) * $porPagina));
     $s->execute([$id, $id]);
 
@@ -689,12 +684,20 @@ function resumen_sesion(string $sesion): array
     return $s->fetch() ?: [];
 }
 
-/** Borra lo más viejo de las dos tablas. Devuelve cuántas líneas se fueron. */
+/**
+ * Borra lo más viejo de las dos tablas. Devuelve cuántas líneas se fueron.
+ *
+ * Deja la constancia aquí dentro y no en la pantalla que llama: borrar el
+ * rastro es la acción donde más falta hace que quede rastro, y desde dos
+ * pantallas distintas una se acordaba y la otra no.
+ */
 function purgar_rastro(int $dias): array
 {
     $a = db()->prepare('DELETE FROM bitacora WHERE creado_en < DATE_SUB(NOW(), INTERVAL ? DAY)');
     $a->execute([$dias]);
     $b = db()->prepare('DELETE FROM visitas WHERE creado_en < DATE_SUB(NOW(), INTERVAL ? DAY)');
     $b->execute([$dias]);
-    return ['acciones' => $a->rowCount(), 'pantallas' => $b->rowCount()];
+    $r = ['acciones' => $a->rowCount(), 'pantallas' => $b->rowCount()];
+    bitacora('rastro_purgado', "Anterior a $dias días · {$r['acciones']} acciones y {$r['pantallas']} pantallas");
+    return $r;
 }

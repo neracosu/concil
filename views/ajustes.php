@@ -41,6 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($accion === 'purgar') {
+        // Esconder el botón no es cerrar la puerta: el formulario se puede
+        // mandar a mano. Borrar el rastro es justo lo que querría hacer quien
+        // tiene algo que tapar, así que la comprobación va aquí, no en el HTML.
+        if (!es_maestro()) {
+            flash('mal', 'Solo el maestro puede limpiar el rastro.');
+            redirigir('?r=ajustes');
+        }
         $dias = max(1, (int) ($_POST['dias'] ?? 90));
         $r = purgar_rastro($dias);
         flash('ok', 'Se borraron ' . number_format($r['acciones'] + $r['pantallas'], 0, ',', '.')

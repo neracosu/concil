@@ -30,7 +30,7 @@ function db(): PDO
  * aquí**, o la migración no llegará a correr en el servidor: se salta cuando la
  * base ya dice tener esta versión.
  */
-const ESQUEMA_VERSION = 6;
+const ESQUEMA_VERSION = 8;
 
 function migrar(): void
 {
@@ -106,6 +106,15 @@ function migrar(): void
         creado_en DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cat_nombre (nombre)
     ) $t");
+
+    // Categorías anidadas: contabilidad desglosa las comisiones en doce
+    // conceptos y quiere verlos por separado sin perder el total. El padre
+    // sigue siendo una categoría normal —se le pueden asignar movimientos—,
+    // así que lo ya clasificado no se mueve de sitio.
+    columna_si_falta($pdo, 'categorias', 'padre_id', 'INT NULL');
+    if (!indice_existe($pdo, 'categorias', 'idx_cat_padre')) {
+        $pdo->exec('ALTER TABLE categorias ADD KEY idx_cat_padre (padre_id)');
+    }
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS reglas (
         id           INT AUTO_INCREMENT PRIMARY KEY,
@@ -379,6 +388,12 @@ function migrar(): void
         $pdo->exec('ALTER TABLE bitacora ADD KEY idx_bit_usuario (usuario_id)');
     }
 
+    // «Ver esta visita» busca por huella de sesión y **sin** rango de fechas, así
+    // que sin este índice recorría la bitácora entera, dos veces por página.
+    if (!indice_existe($pdo, 'bitacora', 'idx_bit_sesion')) {
+        $pdo->exec('ALTER TABLE bitacora ADD KEY idx_bit_sesion (sesion, id)');
+    }
+
     // Lo que hace falta para responder «quién, desde dónde y con qué» meses
     // después. El agente completo se guarda crudo porque es lo que un perito
     // pide; «dispositivo» es el mismo dato en legible, para no leer cadenas de
@@ -600,6 +615,22 @@ function ajuste(string $clave, ?string $defecto = null): ?string
     return $v === false ? $defecto : $v;
 }
 
+/** Varios ajustes de un tirón: una consulta en vez de una por clave. */
+function ajustes_varios(array $claves): array
+{
+    if ($claves === []) {
+        return [];
+    }
+    $huecos = implode(',', array_fill(0, count($claves), '?'));
+    $s = db()->prepare("SELECT clave, valor FROM ajustes WHERE clave IN ($huecos)");
+    $s->execute($claves);
+    $out = array_fill_keys($claves, null);
+    foreach ($s->fetchAll() as $f) {
+        $out[$f['clave']] = $f['valor'];
+    }
+    return $out;
+}
+
 function guardar_ajuste(string $clave, string $valor): void
 {
     $s = db()->prepare('INSERT INTO ajustes (clave, valor) VALUES (?, ?)
@@ -627,6 +658,67 @@ function ip_declarada(): string
         }
     }
     return '';
+}
+
+/**
+ * Qué navegador y qué sistema, en legible.
+ *
+ * A mano y con cuatro expresiones: meter una librería de reconocimiento por
+ * esto sería traer mil reglas para leer una cadena. El orden importa —Edge y
+ * Opera se anuncian además como Chrome, y Chrome como Safari—, así que se
+ * mira de lo más específico a lo más general.
+ *
+ * Vive aquí y no en usuarios.php porque la usa `bitacora()`, y este archivo no
+ * requiere a ninguno: un script que solo abriera la base se caía al escribir.
+ */
+function dispositivo_de(string $ua): string
+{
+    if ($ua === '') {
+        return '';
+    }
+    $nav = 'Navegador desconocido';
+    foreach ([
+        'Edg/'            => 'Edge',
+        'OPR/'            => 'Opera',
+        'YaBrowser/'      => 'Yandex',
+        'SamsungBrowser/' => 'Samsung Internet',
+        'Firefox/'        => 'Firefox',
+        'CriOS/'          => 'Chrome',
+        'FxiOS/'          => 'Firefox',
+        'Chrome/'         => 'Chrome',
+        'Safari/'         => 'Safari',
+        'curl/'           => 'curl',
+    ] as $marca => $rotulo) {
+        if (str_contains($ua, $marca)) {
+            // Safari no pone su versión en «Safari/», que es el número de
+            // compilación del motor: la pone en «Version/».
+            $donde = $rotulo === 'Safari' ? 'Version/' : $marca;
+            $nav = $rotulo;
+            if (preg_match('~' . preg_quote($donde, '~') . '(\\d+)~', $ua, $m)) {
+                $nav .= ' ' . $m[1];
+            }
+            break;
+        }
+    }
+
+    $so = '';
+    foreach ([
+        'Windows NT 10' => 'Windows 10/11',
+        'Windows NT'    => 'Windows',
+        'iPhone'        => 'iPhone',
+        'iPad'          => 'iPad',
+        'Android'       => 'Android',
+        'Mac OS X'      => 'Mac',
+        'CrOS'          => 'Chromebook',
+        'Linux'         => 'Linux',
+    ] as $marca => $rotulo) {
+        if (str_contains($ua, $marca)) {
+            $so = $rotulo;
+            break;
+        }
+    }
+
+    return mb_substr($so === '' ? $nav : "$nav · $so", 0, 60);
 }
 
 /**

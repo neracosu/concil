@@ -46,7 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $lista = usuarios();
-$activos = usuarios_activos(10);
+// La misma lista y la misma ventana que la barra de arriba: con diez minutos
+// aquí y cuatro allá, la misma persona salía en una y no en la otra.
+$activos = presencia_viva(true);
 $rastro = ultimo_rastro(20);
 $enPantalla = [];
 foreach ($activos as $a) {

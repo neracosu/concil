@@ -111,16 +111,20 @@ if (autenticado() && $ruta !== 'salir' && $ruta !== 'presencia' && !sede_elegida
     $ruta = 'sede';
 }
 
-// Quién está dónde: una sola escritura por página, para el seguimiento.
-if (autenticado()) {
-    marcar_presencia($ruta);
-}
-
-$vista = __DIR__ . "/views/$ruta.php";
-if (!is_file($vista)) {
+// Los archivos que empiezan por raya baja son trozos que incluyen las vistas,
+// no rutas: `?r=_layout` no debe poder pedirse desde fuera.
+$vista = str_starts_with($ruta, '_') ? '' : __DIR__ . "/views/$ruta.php";
+if ($vista === '' || !is_file($vista)) {
     http_response_code(404);
     $ruta = 'panel';
     $vista = __DIR__ . '/views/panel.php';
+}
+
+// Quién está dónde: una sola escritura por página, y **después** de saber que
+// la ruta existe. Antes, un `?r=loquesea` dejaba su renglón en el recorrido,
+// así que cualquiera podía llenar la tabla con nombres inventados.
+if (autenticado()) {
+    marcar_presencia($ruta);
 }
 
 $mensaje = ['tipo' => '', 'texto' => ''];

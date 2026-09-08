@@ -48,6 +48,10 @@ date_default_timezone_set(ZONA_HORARIA);
 const MAX_INTENTOS = 5;      // intentos fallidos seguidos antes de bloquear
 const BLOQUEO_SEGS = 900;    // 15 minutos de bloqueo
 const SESION_SEGS  = 28800;  // 8 horas de sesión
+// Qué es «ahora mismo» para la presencia en vivo. El navegador avisa cada 20 s
+// mientras alguien está usando la pestaña, así que con cuatro minutos quien
+// sigue ahí no se cae de la lista y quien se levantó desaparece solo.
+const MINUTOS_PRESENCIA = 4;
 
 // Carga de archivos
 const MAX_UPLOAD_MB  = 25;

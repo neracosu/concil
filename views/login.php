@@ -11,10 +11,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // mensaje si acertó el PIN aunque fallara la suma.
         $conSuma = captcha_necesario();
         if ($conSuma && !captcha_correcto((string) ($_POST['suma'] ?? ''))) {
+            // Cuenta como intento fallido: si no, quien falla la suma a
+            // propósito se queda probando para siempre sin llegar al bloqueo.
+            intento_fallido();
+            $espera = bloqueado();
             // La suma fallida se anota aparte: es la huella de un robot
             // probando en serie, no la de alguien que se equivocó de tecla.
-            bitacora('captcha_fallido', 'La suma no cuadró · ' . strlen((string) $pin) . ' dígitos tecleados');
-            $error = 'La suma no es correcta. Inténtalo otra vez.';
+            bitacora('captcha_fallido', 'La suma no cuadró · ' . strlen((string) $pin) . ' dígitos tecleados'
+                . ($espera > 0 ? ' · quedó bloqueado' : ''));
+            $error = $espera > 0
+                ? 'Demasiados intentos. Acceso bloqueado por ' . ceil($espera / 60) . ' minutos.'
+                : 'La suma no es correcta. Inténtalo otra vez.';
         } else {
             $usuario = verificar_pin((string) $pin);
             if ($usuario !== null) {

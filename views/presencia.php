@@ -33,12 +33,16 @@ foreach (presencia_viva() as $g) {
 
 /* De paso viajan los dos contadores del menú: quien deja la pantalla abierta
    mientras otra persona carga un extracto ve subir lo que le falta por hacer
-   sin recargar nada. */
+   sin recargar nada. Pero solo cuando el navegador los pide —una vez por
+   minuto, no en cada latido—: son dos COUNT sobre la tabla de movimientos, y
+   esa es justo la consulta que con medio millón de filas costaba segundos. */
+$datos = ['gente' => $gente];
+if (($_GET['cuentas'] ?? '') === '1') {
+    $datos['pend'] = sede_elegida() ? pendientes_total() : 0;
+    $datos['rep']  = sede_elegida() ? contar_repetidos() : 0;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
-echo json_encode([
-    'gente' => $gente,
-    'pend'  => sede_elegida() ? pendientes_total() : 0,
-    'rep'   => sede_elegida() ? contar_repetidos() : 0,
-], JSON_UNESCAPED_UNICODE);
+echo json_encode($datos, JSON_UNESCAPED_UNICODE);
 exit;

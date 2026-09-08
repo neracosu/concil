@@ -24,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'purgar') {
         $dias = max(1, (int) ($_POST['dias'] ?? 90));
         $r = purgar_rastro($dias);
-        bitacora('rastro_purgado', "Anterior a $dias días · {$r['acciones']} acciones y {$r['pantallas']} pantallas");
         flash('ok', 'Se borraron ' . number_format($r['acciones'], 0, ',', '.') . ' acciones y '
                   . number_format($r['pantallas'], 0, ',', '.') . ' pantallas de hace más de ' . $dias . ' días.');
         redirigir('?r=auditoria');
@@ -50,12 +49,17 @@ $filtros = [
     'sesion'  => preg_replace('/[^0-9a-f]/', '', (string) ($_GET['s'] ?? '')),
     'ip'      => preg_replace('/[^0-9a-fA-F.:]/', '', (string) ($_GET['ip'] ?? '')),
 ];
-$r = rastro_filtrado($filtros, max(1, (int) ($_GET['p'] ?? 1)));
-
 /* El rastro se baja a Excel para adjuntarlo a un informe: quien pide una
-   auditoría no se lleva una pantalla, se lleva un archivo. */
+   auditoría no se lleva una pantalla, se lleva un archivo.
+
+   Va antes de pedir la página que se ve en pantalla: al exportar, esa consulta
+   no la lee nadie. Y el tope no es un secreto: si el filtro trae más, el
+   propio archivo lo dice en su última línea, porque un archivo corto y callado
+   es peor que uno que avisa. */
+const TOPE_EXPORTACION = 20000;
+
 if (($_GET['export'] ?? '') !== '') {
-    $todo = rastro_filtrado($filtros, 1, 5000);
+    $todo = rastro_filtrado($filtros, 1, TOPE_EXPORTACION);
     $filas = [];
     foreach ($todo['filas'] as $f) {
         $filas[] = [
@@ -69,6 +73,11 @@ if (($_GET['export'] ?? '') !== '') {
             (string) $f['sesion'],
         ];
     }
+    if ($todo['total'] > TOPE_EXPORTACION) {
+        $filas[] = ['— Se bajaron las ' . number_format(TOPE_EXPORTACION, 0, ',', '.')
+                  . ' anotaciones más recientes de ' . number_format($todo['total'], 0, ',', '.')
+                  . '. Acote las fechas para bajar el resto. —', '', '', '', '', '', '', ''];
+    }
     $enc = ['Cuándo', 'Quién', 'Qué', 'Detalle', 'Unidad', 'Desde (IP)', 'Equipo', 'Visita'];
     $nombre = APP_NOMBRE . '-rastro-' . date('Y-m-d');
     if (($_GET['export'] ?? '') === 'csv') {
@@ -77,6 +86,8 @@ if (($_GET['export'] ?? '') !== '') {
     exportar_xlsx($nombre, $enc, $filas);
     exit;
 }
+
+$r = rastro_filtrado($filtros, max(1, (int) ($_GET['p'] ?? 1)));
 
 $sesion = $filtros['sesion'] !== '' ? resumen_sesion($filtros['sesion']) : [];
 

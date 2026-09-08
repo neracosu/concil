@@ -18,6 +18,11 @@ es hosting cPanel compartido y esa restricción es deliberada.
   vas a tocar varios archivos que dependen entre sí (por ejemplo `lib/guia.php`
   y `views/_layout.php`), hazlo rápido y verifica enseguida — durante esos
   segundos la aplicación puede quedar rota para quien la esté usando.
+  **Escribe siempre la función antes que la llamada.** Dejar en `migrar()` una
+  llamada a algo que ibas a escribir «ahora mismo» tumbó la aplicación entera
+  durante cuarenta segundos: `migrar()` corre en cada petición y el `catch` de
+  `index.php` convierte cualquier `Error` en la pantalla de «no hay conexión
+  con la base de datos».
 - Los datos y credenciales están en `/home/mardenli/conciliacion_data`
   (`secrets.php`, `uploads/`, `PIN-INICIAL.txt`), fuera de `public_html`.
 - SAPI **fpm-fcgi**: los `php_value` del `.htaccess` se ignoran. Los límites de
@@ -261,6 +266,23 @@ Guardar por `effective_date` deja el fin de semana sin fila; se guarda por
 `data-guia="..."` de las vistas. Si renombras o quitas uno de esos elementos, el
 paso correspondiente se salta en silencio. Al añadir una sección nueva, añade su
 ancla y su paso.
+
+**Esconder el botón no es cerrar la puerta.** El permiso se comprueba en el
+manejador del POST, no en el HTML que lo dibuja: un formulario se manda a mano.
+Le pasó al borrado del rastro —la tarjeta iba dentro de un `if (es_maestro())`
+y el `if ($accion === 'purgar')` no—, así que cualquiera podía vaciar la
+bitácora y las visitas. Y la constancia de una acción así va **dentro** de la
+función que la hace (`purgar_rastro()`), no en la pantalla: desde dos pantallas
+distintas, una se acordaba y la otra no.
+
+**La presencia está escrita dos veces**, en PHP (`ojito_html`, `presente_html`,
+`quien_esta`) y en JavaScript (`pastilla`, `quienEsta`, el mapa `mismo`), porque
+la página sale ya pintada y el latido la repinta. Las dos copias ya se
+separaron una vez: el verde de «está en lo mismo que usted» miraba solo la
+pantalla en PHP y pantalla + id en el latido, así que se encendía al cargar y se
+apagaba a los veinte segundos. **Si tocas una, toca la otra**; y si algún día
+sobra tiempo, que `?r=presencia` devuelva el trozo ya pintado y el navegador
+solo lo cambie de sitio.
 
 **Cada nombre del rastro lleva a su ficha.** `?r=persona&id=N`, solo para el
 maestro (quien no lo es, y pide la suya, cae en Mi perfil). `persona_enlace()`

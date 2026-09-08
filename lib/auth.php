@@ -49,6 +49,20 @@ function verificar_pin(string $pin): ?array
         guardar_ajuste('bloqueo_hasta', '0');
         return $u;
     }
+    intento_fallido();
+    return null;
+}
+
+/**
+ * Suma uno al contador y bloquea al llegar al tope.
+ *
+ * Fallar la suma cuenta igual que fallar el PIN. Si no contara, un robot se
+ * quedaría en tres intentos para siempre: nunca llegaría al bloqueo y cada
+ * envío dejaría una línea en la bitácora, que es una forma barata de llenar
+ * el disco y de tapar el rastro de verdad con ruido.
+ */
+function intento_fallido(): void
+{
     $n = (int) ajuste('intentos', '0') + 1;
     guardar_ajuste('intentos', (string) $n);
     if ($n >= MAX_INTENTOS) {
@@ -56,7 +70,6 @@ function verificar_pin(string $pin): ?array
         guardar_ajuste('intentos', '0');
         bitacora('bloqueo', 'Demasiados intentos fallidos');
     }
-    return null;
 }
 
 /**

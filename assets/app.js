@@ -364,6 +364,7 @@
     }
 
     function pintar(datos) {
+      if (!datos.gente) return;
       var barra = document.querySelector('[data-presentes]');
       var caja = document.querySelector('[data-presentes-gente]');
       if (!barra || !caja) return;
@@ -390,7 +391,10 @@
       });
 
       /* De paso, los dos contadores del menú: si otra persona acaba de cargar
-         un extracto, lo que queda por justificar sube sin recargar. */
+         un extracto, lo que queda por justificar sube sin recargar. No vienen
+         en cada latido —son dos COUNT sobre la tabla grande y con años de
+         movimientos eso pesa—, sino una vez por minuto. */
+      if (typeof datos.pend !== 'number') return;
       var pend = document.querySelector('[data-pend]');
       if (pend) {
         pend.textContent = datos.pend > 999 ? '999+' : datos.pend;
@@ -399,13 +403,25 @@
         if (renglon) renglon.classList.toggle('tiene-pendientes', datos.pend > 0);
       }
       var rep = document.querySelector('[data-rep]');
-      if (rep) rep.textContent = datos.rep > 999 ? '999+' : datos.rep;
+      if (rep) {
+        rep.textContent = datos.rep > 999 ? '999+' : datos.rep;
+        /* El renglón entero se enciende y se apaga: si otra persona resuelve
+           el último repetido, aquí desaparece; y si aparecen cinco nuevos, el
+           renglón sale sin recargar, que es para lo que sirve el latido. */
+        var renglonRep = rep.closest('[data-rep-renglon]');
+        if (renglonRep) {
+          renglonRep.hidden = datos.rep === 0 && !renglonRep.classList.contains('on');
+        }
+      }
     }
 
+    var vuelta = 0;
     function latir() {
       if (pidiendo || document.hidden || Date.now() - ultimoToque > QUIETO) return;
       pidiendo = true;
-      fetch('?r=presencia&en=' + encodeURIComponent(PRES.ruta) + '&ref=' + PRES.ref,
+      var conCuentas = vuelta++ % 3 === 0;      // una de cada tres: ~1 por minuto
+      fetch('?r=presencia&en=' + encodeURIComponent(PRES.ruta) + '&ref=' + PRES.ref
+            + (conCuentas ? '&cuentas=1' : ''),
             { headers: { 'Accept': 'application/json' } })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (d) { if (d) pintar(d); })

@@ -8,6 +8,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
     // pantalla no llegue vacía y luego dé un salto cuando conteste el latido.
     $gente   = presencia_viva();
     $porRuta = presencia_por_ruta($gente);
+    $miRef   = referencia_pantalla();
     ?><!doctype html>
 <html lang="es"<?= tema() !== '' ? ' data-tema="' . e(tema()) . '"' : '' ?><?= escala() !== '' ? ' data-escala="' . e(escala()) . '"' : '' ?>>
 <head>
@@ -70,10 +71,10 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <a href="?r=movimientos" data-ruta="movimientos" class="<?= $ruta === "movimientos" || $ruta === "movimiento" ? "on" : "" ?>">Movimientos<?= ojito_html($porRuta, 'movimientos', 'movimiento') ?></a>
       <?php /* Solo aparece cuando hay algo que revisar: un enlace que casi
                siempre lleva a «no hay nada» enseña a no mirarlo. */
-      $rep = contar_repetidos(); if ($rep > 0): ?>
-        <a href="?r=repetidos" data-ruta="repetidos" class="<?= $ruta === 'repetidos' ? 'on' : '' ?>">Repetidos
+      $rep = contar_repetidos(); ?>
+        <a href="?r=repetidos" data-ruta="repetidos" class="<?= $ruta === 'repetidos' ? 'on' : '' ?>"
+           data-rep-renglon<?= $rep > 0 || $ruta === 'repetidos' ? '' : ' hidden' ?>>Repetidos
           <span class="nav-marcas"><?= ojito_html($porRuta, 'repetidos') ?><span class="cuenta cuenta-aviso" data-rep><?= $rep > 999 ? '999+' : $rep ?></span></span></a>
-      <?php endif ?>
       <a href="?r=reportes"    data-ruta="reportes" class="<?= $ruta === "reportes" ? "on" : "" ?>">Reportes<?= ojito_html($porRuta, 'reportes') ?></a>
       <div class="nav-titulo">Configuración</div>
       <a href="?r=reglas"     data-ruta="reglas" class="<?= $ruta === 'reglas' ? 'on' : '' ?>">Reglas de mapeo<?= ojito_html($porRuta, 'reglas') ?></a>
@@ -147,7 +148,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <span class="presentes-rotulo">Trabajando ahora</span>
       <div class="presentes-gente" data-presentes-gente>
         <?php foreach ($gente as $g): ?>
-          <?= presente_html($g, $ruta) ?>
+          <?= presente_html($g, $ruta, $miRef) ?>
         <?php endforeach ?>
       </div>
     </div>
@@ -179,7 +180,7 @@ window.PRESENCIA = <?= json_encode([
     'ref'  => referencia_pantalla(),
 ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
-<script src="assets/app.js?v=14"></script>
+<script src="assets/app.js?v=15"></script>
 <script src="assets/guia.js?v=12"></script>
 </body>
 </html>
@@ -239,10 +240,18 @@ function persona_enlace(array $fila): string
         . e($nombre) . '</b></a>';
 }
 
-/** La pastilla de una persona conectada: su inicial y en qué anda. */
-function presente_html(array $g, string $ruta = ''): string
+/**
+ * La pastilla de una persona conectada: su inicial y en qué anda.
+ *
+ * «Está aquí» compara pantalla **y** a qué se refiere, igual que el latido: si
+ * solo mirara la pantalla, en el detalle de un movimiento se pondría verde
+ * quien está en otro movimiento distinto, y a los veinte segundos —cuando
+ * contesta el servidor— se apagaría solo. El verde promete «cuidado, están en
+ * lo mismo que usted»; equivocarse en eso es peor que no ponerlo.
+ */
+function presente_html(array $g, string $ruta = '', int $ref = 0): string
 {
-    $aqui = (string) $g['pantalla'] === $ruta;
+    $aqui = (string) $g['pantalla'] === $ruta && (int) $g['pantalla_ref'] === $ref;
     $rotulo = $g['nombre'] . ' · está en ' . nombre_pantalla((string) $g['pantalla'])
         . ((int) $g['hace'] <= 0 ? ' · ahora mismo' : ' · visto hace ' . (int) $g['hace'] . ' min');
     return '<span class="presente' . ($aqui ? ' presente-aqui' : '') . '"'
