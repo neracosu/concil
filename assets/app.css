@@ -588,6 +588,11 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
 .presente-aqui{border-color:rgba(127,209,139,.45);color:var(--texto)}
 .presente-aqui i{background:var(--entrada);color:var(--tinta);box-shadow:0 0 0 2px rgba(127,209,139,.2)}
 
+/* Categorías anidadas: la sangría y el guioncito dicen de quién depende cada
+   una sin que haga falta leer el nombre de la madre en cada renglón. */
+.rama{display:inline-flex;align-items:center;gap:0.375rem}
+.rama-guion{width:0.75rem;height:1px;background:var(--linea-fuerte);flex:none}
+
 /* Ficha de una persona: listas cortas de dos o tres columnas —desde dónde
    entra, con qué trabaja— que no merecen el marco de una tabla entera. */
 .tabla-lista{width:100%;border-collapse:collapse}

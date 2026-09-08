@@ -319,3 +319,78 @@ function saldos_por_cuenta(array $f): array
     }
     return $filas;
 }
+
+/**
+ * Las categorías ordenadas como un árbol: cada madre seguida de sus hijas.
+ *
+ * Devuelve cada fila con `nivel` (0 raíz, 1 hija, 2 nieta) para que la
+ * pantalla sepa cuánto sangrarla. El orden lo arma PHP y no SQL porque son
+ * treinta filas y un `WITH RECURSIVE` obligaría a MySQL 8, que en un cPanel
+ * compartido no está garantizado.
+ */
+function categorias_arbol(array $filas): array
+{
+    $porPadre = [];
+    foreach ($filas as $f) {
+        $porPadre[(int) ($f['padre_id'] ?? 0)][] = $f;
+    }
+    $orden = [];
+    $bajar = function (int $padre, int $nivel) use (&$bajar, &$orden, $porPadre): void {
+        foreach ($porPadre[$padre] ?? [] as $f) {
+            $f['nivel'] = $nivel;
+            $orden[] = $f;
+            $bajar((int) $f['id'], $nivel + 1);
+        }
+    };
+    $bajar(0, 0);
+
+    // Una hija cuya madre se borró quedaría fuera del recorrido: se rescata
+    // al final en vez de desaparecer de la pantalla sin explicación.
+    if (count($orden) < count($filas)) {
+        $vistos = array_column($orden, 'id');
+        foreach ($filas as $f) {
+            if (!in_array($f['id'], $vistos)) {
+                $f['nivel'] = 0;
+                $orden[] = $f;
+            }
+        }
+    }
+    return $orden;
+}
+
+/**
+ * Nombre completo de una categoría, con su madre delante.
+ * «Comisiones bancarias › Punto de venta › débito» dice sola dónde está;
+ * suelta, «débito» no significa nada en una lista desplegable.
+ */
+function categoria_camino(array $porId, int $id): string
+{
+    $partes = [];
+    $vistos = [];
+    while ($id > 0 && isset($porId[$id]) && !isset($vistos[$id])) {
+        $vistos[$id] = true;
+        array_unshift($partes, (string) $porId[$id]['nombre']);
+        $id = (int) ($porId[$id]['padre_id'] ?? 0);
+    }
+    return implode(' › ', $partes);
+}
+
+/** ¿Sería $posible madre de $hija sin formar un círculo? */
+function madre_valida(array $porId, int $hija, int $posible): bool
+{
+    if ($posible === 0) {
+        return true;
+    }
+    if ($posible === $hija || !isset($porId[$posible])) {
+        return false;
+    }
+    $sube = (int) ($porId[$posible]['padre_id'] ?? 0);
+    $saltos = 0;
+    while ($sube > 0 && $saltos++ < 20) {
+        if ($sube === $hija) {
+            return false;           // la supuesta madre cuelga de la hija
+        }
+        $sube = (int) ($porId[$sube]['padre_id'] ?? 0);
+    }
+    return true;
+}

@@ -524,6 +524,7 @@ function migrar(): void
     columna_si_falta($pdo, 'pagos_factura', 'usuario_id', 'INT NULL');
 
     sembrar_comisiones($pdo);
+    sembrar_desglose_comisiones($pdo);
     sembrar_maestro($pdo);
 
     // Al final del todo: si algo de arriba falló, la próxima petición reintenta.

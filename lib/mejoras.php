@@ -41,6 +41,25 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7', 'tipo' => 'nuevo',
+            'titulo' => 'Las comisiones del banco, desglosadas como las lleva contabilidad',
+            'resumen' => 'Hasta ahora todo lo que cobraba el banco caía en un solo renglón. Ahora se '
+                       . 'separa en lo que contabilidad distingue: lo que cobran por servicios, lo del '
+                       . 'punto de venta —y dentro, débito, crédito y electrónico—, el pago móvil, los '
+                       . 'traspasos y la intervención cambiaria. El total de comisiones sigue siendo uno '
+                       . 'solo; ahora se puede abrir.',
+            'detalles' => [
+                'Una categoría puede depender de otra. En Categorías se elige de cuál, y el listado '
+                . 'las enseña colgadas de su madre.',
+                'En Reportes hay un corte nuevo, «Categoría principal», que suma cada familia entera.',
+                'Se reconocen los 69 conceptos del catálogo que pasó contabilidad, de los once bancos.',
+                'Dos renglones quedaron apagados a la espera de que contabilidad los confirme: se ven '
+                . 'en Reglas y se encienden con un clic.',
+                'Lo que ya estaba clasificado no se movió de sitio. Para que las reglas nuevas alcancen '
+                . 'lo viejo, use «Volver a aplicar las reglas» en la pantalla de Reglas.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.6.1', 'tipo' => 'mejora',
             'titulo' => 'Haga clic en un nombre y vea todo lo de esa persona',
             'resumen' => 'El registro decía qué se hizo pero no siempre quién. Ahora el nombre está en '

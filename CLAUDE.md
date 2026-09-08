@@ -174,6 +174,28 @@ y todo `factura_id` que llegue de un formulario se comprueba con
 que comprobarlo contra la sede** antes de usarlo: el `cuenta_id` de la carga y
 el `movimiento_id` al anotar un proveedor permitían tocar otra unidad.
 
+**Las categorías se anidan, y el desglose de comisiones vive en `seed.php`.**
+`categorias.padre_id` cuelga una categoría de otra; la madre sigue siendo una
+categoría normal, así que lo ya clasificado en ella no se mueve. El árbol lo
+arma `categorias_arbol()` en PHP y no un `WITH RECURSIVE`: son treinta filas y
+ese SQL obligaría a MySQL 8, que en un cPanel compartido no está garantizado.
+Al borrar una madre, las hijas **suben** al sitio que ocupaba, no se quedan
+sueltas. `madre_valida()` impide el círculo de colgar una categoría de su
+propia hija: pasaría a no dibujarse nunca y no habría cómo deshacerlo.
+
+El desglose que pidió contabilidad —los 69 conceptos de los once bancos— está
+en `reglas_desglose_comisiones()`. **La prioridad es el todo**: gana la primera
+regla que coincide, y la comodín de comisiones está en 70. Las nuevas van en
+12, salvo las que tienen que adelantarse a reglas que ya existían en 10, que
+van en 8. Si añades una, comprueba contra qué se está peleando antes de elegir
+el número.
+
+**Un patrón corto se lleva por delante los cobros.** `P2C` a secas parecía
+razonable y alcanzaba 3.555 textos del Bicentenario: casi todos `PAG P2C …`,
+que es el cobro que entra, no su comisión. Quedó como `COM( \w+)? P2C`. Antes
+de dar por buena una regla, cuenta cuántos textos **distintos** de los
+extractos reales alcanza; si son cientos, algo está mal.
+
 **Las comisiones tienen dos caminos y hay que respetar los dos.** La mayoría de
 los bancos las nombra y basta una regla de texto; Banesco cobra la comisión del
 pago móvil con el mismo concepto que el pago, así que solo se distingue por ser

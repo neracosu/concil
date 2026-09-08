@@ -486,7 +486,7 @@ assets/
 | `pagos_factura` | Qué movimiento cubrió qué factura y por cuánto, en bolívares y en la moneda de la factura, con la tasa congelada |
 | `cuentas` | Cuentas bancarias: banco, número, titular, RIF, saldo de arranque y su sede |
 | `formatos` | Huellas de formato aprendidas, con su mapeo de columnas |
-| `categorias` | Tipos de gasto, agrupados y con color |
+| `categorias` | Tipos de gasto, agrupados, con color y **anidables**: `padre_id` cuelga una de otra |
 | `reglas` | Patrones que asignan categoría y beneficiario automáticamente |
 | `importaciones` | Historial de cargas con conteos de nuevos y repetidos |
 | `movimientos` | Los movimientos, con su clasificación y justificación |

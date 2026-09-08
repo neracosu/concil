@@ -12,6 +12,13 @@ $cortes = [
     'cuenta'       => ['Cuenta',       'c.nombre',                               '"#6b82c4"',                      'c.id'],
     'mes'          => ['Mes',          'DATE_FORMAT(m.fecha, "%Y-%m")',          '"#d4a857"',                      'NULL'],
     'grupo'        => ['Grupo',        'COALESCE(cat.grupo, "Sin clasificar")',  '"#c83bff"',                      'NULL'],
+    // Las comisiones se desglosan en subcategorías, pero muchas veces lo que
+    // se quiere es el total de la familia. Dos saltos bastan: el árbol tiene
+    // tres niveles y un tercero lo decidiría una persona, no una regla.
+    'madre'        => ['Categoría principal',
+                       'COALESCE(abuela.nombre, madre.nombre, cat.nombre, "Sin clasificar")',
+                       'COALESCE(abuela.color, madre.color, cat.color, "#ffd166")',
+                       'COALESCE(abuela.id, madre.id, cat.id, 0)'],
 ];
 $corte = isset($cortes[$_GET['corte'] ?? '']) ? $_GET['corte'] : 'categoria';
 [$rotulo, $exprSel, $exprColor, $exprId] = $cortes[$corte];
@@ -25,6 +32,8 @@ $sql = "SELECT COALESCE($exprSel, '— sin indicar —') clave, $exprColor color
           FROM movimientos m
           JOIN cuentas c ON c.id = m.cuenta_id
      LEFT JOIN categorias cat ON cat.id = m.categoria_id
+     LEFT JOIN categorias madre  ON madre.id  = cat.padre_id
+     LEFT JOIN categorias abuela ON abuela.id = madre.padre_id
      LEFT JOIN proveedores prov ON prov.id = m.proveedor_id
          WHERE $w
       GROUP BY clave
