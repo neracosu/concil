@@ -103,9 +103,9 @@ encabezado_html('Categorías', 'categorias', count($lista) . ' categorías activ
             <td><span class="rama" style="padding-left:<?= $nivel * 1.375 ?>rem"><?php if ($nivel > 0): ?><i class="rama-guion"></i><?php endif ?><span class="etq"><i style="background:<?= e($c['color']) ?>"></i><?= e($c['nombre']) ?></span></span></td>
             <td class="der num"><?= number_format((int) $c['usos'], 0, ',', '.') ?></td>
             <td class="der num"><?= bs((float) $c['total'], 0) ?></td>
-            <td style="text-align:right;white-space:nowrap">
+            <td class="acciones-fijas">
               <a class="btn btn-sm" href="?r=movimientos&categoria=<?= $c['id'] ?>&tipo=D">Ver</a>
-              <a class="btn btn-sm" href="?r=categorias&editar=<?= $c['id'] ?>">Editar</a>
+              <a class="btn btn-sm" href="?r=categorias&editar=<?= $c['id'] ?>#ficha">Editar</a>
               <form method="post" style="display:inline">
                 <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
                 <input type="hidden" name="id" value="<?= $c['id'] ?>">
@@ -121,7 +121,7 @@ encabezado_html('Categorías', 'categorias', count($lista) . ' categorías activ
   </div>
 
   <div class="tarjeta">
-    <h2><?= $editar ? 'Editar categoría' : 'Nueva categoría' ?></h2>
+    <h2 id="ficha"><?= $editar ? 'Editar categoría' : 'Nueva categoría' ?></h2>
     <form method="post" class="pila">
       <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
       <input type="hidden" name="accion" value="guardar">

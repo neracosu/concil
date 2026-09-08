@@ -172,9 +172,9 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
               <span class="origen" style="display:block"><?= $sal['fuente'] === 'banco' ? 'según el banco'
                   : ($sal['fuente'] === 'calculado' ? 'calculado' : 'falta saldo inicial') ?></span></td>
             <td class="der num" style="color:<?= $c['pend'] > 0 ? 'var(--pendiente)' : 'var(--tenue)' ?>"><?= number_format((int) $c['pend'], 0, ',', '.') ?></td>
-            <td style="text-align:right;white-space:nowrap">
+            <td class="acciones-fijas">
               <a class="btn btn-sm" href="?r=movimientos&cuenta=<?= $c['id'] ?>">Ver</a>
-              <a class="btn btn-sm" href="?r=cuentas&editar=<?= $c['id'] ?>">Editar</a>
+              <a class="btn btn-sm" href="?r=cuentas&editar=<?= $c['id'] ?>#ficha">Editar</a>
               <form method="post" style="display:inline">
                 <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
                 <input type="hidden" name="id" value="<?= $c['id'] ?>">
@@ -234,7 +234,7 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
   <?php endif ?>
 
   <div class="tarjeta">
-    <h2><?= $editar ? 'Editar cuenta' : 'Nueva cuenta' ?></h2>
+    <h2 id="ficha"><?= $editar ? 'Editar cuenta' : 'Nueva cuenta' ?></h2>
     <form method="post" class="pila">
       <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
       <input type="hidden" name="accion" value="guardar">

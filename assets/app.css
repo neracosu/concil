@@ -256,6 +256,23 @@ a.cifra:hover{border-color:var(--linea-fuerte);background:var(--panel-2)}
 /* ---------- Tablas ---------- */
 .marco-tabla{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);overflow:hidden}
 .tabla-scroll{overflow-x:auto}
+/* La última columna es la de los botones —Ver, Editar, Borrar— y con una tabla
+   ancha se iba fuera de la pantalla: alguien con 22 cuentas creía que no se
+   podían editar, porque no vio que la tabla se desliza. Se queda pegada a la
+   derecha, siempre a la vista, con una sombra que dice que hay más detrás. */
+.tabla-scroll table td.acciones-fijas,
+.tabla-scroll table th.acciones-fijas{
+  position:sticky;right:0;z-index:2;background:var(--panel);
+  box-shadow:-10px 0 12px -8px var(--sombra);
+  white-space:nowrap;text-align:right;
+}
+.tabla-scroll table thead th.acciones-fijas{background:var(--panel-2)}
+.tabla-scroll table tbody tr:hover td.acciones-fijas{background:var(--panel-2)}
+@media (max-width:640px){
+  /* En un teléfono la columna pegada se comería media pantalla. */
+  .tabla-scroll table td.acciones-fijas,
+  .tabla-scroll table th.acciones-fijas{position:static;box-shadow:none}
+}
 table{width:100%;border-collapse:collapse;font-size:0.9062rem}
 thead th{
   text-align:left;padding:11px 12px;font-size:0.75rem;letter-spacing:.1em;text-transform:uppercase;

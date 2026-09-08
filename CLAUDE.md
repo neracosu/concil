@@ -398,6 +398,14 @@ resuelto con un `[hidden]{display:none !important}` al principio de `app.css`;
 si escribes `display` en una clase que también se oculta por atributo, ya está
 cubierto.
 
+**Los botones de un renglón van en `td.acciones-fijas`.** Esa clase pega la
+última columna al borde derecho de la tabla, con sombra para que se vea que hay
+más detrás. Sin eso, en una tabla más ancha que la pantalla los botones se van
+fuera y no se descubren: con 22 cuentas cargadas, el usuario dio por hecho que
+no se podían editar. Y el enlace de editar lleva `#ficha`, que es el ancla del
+formulario: si no, la página recarga arriba, el formulario queda abajo y parece
+que el botón no hizo nada.
+
 **44 px es el mínimo de lo que se pulsa.** Es lo que piden las guías de
 accesibilidad (WCAG 2.5.5) y lo que usan Apple y Material. Los renglones del
 menú van a 46 y `.btn-grande` a 48, para la acción principal de cada pantalla.

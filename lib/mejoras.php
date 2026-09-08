@@ -41,6 +41,19 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7.6', 'tipo' => 'correccion',
+            'titulo' => 'Los botones de cada renglón ya no se esconden al lado',
+            'resumen' => 'Con muchas cuentas o muchas categorías, la tabla se hace más ancha que la '
+                       . 'pantalla y los botones de Ver, Editar y Borrar quedaban fuera, a la derecha. '
+                       . 'Había que descubrir que la tabla se desliza. Ahora se quedan pegados al '
+                       . 'borde, siempre a la vista. Y al pulsar Editar, la pantalla lo lleva al '
+                       . 'formulario en vez de dejarlo buscándolo.',
+            'detalles' => [
+                'Pasa en Cuentas y en Categorías, que son las de más columnas.',
+                'En el teléfono no se pegan: se comerían media pantalla.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7.5', 'tipo' => 'correccion',
             'titulo' => 'El panel abría en un mes futuro, y el contador se quedaba en 999+',
             'resumen' => 'Al cargar el semestre aparecieron cinco cargos del punto de venta fechados '
