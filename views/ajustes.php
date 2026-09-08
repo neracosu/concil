@@ -59,11 +59,17 @@ $stats = $pdo->query("SELECT COUNT(*) movs,
         MIN(m.fecha) f1, MAX(m.fecha) f2 FROM movimientos m WHERE " . filtro_sede())->fetch();
 $peso = $pdo->query("SELECT ROUND(SUM(data_length + index_length)/1048576, 2) mb
                        FROM information_schema.TABLES WHERE table_schema = DATABASE()")->fetchColumn();
-$log = ultimo_rastro(25);
-$fallos = fallos_recientes(25);
+$log = $soyMaestro ? ultimo_rastro(25) : [];
+/* Los fallos, la bitácora y las rutas del servidor son cosa de quien lleva el
+   sistema: un código de fallo enseña en qué archivo y en qué línea se rompió, y
+   la bitácora dice desde qué conexión trabaja cada quien. Lo demás de esta
+   pantalla —el PIN de uno, las tasas, el estado— lo puede ver cualquiera. */
+$soyMaestro = es_maestro();
+$fallos = $soyMaestro ? fallos_recientes(25) : [];
 $pendInicial = ajuste('pin_inicial_pendiente') === '1';
 
-encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
+encabezado_html('Ajustes', 'ajustes',
+    $soyMaestro ? 'Acceso, estado del sistema y bitácora' : 'Su clave de entrada y el estado del sistema');
 ?>
 <div class="rejilla rejilla-3" style="margin-bottom:16px">
   <div class="cifra"><div class="rotulo">Movimientos</div>
@@ -149,6 +155,7 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
     </details>
   </div>
 
+  <?php if ($soyMaestro): ?>
   <div class="tarjeta">
     <h2>Si algo falla</h2>
     <?php if ($fallos === []): ?>
@@ -189,7 +196,9 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
       </div>
     <?php endif ?>
   </div>
+  <?php endif ?>
 
+  <?php if ($soyMaestro): ?>
   <div class="tarjeta">
     <h2>Dónde viven los datos</h2>
     <dl style="margin:0">
@@ -212,8 +221,10 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
       Para respaldar, usa el asistente de copias de seguridad de cPanel o exporta desde phpMyAdmin.
     </p>
   </div>
+  <?php endif ?>
 </div>
 
+<?php if ($soyMaestro): ?>
 <div class="marco-tabla" style="margin-top:16px">
   <div class="tabla-scroll">
     <table>
@@ -243,4 +254,5 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
     </form>
   </div>
 </div>
+<?php endif ?>
 <?php pie_html(); ?>

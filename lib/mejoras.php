@@ -52,6 +52,8 @@ function mejoras(): array
                 'Si aparece una conexión que esa persona no reconoce, es la señal de que alguien más '
                 . 'está usando su clave.',
                 'La bitácora de Ajustes ya dice quién hizo cada cosa y con qué equipo.',
+                'En Ajustes, el registro de fallos, la bitácora y las rutas del servidor los ve '
+                . 'solo el maestro. Cada quien sigue teniendo ahí su clave, las tasas y el estado.',
             ],
         ],
         [
