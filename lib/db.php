@@ -179,7 +179,6 @@ function migrar(): void
         UNIQUE KEY uq_mov (firma, ocurrencia),
         KEY idx_mov_fecha  (fecha),
         KEY idx_mov_cuenta (cuenta_id, fecha),
-        KEY idx_mov_estado (tipo, estado),
         KEY idx_mov_cat    (categoria_id),
         CONSTRAINT fk_mov_cuenta FOREIGN KEY (cuenta_id)      REFERENCES cuentas(id)       ON DELETE CASCADE,
         CONSTRAINT fk_mov_imp    FOREIGN KEY (importacion_id) REFERENCES importaciones(id) ON DELETE SET NULL,
@@ -238,6 +237,8 @@ function migrar(): void
     if (!indice_existe($pdo, 'movimientos', 'idx_mov_ctf')) {
         $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_ctf (cuenta_id, tipo, fecha, categoria_id)');
     }
+    // Este DROP se queda aunque el CREATE de arriba ya no lo cree: las bases
+    // que existían antes del 08/09/2026 sí lo tienen.
     // idx_mov_estado (tipo, estado) no lo usa ninguna consulta: la columna estado
     // se escribe pero nunca se lee —el filtro «pendiente/conciliado» de la
     // interfaz mira categoria_id, no esta columna—. Y además hacía daño: el

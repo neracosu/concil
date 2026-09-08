@@ -32,6 +32,9 @@ banco no explica.
 - [Control de duplicados](#control-de-duplicados)
 - [Saldos](#saldos)
 - [Tasa del dólar](#tasa-del-dólar)
+- [Hora](#hora)
+- [Usuarios y rastro](#usuarios-y-rastro)
+- [Registro de fallos](#registro-de-fallos)
 - [Seguridad](#seguridad)
 - [Respaldo y restauración](#respaldo-y-restauración)
 - [Rendimiento](#rendimiento)
@@ -463,6 +466,7 @@ views/
   repetidos.php        Pagos que pueden haber llegado dos veces
   usuarios.php         Alta de personas, quién está trabajando y su último rastro
   auditoria.php        El rastro completo con filtros, para auditar a fondo
+  persona.php          Ficha de una persona: desde dónde entra y todo lo que ha hecho
   presencia.php        Quién está dentro y dónde, en JSON, para el latido en vivo
   perfil.php           Su nombre, su PIN y lo que ha hecho
   mejoras.php          Historial de lo que ha ido recibiendo el sistema
@@ -492,7 +496,8 @@ assets/
 | `movimientos` | Los movimientos, con su clasificación y justificación |
 | `bitacora` | Accesos, importaciones, correcciones y exportaciones, con IP, navegador y huella de la sesión |
 | `visitas` | El recorrido: una línea por pantalla abierta, para reconstruir una jornada |
-| `ajustes` | Hash del PIN, intentos fallidos, bloqueo |
+| `tasas` | La tasa del BCV, una fila por día de calendario; `origen = 'manual'` no la pisa la sincronización |
+| `ajustes` | Hash del PIN, intentos fallidos, bloqueo, versión del esquema |
 
 El esquema se crea y se actualiza solo, en `migrar()` (`lib/db.php`). Las
 columnas nuevas se añaden con `columna_si_falta()`, que consulta
@@ -506,10 +511,17 @@ Una regla asocia un patrón con una categoría y, opcionalmente, un beneficiario
 | Campo | Significado |
 |---|---|
 | `campo` | Dónde busca: `concepto`, `nota` (la nota del archivo) o `referencia` |
-| `tipo` | `contiene`, `empieza`, `termina`, `igual` o `regex` |
-| `patron` | Texto ya normalizado, o expresión regular |
-| `prioridad` | Menor gana; las de comisiones usan 10 para vencer a las generales |
+| `tipo` | `contiene`, `empieza`, `termina`, `igual`, `regex` o `proporcion` |
+| `patron` | Texto ya normalizado, expresión regular, o el porcentaje si es `proporcion` |
+| `prioridad` | Menor gana. Las de comisiones van en 10; el desglose por subcategoría, en 8 y 12; la comodín que se lleva todo lo que diga «COM», en 70 |
 | `cuenta_id` | Restringe la regla a una sola cuenta, si hace falta |
+| `activa` | Una regla se puede dejar apagada: se ve en la pantalla y se enciende de un clic. Se usa para las que están esperando que contabilidad las confirme |
+
+`proporcion` es distinta de las demás: no mira el texto de un movimiento aislado
+sino su monto frente al de otro con la misma referencia, así que no pasa por
+`casar_regla()` sino por `aplicar_comisiones()`, en una pasada aparte. Existe
+porque Banesco cobra la comisión del pago móvil **con el mismo concepto que el
+pago**, y lo único que la distingue es ser el 0,3 % de él.
 
 La comparación ocurre sobre el texto normalizado por `norm()`: mayúsculas, sin
 acentos y sin puntuación. Por eso `COM/LIQ/TDD` se guarda como `COM LIQ TDD`, y
@@ -526,6 +538,13 @@ corrupto `COMISI N CR DITO INMEDIATO`.
 
 Gana la primera regla que coincide, ordenando por prioridad y luego por id. Las
 reglas solo se aplican a débitos; ver [Decisiones de diseño](#decisiones-de-diseño).
+
+**Las categorías se anidan.** `categorias.padre_id` cuelga una categoría de
+otra, y la madre sigue siendo una categoría normal: lo ya clasificado en ella no
+se mueve. Se usa para el desglose de comisiones que lleva contabilidad —cobro
+por servicios, punto de venta con su débito, crédito y electrónico, pago móvil,
+traspasos, transferencias e intervención cambiaria— y el reporte trae un corte
+«Categoría principal» que vuelve a sumar cada familia entera.
 
 **Sugerencias automáticas.** La pantalla de reglas propone reglas a partir de las
 notas que ya venían escritas en los propios extractos y siguen sin clasificar.
@@ -627,8 +646,21 @@ dentro de `bitacora()`, así que las llamadas repartidas por la aplicación no
 tuvieron que cambiar para empezar a dejar rastro con nombre.
 
 **Presencia en vivo.** Cada página deja una marca de quién es y en qué pantalla
-está. En Usuarios se ve quién está trabajando ahora y en qué, para saber sobre
-qué está cada quien sin tener que preguntar.
+está, y el navegador la refresca cada veinte segundos. Arriba de cada pantalla
+aparece quién más está dentro, y en el menú se enciende un ojito en la sección
+donde hay alguien; si esa persona está mirando lo mismo que usted, su nombre se
+marca en verde. No late con la pestaña de fondo ni tras cinco minutos sin tocar
+nada, así que una pestaña olvidada deja de contar como presente —y su sesión
+caduca a su hora, como debe—.
+
+**El rastro sirve para auditar.** Cada anotación guarda además desde qué IP, con
+qué navegador y sistema, en qué pantalla y una huella de la sesión, que es lo
+que permite seguir una visita de principio a fin. Con el rastro de navegación
+encendido queda también una línea por pantalla abierta. Todo eso se consulta en
+**Rastro y auditoría** (solo el maestro), con filtros y descarga a Excel; y
+haciendo clic en cualquier nombre se abre **la ficha de esa persona**: desde qué
+conexiones entra, con qué equipos trabaja, en qué se le va el tiempo y su
+historial completo.
 
 **Mi perfil** es de todos: el nombre con el que se firma y el PIN propio. Nadie
 necesita al maestro para cambiar su clave.
@@ -711,7 +743,7 @@ Medido sobre 6.496 movimientos, en PHP 8.3 con OPcache activo:
 |---|---|
 | Importar 6.496 movimientos (5 archivos) | 0,56 s |
 | Leer un XLSX de 4.667 filas | 4 MB de memoria |
-| Cualquier pantalla de la aplicación | 40–130 ms |
+| Cualquier pantalla de la aplicación | 29–40 ms |
 
 Decisiones que sostienen esas cifras:
 
@@ -721,14 +753,39 @@ Decisiones que sostienen esas cifras:
   viaje por fila (3,2× más rápido que la versión inicial).
 - Paginación y agregados **en el servidor**: la tabla nunca envía más de 60 filas
   al navegador.
-- Índices sobre `fecha`, `(cuenta_id, fecha)`, `(tipo, estado)` y `categoria_id`.
+- Índices pensados uno a uno, no por si acaso: ver abajo.
 
-Activar OPcache, donde esté disponible, reduce el tiempo de render alrededor de
-un tercio.
+### Con cinco años de movimientos encima
+
+Se probó con **500.000 movimientos** sintéticos —unos cinco años al ritmo
+actual—, y lo que salió cambió cuatro cosas del código:
+
+| Pantalla | Antes | Después |
+|---|---|---|
+| Panel | 18 s | 0,8 s |
+| Cuentas | 15 s | 0,5 s |
+| Lista de movimientos | — | 13× más rápida |
+
+- **Un índice de más hace daño.** `idx_mov_estado (tipo, estado)` no lo usaba
+  ninguna lectura —la columna `estado` se escribe y nunca se consulta; el filtro
+  «pendiente/conciliado» mira `categoria_id`— y el optimizador lo prefería para
+  `tipo='D' AND cuenta_id IN (…)`, leyendo 251.000 filas una a una. **Se quitó**,
+  y esas consultas bajaron 15×. Antes de añadir un índice, comprobar con
+  `EXPLAIN` que el que ya hay no se vuelve la mala opción.
+- **Nada de una consulta por cuenta**: `saldos_de_cuentas()` resuelve en una
+  pasada lo que un bucle de `saldo_cuenta()` tardaba 9 s en hacer.
+- **Ordenar y unir no se mezclan**: la lista pide primero los ids de la página
+  —sin una sola unión, todo dentro del índice— y después los datos.
+- **Lo que no se puede reclamar, no se calcula**: el aviso de montos repetidos
+  mira los últimos 180 días.
+
+Al medir en hosting compartido hay que tomar la mediana de varias tomas: la
+misma pantalla puede dar 1,1 s y 6,4 s seguidas. OPcache está activo desde el
+31/08/2026 y reduce el render alrededor de un tercio.
 
 ## Visita guiada
 
-La aplicación incluye un recorrido de 22 pasos que **navega solo entre las diez
+La aplicación incluye un recorrido de 35 pasos que **navega solo entre las diez
 secciones**, señalando con un foco qué hace cada una. Está escrito para personas
 que no trabajan con sistemas: sin jerga técnica y explicando qué gana quien lo
 usa, no qué hace el programa.
@@ -772,7 +829,9 @@ banco.
   comparar nombres de banco, que es más débil.
 - **Los créditos se guardan pero no se clasifican.** Se consultan con el filtro
   de tipo. Activarlos es quitar el filtro `tipo = 'D'`, sin volver a importar.
-- **Un solo PIN, sin usuarios.** La bitácora registra acciones, no autores.
+- **La copia de seguridad no sale del servidor.** Hay respaldo diario
+  automático, pero vive en el mismo disco que la base: protege de un borrado, no
+  de que se dañe el disco.
 - **Borrar una unidad de negocio no arrastra sus cuentas**: `cuentas.sede_id` no
   tiene clave foránea. Hoy no se pueden borrar desde la interfaz; si algún día
   se añade ese botón, hay que resolverlo antes.
