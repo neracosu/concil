@@ -8,6 +8,7 @@ exigir_login();
 $paso = 'subir';
 $lote = [];
 $resultados = [];
+$errFila = [];      // índice del archivo → qué le falta, para señalarlo en su tarjeta
 
 $limite = limite_subida();
 
@@ -93,12 +94,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    /* ---------- Volver a la pantalla anterior sin perder lo subido ---------- */
+    if ($accion === 'reintentar') {
+        $lote = $_SESSION['lote'] ?? [];
+        $paso = $lote === [] ? 'subir' : 'confirmar';
+    }
+
     /* ---------- Paso 2: importar ---------- */
     if ($accion === 'importar') {
         $lote = $_SESSION['lote'] ?? [];
         $elegidas = (array) ($_POST['cuenta'] ?? []);
         $nuevas   = (array) ($_POST['cuenta_nueva'] ?? []);
         $omitir   = (array) ($_POST['omitir'] ?? []);
+
+        // Nada se importa hasta que todos los archivos tengan a dónde ir. Antes
+        // se empezaba de una y el primer error se llevaba por delante el lote
+        // entero: los archivos ya subidos se borraban y la pantalla de
+        // resultado no tenía vuelta atrás, así que había que subirlo todo otra
+        // vez solo por no haberle puesto nombre a una cuenta.
+        $errFila = [];
+        foreach ($lote as $i => $a) {
+            if (!$a['ok'] || isset($omitir[$i]) || !is_file($a['ruta'])) {
+                continue;
+            }
+            $elegida = (string) ($elegidas[$i] ?? '');
+            if ($elegida === 'nueva' || (int) $elegida <= 0) {
+                if ((trim((string) ($nuevas[$i] ?? '')) ?: $a['cuenta']) === '') {
+                    $errFila[$i] = 'Escriba cómo se va a llamar esta cuenta. Sin nombre no se puede crear, ni elegirla después.';
+                }
+            }
+        }
+        if ($errFila !== []) {
+            $paso = 'confirmar';
+            $mensaje = ['tipo' => 'mal', 'texto' => 'Falta el nombre de ' . count($errFila)
+                . ' cuenta(s). Sus archivos siguen aquí: complete lo que falta y vuelva a darle a importar.'];
+        }
+    }
+
+    if ($accion === 'importar' && $errFila === []) {
+        $fallidos = [];     // los que no entraron, para poder reintentar sin volver a subir
 
         foreach ($lote as $i => $a) {
             if (!$a['ok'] || isset($omitir[$i]) || !is_file($a['ruta'])) {
@@ -153,9 +187,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $resultados[] = $r;
             } catch (Throwable $ex) {
                 $resultados[] = ['nombre' => $a['nombre'], 'error' => $ex->getMessage()];
+                $fallidos[$i] = true;
             }
         }
-        limpiar_lote();
+        // Los que entraron ya no hacen falta. Los que fallaron se quedan en el
+        // servidor para poder corregir el destino y reintentar sin volver a
+        // subirlos: es lo que antes obligaba a empezar de cero.
+        limpiar_lote($fallidos === [] ? null : array_keys($fallidos));
         $paso = 'resultado';
         $tot = array_sum(array_column($resultados, 'insertados'));
         bitacora('importacion', count($resultados) . ' archivo(s), ' . $tot . ' movimientos nuevos');
@@ -166,14 +204,28 @@ if ($paso === 'subir') {
     limpiar_lote();
 }
 
-function limpiar_lote(): void
+/**
+ * Borra los archivos del lote. Con $conservar se guardan esos índices, que son
+ * los que fallaron: sin archivo no hay forma de reintentar y quien carga tiene
+ * que volver a subirlo todo.
+ */
+function limpiar_lote(?array $conservar = null): void
 {
-    foreach ($_SESSION['lote'] ?? [] as $a) {
+    $queda = [];
+    foreach ($_SESSION['lote'] ?? [] as $i => $a) {
+        if ($conservar !== null && in_array($i, $conservar, true)) {
+            $queda[$i] = $a;
+            continue;
+        }
         if (!empty($a['ruta']) && is_file($a['ruta'])) {
             @unlink($a['ruta']);
         }
     }
-    unset($_SESSION['lote']);
+    if ($queda === []) {
+        unset($_SESSION['lote']);
+    } else {
+        $_SESSION['lote'] = $queda;
+    }
     purgar_subidas();
 }
 
@@ -233,7 +285,11 @@ encabezado_html('Cargar extractos', 'carga',
     </p>
   </div>
 
-<?php elseif ($paso === 'confirmar'): $lote = $_SESSION['lote'] ?? []; ?>
+<?php elseif ($paso === 'confirmar'): $lote = $_SESSION['lote'] ?? [];
+      // Lo que ya venía elegido en el intento anterior: si la pantalla se
+      // repinta por un error, nadie tiene que volver a escribirlo.
+      $prevCuenta = (array) ($_POST['cuenta'] ?? []);
+      $prevNombre = (array) ($_POST['cuenta_nueva'] ?? []); ?>
   <form method="post">
     <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
     <input type="hidden" name="accion" value="importar">
@@ -278,6 +334,9 @@ encabezado_html('Cargar extractos', 'carga',
                           fn($c) => norm((string) $c['banco']) === norm($a['banco'])));
                       if (count($mismas) === 1) { $sug = (int) $mismas[0]['id']; }
                   }
+                  if (isset($prevCuenta[$i])) {
+                      $sug = $prevCuenta[$i] === 'nueva' ? null : (int) $prevCuenta[$i];
+                  }
                   foreach ($cuentasLista as $c): ?>
                     <option value="<?= $c['id'] ?>" <?= $sug === (int) $c['id'] ? 'selected' : '' ?>>
                       <?= e($c['nombre']) ?><?= $c['banco'] ? ' — ' . e($c['banco']) : '' ?></option>
@@ -287,9 +346,13 @@ encabezado_html('Cargar extractos', 'carga',
               </div>
               <div>
                 <label>Nombre si es cuenta nueva</label>
-                <input type="text" name="cuenta_nueva[<?= $i ?>]" value="<?= e($a['cuenta']) ?>" maxlength="120">
+                <input type="text" name="cuenta_nueva[<?= $i ?>]" maxlength="120"
+                       value="<?= e($prevNombre[$i] ?? $a['cuenta']) ?>" placeholder="Ej.: BANESCO corriente">
               </div>
             </div>
+            <?php if (isset($errFila[$i])): ?>
+              <div class="aviso aviso-mal" style="margin-top:14px"><b>Falta un dato.</b> <?= e($errFila[$i]) ?></div>
+            <?php endif ?>
             <?php $chequeos = comprobaciones($a); if ($chequeos !== []): ?>
               <ul class="comprobaciones">
                 <?php foreach ($chequeos as $c): ?>
@@ -354,7 +417,7 @@ encabezado_html('Cargar extractos', 'carga',
     </div>
     <div class="acciones" style="margin-top:16px">
       <button class="btn btn-oro">Importar a la base</button>
-      <a class="btn" href="?r=carga">Cancelar</a>
+      <a class="btn" href="?r=carga">← Volver a elegir archivos</a>
     </div>
   </form>
 
@@ -392,7 +455,14 @@ encabezado_html('Cargar extractos', 'carga',
     </div>
   </div>
   <div class="acciones" style="margin-top:16px">
-    <a class="btn btn-oro" href="?r=pendientes">Ir a justificar</a>
+    <?php if (($_SESSION['lote'] ?? []) !== []): ?>
+      <form method="post" style="display:contents">
+        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+        <input type="hidden" name="accion" value="reintentar">
+        <button class="btn btn-oro">← Corregir y volver a intentar</button>
+      </form>
+    <?php endif ?>
+    <a class="btn <?= ($_SESSION['lote'] ?? []) === [] ? 'btn-oro' : '' ?>" href="?r=pendientes">Ir a justificar</a>
     <a class="btn" href="?r=carga">Cargar más archivos</a>
     <a class="btn" href="?r=panel">Ver el panel</a>
   </div>
