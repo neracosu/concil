@@ -29,11 +29,19 @@
     return '?r=' + encodeURIComponent(ruta) + '&guia=' + paso;
   }
 
+  /* Un ancla que existe pero está escondida —la barra de quién está trabajando
+     cuando no hay nadie más— no sirve para señalar: se salta igual que si no
+     estuviera. getClientRects() da cero cuando el elemento no se ve. */
+  function ancla(sel) {
+    var el = document.querySelector(sel);
+    return el && el.getClientRects().length ? el : null;
+  }
+
   function arrancar(desde) {
     // Si el paso de entrada no tiene a quién señalar, se avanza al siguiente,
     // pero solo dentro de esta misma sección: los de otras se resuelven al navegar.
     while (desde < PASOS.length - 1 && PASOS[desde].ruta === RUTA
-           && PASOS[desde].sel && !document.querySelector(PASOS[desde].sel)) {
+           && PASOS[desde].sel && !ancla(PASOS[desde].sel)) {
       desde++;
     }
     if (PASOS[desde].ruta !== RUTA) {          // el salto nos dejó en otra sección
@@ -79,7 +87,7 @@
 
     /** Sitúa el recorte y la tarjeta respecto al elemento señalado. */
     function colocar(p) {
-      var el = p.sel ? document.querySelector(p.sel) : null;
+      var el = p.sel ? ancla(p.sel) : null;
 
       if (!el) {                       // paso sin objetivo: tarjeta al centro
         foco.style.opacity = '0';
@@ -136,7 +144,7 @@
       var n = i + paso;
       // Salta los pasos de esta misma sección cuyo objetivo no está presente.
       while (n >= 0 && n < PASOS.length && PASOS[n].ruta === RUTA
-             && PASOS[n].sel && !document.querySelector(PASOS[n].sel)) {
+             && PASOS[n].sel && !ancla(PASOS[n].sel)) {
         n += (paso >= 0 ? 1 : -1);
       }
       if (n >= PASOS.length) { salir(true); return; }
@@ -186,7 +194,7 @@
       pie.appendChild(botones);
       carta.appendChild(pie);
 
-      var el = p.sel ? document.querySelector(p.sel) : null;
+      var el = p.sel ? ancla(p.sel) : null;
       if (el) {
         el.scrollIntoView({ behavior: suave ? 'smooth' : 'auto', block: 'center' });
         setTimeout(function () { colocar(p); seguir.focus({ preventScroll: true }); }, suave ? 300 : 0);

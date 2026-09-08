@@ -9,7 +9,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pin = preg_replace('/\D/', '', implode('', (array) ($_POST['d'] ?? [])));
         // La suma se comprueba antes que el PIN: si no, un robot sabría por el
         // mensaje si acertó el PIN aunque fallara la suma.
-        if (captcha_necesario() && !captcha_correcto((string) ($_POST['suma'] ?? ''))) {
+        $conSuma = captcha_necesario();
+        if ($conSuma && !captcha_correcto((string) ($_POST['suma'] ?? ''))) {
+            // La suma fallida se anota aparte: es la huella de un robot
+            // probando en serie, no la de alguien que se equivocó de tecla.
+            bitacora('captcha_fallido', 'La suma no cuadró · ' . strlen((string) $pin) . ' dígitos tecleados');
             $error = 'La suma no es correcta. Inténtalo otra vez.';
         } else {
             $usuario = verificar_pin((string) $pin);
@@ -17,8 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 entrar($usuario);
                 redirigir('?r=panel');
             }
-            bitacora('acceso_fallido', 'PIN incorrecto');
+            // Cuántos dígitos llegaron —nunca cuáles— y por qué intento va:
+            // seis dígitos seguidos y a deshora no es lo mismo que dos.
+            // Al bloquear, el contador vuelve a cero, así que ese caso se
+            // cuenta aparte o el registro diría «intento 0 de 5».
             $espera = bloqueado();
+            bitacora('acceso_fallido', 'PIN incorrecto · ' . strlen((string) $pin) . ' dígitos tecleados'
+                . ' · ' . ($espera > 0
+                    ? 'intento ' . MAX_INTENTOS . ' de ' . MAX_INTENTOS . ', quedó bloqueado'
+                    : 'intento ' . (int) ajuste('intentos', '0') . ' de ' . MAX_INTENTOS)
+                . ($conSuma ? ' · con suma de por medio' : ''));
             $error = $espera > 0
                 ? 'Demasiados intentos. Acceso bloqueado por ' . ceil($espera / 60) . ' minutos.'
                 : 'PIN incorrecto. Te quedan ' . (MAX_INTENTOS - (int) ajuste('intentos', '0')) . ' intentos.';
@@ -33,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="robots" content="noindex,nofollow">
 <title>Acceso · <?= e(APP_CREDITO) ?></title>
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=13">
+<link rel="stylesheet" href="assets/app.css?v=21">
 </head>
 <body>
 <div class="acceso">

@@ -42,9 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($accion === 'purgar') {
         $dias = max(1, (int) ($_POST['dias'] ?? 90));
-        $s = $pdo->prepare('DELETE FROM bitacora WHERE creado_en < DATE_SUB(NOW(), INTERVAL ? DAY)');
-        $s->execute([$dias]);
-        flash('ok', $s->rowCount() . ' registros de bitácora eliminados.');
+        $r = purgar_rastro($dias);
+        flash('ok', 'Se borraron ' . number_format($r['acciones'] + $r['pantallas'], 0, ',', '.')
+                  . ' anotaciones de hace más de ' . $dias . ' días.');
         redirigir('?r=ajustes');
     }
 }
@@ -232,7 +232,7 @@ encabezado_html('Ajustes', 'ajustes', 'Acceso, estado del sistema y bitácora');
     </table>
   </div>
   <div class="paginas">
-    <span>Últimos 25 registros</span>
+    <span>Últimos 25 registros<?= es_maestro() ? ' · <a href="?r=auditoria">ver el rastro completo</a>' : '' ?></span>
     <form method="post" style="display:flex;gap:8px;align-items:center">
       <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
       <input type="hidden" name="accion" value="purgar">

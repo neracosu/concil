@@ -102,7 +102,9 @@ if (autenticado() && ($_POST['accion'] ?? '') === 'cambiar_sede') {
 }
 
 // Lo primero de cada sesión es decir en qué unidad se va a trabajar.
-if (autenticado() && $ruta !== 'salir' && !sede_elegida()) {
+// El latido de la presencia no es una pantalla: si se le manda a elegir
+// unidad, el navegador recibe HTML donde espera datos.
+if (autenticado() && $ruta !== 'salir' && $ruta !== 'presencia' && !sede_elegida()) {
     $ruta = 'sede';
 }
 

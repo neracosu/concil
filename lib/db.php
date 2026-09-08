@@ -30,7 +30,7 @@ function db(): PDO
  * aquí**, o la migración no llegará a correr en el servidor: se salta cuando la
  * base ya dice tener esta versión.
  */
-const ESQUEMA_VERSION = 3;
+const ESQUEMA_VERSION = 5;
 
 function migrar(): void
 {
@@ -379,6 +379,55 @@ function migrar(): void
         $pdo->exec('ALTER TABLE bitacora ADD KEY idx_bit_usuario (usuario_id)');
     }
 
+    // Lo que hace falta para responder «quién, desde dónde y con qué» meses
+    // después. El agente completo se guarda crudo porque es lo que un perito
+    // pide; «dispositivo» es el mismo dato en legible, para no leer cadenas de
+    // 200 caracteres en pantalla.
+    columna_si_falta($pdo, 'bitacora', 'agente',      "VARCHAR(255) NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'bitacora', 'dispositivo', "VARCHAR(60)  NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'bitacora', 'ruta',        "VARCHAR(40)  NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'bitacora', 'metodo',      "VARCHAR(4)   NOT NULL DEFAULT ''");
+    columna_si_falta($pdo, 'bitacora', 'sede_id',     'INT NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'bitacora', 'sesion',      "CHAR(12) NOT NULL DEFAULT ''");
+    // La IP que declara el navegador, cuando llega por un proxy. Va aparte de
+    // «ip» a propósito: esa cabecera la escribe quien quiera, así que sirve de
+    // pista pero no de prueba.
+    columna_si_falta($pdo, 'bitacora', 'via',         "VARCHAR(45) NOT NULL DEFAULT ''");
+
+    // El paso a paso de cada visita. Va en su propia tabla y no en la bitácora
+    // porque son cosas distintas: la bitácora es lo que alguien cambió —se lee
+    // entera— y esto es por dónde anduvo, que crece mil veces más rápido y se
+    // limpia sin tocar lo otro.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS visitas (
+        id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+        usuario_id  INT NULL,
+        ruta        VARCHAR(40) NOT NULL DEFAULT '',
+        ref         INT NOT NULL DEFAULT 0,
+        sede_id     INT NOT NULL DEFAULT 0,
+        ip          VARCHAR(45) NOT NULL DEFAULT '',
+        dispositivo VARCHAR(60) NOT NULL DEFAULT '',
+        sesion      CHAR(12)    NOT NULL DEFAULT '',
+        creado_en   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_vis_fecha (creado_en),
+        KEY idx_vis_sesion (sesion, id)
+    ) $t");
+
+    // Un índice por usuario parecía obvio y no lo era: medido con 100.000
+    // visitas, la pantalla de auditoría siempre parte del rango de fechas y el
+    // optimizador escoge `idx_vis_fecha` incluso filtrando por persona. El de
+    // usuario no lo usaba ninguna consulta y esta tabla recibe una escritura
+    // por página, que es justo donde un índice de más se paga.
+    if (indice_existe($pdo, 'visitas', 'idx_vis_usuario')) {
+        $pdo->exec('ALTER TABLE visitas DROP INDEX idx_vis_usuario');
+    }
+
+    // Qué movimiento o qué proveedor está mirando, no solo en qué pantalla:
+    // es lo que permite avisar de que dos personas están sobre lo mismo.
+    columna_si_falta($pdo, 'usuarios', 'pantalla_ref', 'INT NOT NULL DEFAULT 0');
+    // La unidad de negocio en la que está trabajando ahora mismo. No es una
+    // asignación: es dónde está parada, y cambia cada vez que cambia de unidad.
+    columna_si_falta($pdo, 'usuarios', 'sede_activa',  'INT NOT NULL DEFAULT 0');
+
     // --------------------------------------------------------- Proveedores
     // Lo que trae el listado que exporta contabilidad. El código es el nombre
     // corto con que lo llaman («TOTTI», «40 GRADOS») y por ahí lo buscan; no es
@@ -551,11 +600,66 @@ function guardar_ajuste(string $clave, string $valor): void
     $s->execute([$clave, $valor]);
 }
 
+/**
+ * De dónde viene la petición. Se queda con REMOTE_ADDR, que es la única que no
+ * puede falsear quien llama: `X-Forwarded-For` la escribe el propio navegador
+ * si quiere. La declarada se guarda aparte, como pista.
+ */
+function ip_cliente(): string
+{
+    return mb_substr((string) ($_SERVER['REMOTE_ADDR'] ?? 'cli'), 0, 45);
+}
+
+/** La IP que dice el proxy, si hay proxy. Vacío en la mayoría de los casos. */
+function ip_declarada(): string
+{
+    foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP'] as $c) {
+        $v = trim(explode(',', (string) ($_SERVER[$c] ?? ''))[0]);
+        if ($v !== '' && $v !== ip_cliente()) {
+            return mb_substr($v, 0, 45);
+        }
+    }
+    return '';
+}
+
+/**
+ * Huella de la sesión, para poder seguir una visita entera de principio a fin.
+ * Se guarda el resumen y no el identificador: con el identificador, quien lea
+ * el registro podría hacerse pasar por esa persona; con la huella, no.
+ */
+function huella_sesion(): string
+{
+    $id = session_id();
+    return $id === '' ? '' : substr(hash('sha256', $id), 0, 12);
+}
+
+/**
+ * Deja constancia de algo que alguien hizo.
+ *
+ * Guarda además desde dónde y con qué: es lo que hace falta el día que haya
+ * que auditar en serio. Lo que **no** entra nunca aquí es el contenido de
+ * `$_POST`: por ahí viaja el PIN.
+ */
 function bitacora(string $accion, string $detalle = ''): void
 {
     // El autor sale de la sesión: así ninguna de las 18 llamadas repartidas por
     // la aplicación tuvo que cambiar para empezar a dejar rastro con nombre.
     $uid = (int) ($_SESSION['uid'] ?? 0) ?: null;
-    $s = db()->prepare('INSERT INTO bitacora (accion, detalle, ip, usuario_id) VALUES (?, ?, ?, ?)');
-    $s->execute([$accion, mb_substr($detalle, 0, 500), $_SERVER['REMOTE_ADDR'] ?? 'cli', $uid]);
+    $ua  = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $s = db()->prepare('INSERT INTO bitacora
+            (accion, detalle, ip, via, usuario_id, agente, dispositivo, ruta, metodo, sede_id, sesion)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $s->execute([
+        $accion,
+        mb_substr($detalle, 0, 500),
+        ip_cliente(),
+        ip_declarada(),
+        $uid,
+        mb_substr($ua, 0, 255),
+        dispositivo_de($ua),
+        mb_substr((string) ($GLOBALS['ruta'] ?? ''), 0, 40),
+        mb_substr((string) ($_SERVER['REQUEST_METHOD'] ?? ''), 0, 4),
+        (int) ($_SESSION['sede'] ?? 0),
+        huella_sesion(),
+    ]);
 }

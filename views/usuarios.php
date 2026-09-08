@@ -165,7 +165,7 @@ encabezado_html('Usuarios', 'usuarios',
   <h2>Lo último que ha hecho cada quien</h2>
   <div class="tabla-scroll" style="border:1px solid var(--linea);border-radius:var(--r-sm)">
     <table>
-      <thead><tr><th>Cuándo</th><th>Quién</th><th>Qué</th><th>Detalle</th></tr></thead>
+      <thead><tr><th>Cuándo</th><th>Quién</th><th>Qué</th><th>Detalle</th><th>Desde</th><th>Equipo</th></tr></thead>
       <tbody>
       <?php foreach ($rastro as $r): ?>
         <tr>
@@ -173,11 +173,18 @@ encabezado_html('Usuarios', 'usuarios',
           <td><b><?= e((string) $r['usuario']) ?></b></td>
           <td><?= e(str_replace('_', ' ', (string) $r['accion'])) ?></td>
           <td class="concepto"><span class="txt"><?= e((string) $r['detalle']) ?></span></td>
+          <td class="ref"><?= e((string) $r['ip']) ?></td>
+          <td class="ref"><?= e((string) $r['dispositivo']) ?></td>
         </tr>
       <?php endforeach ?>
       </tbody>
     </table>
   </div>
+  <p class="nota" style="margin:12px 0 0">
+    Esto es lo último, para mirarlo de un vistazo. Si necesita revisar a fondo —a qué hora entró
+    alguien, desde qué conexión, qué pantallas abrió— está todo en
+    <a href="?r=auditoria">Rastro y auditoría</a>.
+  </p>
 </div>
 
 <?php pie_html(); ?>

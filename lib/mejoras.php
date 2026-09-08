@@ -41,6 +41,25 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.6', 'tipo' => 'nuevo',
+            'titulo' => 'Quién está trabajando, y todo lo que pasa queda anotado',
+            'resumen' => 'Ahora se ve quién más está dentro y en qué pantalla está parado, con un ojito '
+                       . 'en el menú que se enciende solo. Y por detrás, el sistema anota cada cosa que '
+                       . 'se hace con su hora, la conexión desde donde se hizo y el equipo que se usó, '
+                       . 'por si algún día hay que revisar a fondo.',
+            'detalles' => [
+                'Arriba de cada pantalla aparece quién más está trabajando en este momento.',
+                'Si otra persona está mirando lo mismo que usted, su nombre se marca en verde: '
+                . 'así no se hace dos veces el mismo trabajo.',
+                'El menú enciende un ojito en la sección donde hay alguien parado.',
+                'Lo que queda por justificar se actualiza solo, sin recargar la página.',
+                'Nueva pantalla «Rastro y auditoría», solo para el maestro: quién, cuándo, desde qué '
+                . 'conexión y con qué computadora, con filtros y para bajar a Excel.',
+                'Un intento de entrada fallido ya no dice solo «PIN incorrecto»: deja constancia de '
+                . 'por qué intento iba y desde dónde vino.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.5.2', 'tipo' => 'mejora',
             'titulo' => 'Preparado para cuando haya años de movimientos',
             'resumen' => 'Hoy el sistema va rápido porque lleva pocos meses cargados. Se probó con '

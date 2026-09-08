@@ -460,7 +460,14 @@ views/
   facturas_panel.php   Fragmento con las facturas de un proveedor (sin recargar)
   cuentas.php          Cuentas bancarias y saldo de arranque
   sede.php             Elegir, crear y renombrar unidades de negocio
+  repetidos.php        Pagos que pueden haber llegado dos veces
+  usuarios.php         Alta de personas, quién está trabajando y su último rastro
+  auditoria.php        El rastro completo con filtros, para auditar a fondo
+  presencia.php        Quién está dentro y dónde, en JSON, para el latido en vivo
+  perfil.php           Su nombre, su PIN y lo que ha hecho
+  mejoras.php          Historial de lo que ha ido recibiendo el sistema
   ajustes.php          PIN, estado del sistema, bitácora
+  salir.php            Cierre de sesión
 
 assets/
   app.css              Estilos (paleta de marca, tablas densas, guía)
@@ -483,7 +490,8 @@ assets/
 | `reglas` | Patrones que asignan categoría y beneficiario automáticamente |
 | `importaciones` | Historial de cargas con conteos de nuevos y repetidos |
 | `movimientos` | Los movimientos, con su clasificación y justificación |
-| `bitacora` | Accesos, importaciones, correcciones y exportaciones |
+| `bitacora` | Accesos, importaciones, correcciones y exportaciones, con IP, navegador y huella de la sesión |
+| `visitas` | El recorrido: una línea por pantalla abierta, para reconstruir una jornada |
 | `ajustes` | Hash del PIN, intentos fallidos, bloqueo |
 
 El esquema se crea y se actualiza solo, en `migrar()` (`lib/db.php`). Las
@@ -652,7 +660,19 @@ correcto aunque la suma falle. Al quinto fallo sigue el bloqueo de 15 minutos.
 - **Defensa ante ZIP bomba**: se rechaza el archivo si su contenido declarado
   supera 400 MB antes de leer nada.
 - **`lib/` y `views/` no se sirven por web** (`.htaccess` propio en cada uno).
-- **Bitácora** de accesos, cargas, correcciones y exportaciones.
+- **Bitácora** de accesos, cargas, correcciones y exportaciones. Cada anotación
+  guarda además desde qué IP, con qué navegador y sistema, en qué pantalla y una
+  huella de la sesión, que es lo que permite seguir una visita de principio a
+  fin. De un intento fallido queda constancia de cuántos dígitos se teclearon y
+  por qué intento iba; **nunca cuáles**. La huella es un resumen del
+  identificador de sesión y no el identificador: con él, quien leyera el
+  registro podría suplantar a esa persona.
+- **La IP que se guarda como prueba es `REMOTE_ADDR`.** La que declara el
+  cliente (`X-Forwarded-For` y parecidas) va a una columna aparte, porque la
+  escribe quien quiera.
+- **Rastro de navegación** opcional: una línea por pantalla abierta. Se enciende
+  y se apaga en *Rastro y auditoría*, que solo ve el maestro; lo que alguien
+  cambia se guarda siempre. Ahí mismo se limpia lo más viejo y se baja a Excel.
 
 ## Respaldo y restauración
 

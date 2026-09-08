@@ -251,37 +251,177 @@ function activar_usuario(int $id, bool $activo): ?string
 /* Presencia: quién está dentro y en qué está trabajando ahora mismo.  */
 /* ------------------------------------------------------------------ */
 
-/** Nombre llano de cada pantalla, para que el seguimiento se lea sin traducir. */
+/**
+ * Qué navegador y qué sistema, en legible.
+ *
+ * A mano y con cuatro expresiones: meter una librería de reconocimiento por
+ * esto sería traer mil reglas para leer una cadena. El orden importa —Edge y
+ * Opera se anuncian además como Chrome, y Chrome como Safari—, así que se
+ * mira de lo más específico a lo más general.
+ */
+function dispositivo_de(string $ua): string
+{
+    if ($ua === '') {
+        return '';
+    }
+    $nav = 'Navegador desconocido';
+    foreach ([
+        'Edg/'            => 'Edge',
+        'OPR/'            => 'Opera',
+        'YaBrowser/'      => 'Yandex',
+        'SamsungBrowser/' => 'Samsung Internet',
+        'Firefox/'        => 'Firefox',
+        'CriOS/'          => 'Chrome',
+        'FxiOS/'          => 'Firefox',
+        'Chrome/'         => 'Chrome',
+        'Safari/'         => 'Safari',
+        'curl/'           => 'curl',
+    ] as $marca => $rotulo) {
+        if (str_contains($ua, $marca)) {
+            // Safari no pone su versión en «Safari/», que es el número de
+            // compilación del motor: la pone en «Version/».
+            $donde = $rotulo === 'Safari' ? 'Version/' : $marca;
+            $nav = $rotulo;
+            if (preg_match('~' . preg_quote($donde, '~') . '(\\d+)~', $ua, $m)) {
+                $nav .= ' ' . $m[1];
+            }
+            break;
+        }
+    }
+
+    $so = '';
+    foreach ([
+        'Windows NT 10' => 'Windows 10/11',
+        'Windows NT'    => 'Windows',
+        'iPhone'        => 'iPhone',
+        'iPad'          => 'iPad',
+        'Android'       => 'Android',
+        'Mac OS X'      => 'Mac',
+        'CrOS'          => 'Chromebook',
+        'Linux'         => 'Linux',
+    ] as $marca => $rotulo) {
+        if (str_contains($ua, $marca)) {
+            $so = $rotulo;
+            break;
+        }
+    }
+
+    return mb_substr($so === '' ? $nav : "$nav · $so", 0, 60);
+}
+
+/**
+ * Nombre llano de cada pantalla, para que el seguimiento se lea sin traducir.
+ *
+ * Todos van en forma de lugar y no de acción —«los pagos por justificar», no
+ * «justificando pagos»— porque el texto que los envuelve siempre dice «está
+ * en», y así la frase queda bien dicha en las tres pantallas donde aparece.
+ */
 function nombre_pantalla(string $ruta): string
 {
     return [
-        'panel'       => 'el panel',
-        'carga'       => 'cargando extractos',
-        'pendientes'  => 'justificando pagos',
-        'movimientos' => 'consultando movimientos',
-        'movimiento'  => 'revisando un movimiento',
-        'reportes'    => 'viendo reportes',
-        'reglas'      => 'las reglas',
-        'categorias'  => 'las categorías',
-        'proveedores' => 'los proveedores',
-        'proveedor'   => 'la ficha de un proveedor',
-        'cuentas'     => 'las cuentas',
-        'sede'        => 'eligiendo unidad',
-        'ajustes'     => 'los ajustes',
-        'usuarios'    => 'los usuarios',
-        'perfil'      => 'su perfil',
+        'panel'          => 'el panel',
+        'carga'          => 'la carga de extractos',
+        'pendientes'     => 'los pagos por justificar',
+        'movimientos'    => 'la lista de movimientos',
+        'movimiento'     => 'el detalle de un movimiento',
+        'repetidos'      => 'los pagos repetidos',
+        'reportes'       => 'los reportes',
+        'reglas'         => 'las reglas',
+        'categorias'     => 'las categorías',
+        'proveedores'    => 'los proveedores',
+        'proveedor'      => 'la ficha de un proveedor',
+        'facturas_panel' => 'las facturas',
+        'cuentas'        => 'las cuentas',
+        'sede'           => 'las unidades de negocio',
+        'ajustes'        => 'los ajustes',
+        'usuarios'       => 'los usuarios',
+        'auditoria'      => 'el rastro y la auditoría',
+        'mejoras'        => 'las mejoras',
+        'perfil'         => 'su perfil',
+        'salir'          => 'la salida',
     ][$ruta] ?? $ruta;
 }
 
-/** Deja constancia de dónde está quien navega. Una sola escritura por página. */
+/**
+ * A qué se refiere la pantalla que se está mirando: el movimiento, el
+ * proveedor o la factura. Sin esto solo se sabe «está en Movimientos», y lo
+ * que evita el trabajo repetido es saber que dos personas están sobre el
+ * **mismo** pago.
+ */
+function referencia_pantalla(): int
+{
+    return max(0, (int) ($_GET['id'] ?? 0));
+}
+
+/**
+ * Deja constancia de dónde está quien navega. Una escritura por página.
+ *
+ * El latido de la presencia llega por la ruta `presencia`, que no es una
+ * pantalla: cuando viene de ahí se conserva la pantalla real —la manda el
+ * navegador en `en`— y no se anota la visita, o el recorrido se llenaría de
+ * un renglón cada veinte segundos.
+ */
 function marcar_presencia(string $ruta): void
 {
     $id = (int) ($_SESSION['uid'] ?? 0);
     if ($id <= 0) {
         return;
     }
-    db()->prepare('UPDATE usuarios SET visto_en = NOW(), pantalla = ? WHERE id = ?')
-        ->execute([mb_substr($ruta, 0, 40), $id]);
+    $latido = $ruta === 'presencia';
+    $ref    = referencia_pantalla();
+    if ($latido) {
+        $ruta = preg_replace('/[^a-z_]/', '', (string) ($_GET['en'] ?? '')) ?: 'panel';
+        $ref  = max(0, (int) ($_GET['ref'] ?? 0));
+    }
+    $ruta = mb_substr($ruta, 0, 40);
+
+    db()->prepare('UPDATE usuarios
+                      SET visto_en = NOW(), pantalla = ?, pantalla_ref = ?, sede_activa = ?
+                    WHERE id = ?')
+        ->execute([$ruta, $ref, (int) ($_SESSION['sede'] ?? 0), $id]);
+
+    if (!$latido) {
+        anotar_visita($ruta, $ref);
+    }
+}
+
+/** Al cerrar sesión: se borra la marca para que deje de salir como presente. */
+function borrar_presencia(): void
+{
+    $id = (int) ($_SESSION['uid'] ?? 0);
+    if ($id > 0) {
+        db()->prepare('UPDATE usuarios SET visto_en = NULL, pantalla = \'\', pantalla_ref = 0 WHERE id = ?')
+            ->execute([$id]);
+    }
+}
+
+/** ¿Se está guardando el recorrido, pantalla por pantalla? Se puede apagar. */
+function rastro_navegacion(): bool
+{
+    return ajuste('rastro_navegacion', '1') === '1';
+}
+
+/**
+ * Una línea por pantalla abierta. Es lo que convierte la bitácora en un rastro
+ * que se puede auditar: sin esto solo consta lo que alguien cambió, no por
+ * dónde anduvo ni cuánto tiempo estuvo.
+ */
+function anotar_visita(string $ruta, int $ref = 0): void
+{
+    if (!rastro_navegacion()) {
+        return;
+    }
+    db()->prepare('INSERT INTO visitas (usuario_id, ruta, ref, sede_id, ip, dispositivo, sesion)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)')
+        ->execute([
+            (int) $_SESSION['uid'],
+            $ruta,
+            $ref,
+            (int) ($_SESSION['sede'] ?? 0),
+            ip_cliente(),
+            dispositivo_de((string) ($_SERVER['HTTP_USER_AGENT'] ?? '')),
+            huella_sesion(),
+        ]);
 }
 
 /** Quién ha dado señales de vida en los últimos minutos, y dónde. */
@@ -289,22 +429,171 @@ function usuarios_activos(int $minutos = 10): array
 {
     // Los minutos se calculan en la base y no en PHP: los dos relojes no van
     // en la misma zona horaria, y restarlos daba «visto hace 420 minutos».
-    $s = db()->prepare('SELECT id, nombre, pantalla, visto_en, maestro,
-                               TIMESTAMPDIFF(MINUTE, visto_en, NOW()) hace
-                          FROM usuarios
-                         WHERE visto_en IS NOT NULL
-                           AND visto_en > DATE_SUB(NOW(), INTERVAL ? MINUTE)
-                      ORDER BY visto_en DESC');
+    $s = db()->prepare("SELECT u.id, u.nombre, u.pantalla, u.pantalla_ref, u.visto_en, u.maestro,
+                               u.sede_activa, COALESCE(s.nombre, '') sede,
+                               TIMESTAMPDIFF(MINUTE, u.visto_en, NOW()) hace,
+                               TIMESTAMPDIFF(SECOND, u.visto_en, NOW()) hace_segs
+                          FROM usuarios u
+                     LEFT JOIN sedes s ON s.id = u.sede_activa
+                         WHERE u.visto_en IS NOT NULL
+                           AND u.visto_en > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+                      ORDER BY u.visto_en DESC");
     $s->execute([$minutos]);
     return $s->fetchAll();
+}
+
+/**
+ * Quién está trabajando ahora mismo, para los avisos en vivo.
+ *
+ * Cuatro minutos: el navegador avisa cada veinte segundos mientras la pestaña
+ * está abierta y alguien la está usando, así que quien siga ahí no se cae de
+ * la lista, y quien se levantó de la silla desaparece solo.
+ */
+function presencia_viva(bool $incluirme = false): array
+{
+    $yo = (int) ($_SESSION['uid'] ?? 0);
+    $gente = [];
+    foreach (usuarios_activos(4) as $a) {
+        if (!$incluirme && (int) $a['id'] === $yo) {
+            continue;
+        }
+        $gente[] = $a;
+    }
+    return $gente;
+}
+
+/** Cuánta gente hay en cada pantalla, para el ojito del menú. */
+function presencia_por_ruta(array $gente): array
+{
+    $mapa = [];
+    foreach ($gente as $g) {
+        $r = (string) $g['pantalla'];
+        $mapa[$r][] = (string) $g['nombre'];
+    }
+    return $mapa;
 }
 
 /** Lo último que hizo cada quien, sacado de la bitácora. */
 function ultimo_rastro(int $limite = 12): array
 {
-    return db()->query("SELECT b.accion, b.detalle, b.creado_en, b.ip,
+    return db()->query("SELECT b.accion, b.detalle, b.creado_en, b.ip, b.dispositivo, b.sesion,
                                COALESCE(u.nombre, '—') usuario
                           FROM bitacora b
                      LEFT JOIN usuarios u ON u.id = b.usuario_id
                       ORDER BY b.id DESC LIMIT $limite")->fetchAll();
+}
+
+/* ------------------------------------------------------------------ */
+/* Auditoría: el rastro completo, con filtros.                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Acciones y pantallas mezcladas en una sola línea de tiempo.
+ *
+ * Van en dos tablas pero se leen juntas, que es como se reconstruye lo que
+ * pasó: «entró, abrió el panel, abrió este movimiento, lo corrigió, salió».
+ * Siempre con un rango de fechas encima: sin él, la consulta acabaría
+ * ordenando el registro entero para enseñar cuarenta renglones.
+ */
+function rastro_filtrado(array $f, int $pagina = 1, int $porPagina = 60): array
+{
+    // Al pedir una visita concreta se quitan las fechas: la huella de la sesión
+    // ya es un filtro estrecho y va por su propio índice. Si no, «ver esta
+    // visita» de algo de hace un mes no enseñaría nada, que era justo lo que
+    // uno viene a buscar.
+    $cond = [];
+    $arg  = [];
+    if (!empty($f['sesion'])) {
+        $cond[] = 'b.sesion = ?';
+        $arg[]  = (string) $f['sesion'];
+    } else {
+        $desde = $f['desde'] ?: date('Y-m-d', strtotime('-7 days'));
+        $hasta = $f['hasta'] ?: date('Y-m-d');
+        $cond  = ['b.creado_en >= ?', 'b.creado_en < ?'];
+        $arg   = [$desde . ' 00:00:00', $hasta . ' 23:59:59'];
+    }
+
+    if (!empty($f['usuario'])) {
+        $cond[] = 'b.usuario_id = ?';
+        $arg[]  = (int) $f['usuario'];
+    }
+    if (!empty($f['ip'])) {
+        $cond[] = 'b.ip = ?';
+        $arg[]  = (string) $f['ip'];
+    }
+    $where = implode(' AND ', $cond);
+
+    $partes = [];
+    // Las acciones. `orden` es lo que permite ordenar las dos mitades juntas
+    // sin que la base tenga que mirar el texto de la fecha.
+    if ($f['que'] !== 'pantallas') {
+        $partes[] = "SELECT 'accion' clase, b.creado_en, b.usuario_id, b.accion, b.detalle,
+                            b.ip, b.dispositivo, b.agente, b.ruta, b.sesion, b.sede_id
+                       FROM bitacora b WHERE $where";
+    }
+    // El recorrido. Se disfraza de acción «pantalla» para poder unirlas.
+    if ($f['que'] !== 'acciones') {
+        $partes[] = "SELECT 'pantalla' clase, b.creado_en, b.usuario_id, 'pantalla' accion,
+                            b.ruta detalle, b.ip, b.dispositivo, '' agente, b.ruta, b.sesion, b.sede_id
+                       FROM visitas b WHERE $where";
+    }
+    if ($partes === []) {
+        return ['filas' => [], 'total' => 0, 'paginas' => 1, 'pagina' => 1];
+    }
+
+    $total = 0;
+    foreach ($partes as $p) {
+        $c = db()->prepare('SELECT COUNT(*) FROM (' . $p . ') x');
+        $c->execute($arg);
+        $total += (int) $c->fetchColumn();
+    }
+
+    $paginas = max(1, (int) ceil($total / $porPagina));
+    $pagina  = max(1, min($pagina, $paginas));
+    $salto   = ($pagina - 1) * $porPagina;
+
+    $sql = '(' . implode(') UNION ALL (', $partes) . ')
+            ORDER BY creado_en DESC, clase LIMIT ' . $porPagina . ' OFFSET ' . $salto;
+    $s = db()->prepare($sql);
+    $s->execute(count($partes) === 2 ? array_merge($arg, $arg) : $arg);
+    $filas = $s->fetchAll();
+
+    // Los nombres se pegan aparte: unir usuarios dentro de cada mitad del
+    // UNION obliga a la base a ordenar la unión entera con las dos tablas
+    // encima, y son cuatro nombres que caben en memoria.
+    $nombres = [];
+    foreach (usuarios() as $u) {
+        $nombres[(int) $u['id']] = (string) $u['nombre'];
+    }
+    $sedes = [];
+    foreach (sedes() as $sd) {
+        $sedes[(int) $sd['id']] = (string) $sd['nombre'];
+    }
+    foreach ($filas as &$fila) {
+        $fila['usuario'] = $nombres[(int) $fila['usuario_id']] ?? '—';
+        $fila['sede']    = $sedes[(int) $fila['sede_id']] ?? '';
+    }
+    unset($fila);
+
+    return ['filas' => $filas, 'total' => $total, 'paginas' => $paginas, 'pagina' => $pagina];
+}
+
+/** Las visitas de una sesión, para reconstruirla de principio a fin. */
+function resumen_sesion(string $sesion): array
+{
+    $s = db()->prepare("SELECT MIN(creado_en) inicio, MAX(creado_en) fin, COUNT(*) pantallas,
+                               MAX(ip) ip, MAX(dispositivo) dispositivo, MAX(usuario_id) usuario_id
+                          FROM visitas WHERE sesion = ?");
+    $s->execute([$sesion]);
+    return $s->fetch() ?: [];
+}
+
+/** Borra lo más viejo de las dos tablas. Devuelve cuántas líneas se fueron. */
+function purgar_rastro(int $dias): array
+{
+    $a = db()->prepare('DELETE FROM bitacora WHERE creado_en < DATE_SUB(NOW(), INTERVAL ? DAY)');
+    $a->execute([$dias]);
+    $b = db()->prepare('DELETE FROM visitas WHERE creado_en < DATE_SUB(NOW(), INTERVAL ? DAY)');
+    $b->execute([$dias]);
+    return ['acciones' => $a->rowCount(), 'pantallas' => $b->rowCount()];
 }

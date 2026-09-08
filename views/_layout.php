@@ -4,6 +4,10 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 {
     global $mensaje;
     $pend = pendientes_total();
+    // Quién más está dentro ahora mismo. Se pinta ya servido para que la
+    // pantalla no llegue vacía y luego dé un salto cuando conteste el latido.
+    $gente   = presencia_viva();
+    $porRuta = presencia_por_ruta($gente);
     ?><!doctype html>
 <html lang="es"<?= tema() !== '' ? ' data-tema="' . e(tema()) . '"' : '' ?><?= escala() !== '' ? ' data-escala="' . e(escala()) . '"' : '' ?>>
 <head>
@@ -14,7 +18,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
 <meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=19">
+<link rel="stylesheet" href="assets/app.css?v=21">
 </head>
 <body>
 <div class="app">
@@ -56,31 +60,32 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
              como lo que es, una decisión antes de empezar. */ ?>
     <nav class="nav"<?= sede_elegida() ? '' : ' hidden' ?>>
       <div class="nav-titulo">Trabajo diario</div>
-      <a href="?r=panel"       class="<?= $ruta === 'panel' ? 'on' : '' ?>">Panel</a>
-      <a href="?r=carga"       class="<?= $ruta === 'carga' ? 'on' : '' ?>">Cargar extractos</a>
+      <a href="?r=panel"       data-ruta="panel" class="<?= $ruta === 'panel' ? 'on' : '' ?>">Panel<?= ojito_html($porRuta, 'panel') ?></a>
+      <a href="?r=carga"       data-ruta="carga" class="<?= $ruta === 'carga' ? 'on' : '' ?>">Cargar extractos<?= ojito_html($porRuta, 'carga') ?></a>
       <?php /* Es a lo que la gente entra. Mientras quede algo, el renglón se
                enciende y el número va en grande: no hay que acercarse a la
                pantalla para saber cuánto trabajo queda. */ ?>
-      <a href="?r=pendientes" class="<?= $ruta === 'pendientes' ? 'on' : '' ?><?= $pend > 0 ? ' tiene-pendientes' : '' ?>">Por justificar
-        <?php if ($pend > 0): ?><span class="cuenta"><?= $pend > 999 ? '999+' : $pend ?></span><?php endif ?></a>
-      <a href="?r=movimientos" class="<?= $ruta === "movimientos" || $ruta === "movimiento" ? "on" : "" ?>">Movimientos</a>
+      <a href="?r=pendientes" data-ruta="pendientes" class="<?= $ruta === 'pendientes' ? 'on' : '' ?><?= $pend > 0 ? ' tiene-pendientes' : '' ?>">Por justificar
+        <span class="nav-marcas"><?= ojito_html($porRuta, 'pendientes') ?><span class="cuenta" data-pend<?= $pend > 0 ? '' : ' hidden' ?>><?= $pend > 999 ? '999+' : $pend ?></span></span></a>
+      <a href="?r=movimientos" data-ruta="movimientos" class="<?= $ruta === "movimientos" || $ruta === "movimiento" ? "on" : "" ?>">Movimientos<?= ojito_html($porRuta, 'movimientos', 'movimiento') ?></a>
       <?php /* Solo aparece cuando hay algo que revisar: un enlace que casi
                siempre lleva a «no hay nada» enseña a no mirarlo. */
       $rep = contar_repetidos(); if ($rep > 0): ?>
-        <a href="?r=repetidos" class="<?= $ruta === 'repetidos' ? 'on' : '' ?>">Repetidos
-          <span class="cuenta cuenta-aviso"><?= $rep > 999 ? '999+' : $rep ?></span></a>
+        <a href="?r=repetidos" data-ruta="repetidos" class="<?= $ruta === 'repetidos' ? 'on' : '' ?>">Repetidos
+          <span class="nav-marcas"><?= ojito_html($porRuta, 'repetidos') ?><span class="cuenta cuenta-aviso" data-rep><?= $rep > 999 ? '999+' : $rep ?></span></span></a>
       <?php endif ?>
-      <a href="?r=reportes"    class="<?= $ruta === "reportes" ? "on" : "" ?>">Reportes</a>
+      <a href="?r=reportes"    data-ruta="reportes" class="<?= $ruta === "reportes" ? "on" : "" ?>">Reportes<?= ojito_html($porRuta, 'reportes') ?></a>
       <div class="nav-titulo">Configuración</div>
-      <a href="?r=reglas"     class="<?= $ruta === 'reglas' ? 'on' : '' ?>">Reglas de mapeo</a>
-      <a href="?r=categorias" class="<?= $ruta === 'categorias' ? 'on' : '' ?>">Categorías</a>
-      <a href="?r=proveedores" class="<?= $ruta === 'proveedores' ? 'on' : '' ?>">Proveedores</a>
-      <a href="?r=cuentas"    class="<?= $ruta === 'cuentas' ? 'on' : '' ?>">Cuentas</a>
-      <a href="?r=sede"       class="<?= $ruta === 'sede' ? 'on' : '' ?>">Unidades de negocio</a>
+      <a href="?r=reglas"     data-ruta="reglas" class="<?= $ruta === 'reglas' ? 'on' : '' ?>">Reglas de mapeo<?= ojito_html($porRuta, 'reglas') ?></a>
+      <a href="?r=categorias" data-ruta="categorias" class="<?= $ruta === 'categorias' ? 'on' : '' ?>">Categorías<?= ojito_html($porRuta, 'categorias') ?></a>
+      <a href="?r=proveedores" data-ruta="proveedores" class="<?= $ruta === 'proveedores' ? 'on' : '' ?>">Proveedores<?= ojito_html($porRuta, 'proveedores', 'proveedor') ?></a>
+      <a href="?r=cuentas"    data-ruta="cuentas" class="<?= $ruta === 'cuentas' ? 'on' : '' ?>">Cuentas<?= ojito_html($porRuta, 'cuentas') ?></a>
+      <a href="?r=sede"       data-ruta="sede" class="<?= $ruta === 'sede' ? 'on' : '' ?>">Unidades de negocio<?= ojito_html($porRuta, 'sede') ?></a>
       <?php if (es_maestro()): ?>
-        <a href="?r=usuarios" class="<?= $ruta === 'usuarios' ? 'on' : '' ?>">Usuarios</a>
+        <a href="?r=usuarios" data-ruta="usuarios" class="<?= $ruta === 'usuarios' ? 'on' : '' ?>">Usuarios<?= ojito_html($porRuta, 'usuarios') ?></a>
+        <a href="?r=auditoria" data-ruta="auditoria" class="<?= $ruta === 'auditoria' ? 'on' : '' ?>">Rastro y auditoría<?= ojito_html($porRuta, 'auditoria') ?></a>
       <?php endif ?>
-      <a href="?r=ajustes"    class="<?= $ruta === 'ajustes' ? 'on' : '' ?>">Ajustes</a>
+      <a href="?r=ajustes"    data-ruta="ajustes" class="<?= $ruta === 'ajustes' ? 'on' : '' ?>">Ajustes<?= ojito_html($porRuta, 'ajustes') ?></a>
       <a href="#" class="guia-abrir" data-guia-abrir>Visita guiada</a>
     </nav>
     <div class="lateral-pie">
@@ -135,6 +140,17 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       </div>
       <?php if ($acciones !== ''): ?><div class="acciones"><?= $acciones ?></div><?php endif ?>
     </div>
+    <?php /* Quién más está dentro. La caja existe siempre aunque esté vacía:
+             el latido la llena sin recargar, y si apareciera de la nada
+             empujaría la pantalla hacia abajo mientras alguien lee. */ ?>
+    <div class="presentes" data-presentes<?= $gente === [] ? ' hidden' : '' ?>>
+      <span class="presentes-rotulo">Trabajando ahora</span>
+      <div class="presentes-gente" data-presentes-gente>
+        <?php foreach ($gente as $g): ?>
+          <?= presente_html($g, $ruta) ?>
+        <?php endforeach ?>
+      </div>
+    </div>
     <?php $ayuda = ayuda_pantalla($ruta); if ($ayuda !== ''): ?>
       <div class="ayuda-pantalla">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".7" fill="currentColor" stroke="none"/></svg>
@@ -158,12 +174,62 @@ window.GUIA = <?= json_encode([
     'ruta'  => $ruta,
     'pasos' => guia_pasos(),
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+window.PRESENCIA = <?= json_encode([
+    'ruta' => $ruta,
+    'ref'  => referencia_pantalla(),
+], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
-<script src="assets/app.js?v=12"></script>
-<script src="assets/guia.js?v=11"></script>
+<script src="assets/app.js?v=13"></script>
+<script src="assets/guia.js?v=12"></script>
 </body>
 </html>
 <?php
+}
+
+/**
+ * El ojito del menú: enseña que hay alguien parado en esa pantalla.
+ *
+ * Se dibuja siempre, escondido cuando no hay nadie, porque el latido solo
+ * cambia el título y lo enseña: si tuviera que crearlo, el renglón del menú
+ * daría un salto cada vez que alguien entra o sale de esa sección.
+ */
+function ojito_html(array $porRuta, string $ruta, string $tambien = ''): string
+{
+    $quien = array_merge($porRuta[$ruta] ?? [], $tambien === '' ? [] : ($porRuta[$tambien] ?? []));
+    $n = count($quien);
+    // role + aria-label y no solo `title`: un `title` en un span no lo anuncia
+    // un lector de pantalla, y el ojito dice algo que no está escrito en otro
+    // sitio del renglón.
+    return '<span class="ojito" role="img"' . ($n === 0 ? ' hidden' : '')
+        . ' data-ojito="' . e($ruta) . '" title="' . e(quien_esta($quien)) . '"'
+        . ' aria-label="' . e(quien_esta($quien)) . '">'
+        . '<svg viewBox="0 0 24 24" aria-hidden="true">'
+        . '<path d="M1.8 12S5.6 5.5 12 5.5 22.2 12 22.2 12 18.4 18.5 12 18.5 1.8 12 1.8 12Z"/>'
+        . '<circle cx="12" cy="12" r="3.1"/></svg>'
+        . '<b' . ($n > 1 ? '' : ' hidden') . '>' . $n . '</b></span>';
+}
+
+/** «Erika Varela está aquí» o «Erika Varela y Larry Manrique están aquí». */
+function quien_esta(array $nombres): string
+{
+    if ($nombres === []) {
+        return '';
+    }
+    $ultimo = array_pop($nombres);
+    $lista  = $nombres === [] ? $ultimo : implode(', ', $nombres) . ' y ' . $ultimo;
+    return $lista . ($nombres === [] ? ' está aquí' : ' están aquí');
+}
+
+/** La pastilla de una persona conectada: su inicial y en qué anda. */
+function presente_html(array $g, string $ruta = ''): string
+{
+    $aqui = (string) $g['pantalla'] === $ruta;
+    $rotulo = $g['nombre'] . ' · está en ' . nombre_pantalla((string) $g['pantalla'])
+        . ((int) $g['hace'] <= 0 ? ' · ahora mismo' : ' · visto hace ' . (int) $g['hace'] . ' min');
+    return '<span class="presente' . ($aqui ? ' presente-aqui' : '') . '"'
+        . ' data-presente="' . (int) $g['id'] . '" title="' . e($rotulo) . '">'
+        . '<i>' . e(mb_strtoupper(mb_substr((string) $g['nombre'], 0, 1))) . '</i>'
+        . '<span>' . e((string) $g['nombre']) . '</span></span>';
 }
 
 /** Barra segmentada: cómo se reparte el dinero del período. */

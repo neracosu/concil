@@ -249,6 +249,15 @@ function guia_pasos(): array
         ],
 
         [
+            'ruta' => 'panel', 'sel' => '[data-presentes]',
+            'titulo' => 'Quién más está trabajando',
+            'texto' => 'Aquí aparece quien esté dentro en este momento, y en el menú se enciende un '
+                     . '<b>ojito</b> en la pantalla donde está parado. Si alguien está en lo mismo que usted, '
+                     . 'su nombre se marca en verde.',
+            'nota' => 'Sirve para no hacer dos veces el mismo trabajo sin darse cuenta.',
+        ],
+
+        [
             'ruta' => 'panel', 'sel' => '[data-guia="mejoras"]', 'lado' => 'derecha',
             'titulo' => 'Y qué se le ha ido añadiendo',
             'texto' => 'Al final del menú está el número de la versión que usa. <b>Haga clic ahí</b> y verá, '
@@ -288,6 +297,11 @@ function ayuda_pantalla(string $ruta): string
                        . 'Arriba a la izquierda elige con cuál está trabajando. Las categorías y las reglas '
                        . 'son las mismas para todas, así lo aprendido en una sirve en las demás.',
         'ajustes'     => 'Su clave de entrada y el estado del sistema.',
+        'usuarios'    => 'Quién puede entrar y <b>qué está haciendo cada quien ahora mismo</b>. '
+                       . 'Cada persona entra con sus propios seis dígitos, así todo lo que se hace queda a su nombre.',
+        'auditoria'   => 'Todo lo que ha pasado en el sistema, paso a paso: <b>quién, cuándo, desde qué '
+                       . 'computadora y desde qué conexión</b>. Es para el día que haya que revisar algo a fondo; '
+                       . 'para el día a día basta con la pantalla de Usuarios.',
         'mejoras'     => 'Todo lo que el sistema ha ido aprendiendo a hacer, desde que arrancó hasta hoy. '
                        . '<b>Lo más reciente, arriba.</b>',
     ][$ruta] ?? '';

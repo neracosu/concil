@@ -91,6 +91,11 @@
 
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+/* `hidden` tiene que ganarle a cualquier `display` que ponga una clase. La hoja
+   del navegador pierde siempre contra la nuestra, así que sin esto un elemento
+   marcado como oculto se seguía viendo: le pasaba al menú mientras se elige
+   unidad y le habría pasado a la barra de quién está trabajando. */
+[hidden]{display:none !important}
 body{
   font-family:var(--sans); background:var(--tinta); color:var(--texto);
   font-size:0.9688rem; line-height:1.55; -webkit-font-smoothing:antialiased;
@@ -546,6 +551,49 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
 .quien span span{color:var(--tenue);font-size:0.6875rem}
 
 /* Quién está trabajando ahora */
+/* ==========================================================================
+   Quién está trabajando ahora
+   El ojito del menú y las pastillas del encabezado. Se actualizan solas cada
+   veinte segundos; todo en rem para que crezcan con el tamaño de letra.
+   ========================================================================== */
+.nav-marcas{display:flex;align-items:center;gap:0.375rem}
+.ojito{
+  display:inline-flex;align-items:center;gap:0.1875rem;flex:none;
+  color:var(--entrada);font-size:0.75rem;font-weight:700;line-height:1;
+}
+.ojito svg{width:1.0625rem;height:1.0625rem;fill:none;stroke:currentColor;stroke-width:1.7;
+           stroke-linecap:round;stroke-linejoin:round}
+/* El párpado: late despacio, lo justo para que el ojo lo note de reojo sin
+   que estorbe a quien está leyendo la pantalla. */
+.ojito svg circle{animation:pupila 2.6s ease-in-out infinite}
+@keyframes pupila{0%,88%,100%{opacity:1}93%{opacity:.15}}
+@media (prefers-reduced-motion:reduce){.ojito svg circle{animation:none}}
+
+.presentes{display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;margin:-0.5rem 0 1.125rem}
+.presentes-rotulo{font-size:0.6875rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mudo)}
+.presentes-gente{display:flex;align-items:center;gap:0.375rem;flex-wrap:wrap}
+.presente{
+  display:inline-flex;align-items:center;gap:0.375rem;
+  padding:0.25rem 0.625rem 0.25rem 0.25rem;border-radius:1.25rem;
+  background:var(--panel-2);border:1px solid var(--linea);
+  font-size:0.8125rem;color:var(--suave);
+}
+.presente i{
+  display:grid;place-items:center;width:1.5rem;height:1.5rem;border-radius:50%;
+  background:var(--panel-3);color:var(--oro);font-style:normal;font-weight:700;font-size:0.75rem;
+  box-shadow:0 0 0 2px var(--panel);
+}
+/* Quien está en la misma pantalla que uno se marca en verde: es el aviso que
+   evita que dos personas justifiquen el mismo pago sin saberlo. */
+.presente-aqui{border-color:rgba(127,209,139,.45);color:var(--texto)}
+.presente-aqui i{background:var(--entrada);color:var(--tinta);box-shadow:0 0 0 2px rgba(127,209,139,.2)}
+
+/* En el rastro, las pantallas abiertas van más apagadas que lo que alguien
+   cambió: lo importante de una auditoría es lo segundo, y lo primero es el
+   contexto que lo rodea. */
+.fila-suave td{color:var(--mudo)}
+.fila-suave .etq{opacity:.8}
+
 .presencia{display:grid;gap:10px}
 .presencia-uno{display:flex;align-items:flex-start;gap:10px}
 .presencia-punto{flex:none;width:9px;height:9px;margin-top:6px;border-radius:50%;background:var(--entrada);

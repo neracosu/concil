@@ -316,4 +316,106 @@
   });
 
   document.querySelectorAll('[data-reparto]').forEach(recalcular);
+
+  /* ------------------------------------------------------------------
+     Quién está trabajando ahora
+     Cada veinte segundos se le pregunta al servidor quién anda dentro y en
+     qué pantalla, y se encienden los ojitos del menú. No se pregunta si la
+     pestaña está de fondo ni si hace más de cinco minutos que nadie toca
+     nada: así una pestaña olvidada deja de aparecer como «trabajando» —y de
+     paso su sesión caduca a su hora, como debe.
+     ------------------------------------------------------------------ */
+  var PRES = window.PRESENCIA;
+  if (PRES && document.querySelector('[data-presentes]')) {
+    var CADA = 20000;
+    var QUIETO = 300000;
+    var ultimoToque = Date.now();
+    var pidiendo = false;
+
+    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (ev) {
+      document.addEventListener(ev, function () { ultimoToque = Date.now(); }, { passive: true });
+    });
+
+    function texto(g) {
+      return g.nombre + ' · está en ' + g.donde +
+        (g.hace <= 0 ? ' · ahora mismo' : ' · visto hace ' + g.hace + ' min');
+    }
+
+    /* Los nombres los escribe una persona: van por textContent y por
+       setAttribute, nunca pegando HTML. */
+    function pastilla(g) {
+      var caja = document.createElement('span');
+      caja.className = 'presente' + (g.aqui ? ' presente-aqui' : '');
+      caja.setAttribute('data-presente', g.id);
+      caja.setAttribute('title', texto(g));
+      var ini = document.createElement('i');
+      ini.textContent = g.inicial;
+      var nom = document.createElement('span');
+      nom.textContent = g.nombre;
+      caja.appendChild(ini);
+      caja.appendChild(nom);
+      return caja;
+    }
+
+    function quienEsta(nombres) {
+      if (!nombres.length) return '';
+      if (nombres.length === 1) return nombres[0] + ' está aquí';
+      return nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1] + ' están aquí';
+    }
+
+    function pintar(datos) {
+      var barra = document.querySelector('[data-presentes]');
+      var caja = document.querySelector('[data-presentes-gente]');
+      if (!barra || !caja) return;
+      caja.textContent = '';
+      datos.gente.forEach(function (g) { caja.appendChild(pastilla(g)); });
+      barra.hidden = datos.gente.length === 0;
+
+      /* Los ojitos: se agrupa por pantalla y se enciende el renglón que toca.
+         El detalle de un movimiento cuenta como la lista, y la ficha de un
+         proveedor como Proveedores: quien lo mira está en esa sección. */
+      var mismo = { movimiento: 'movimientos', proveedor: 'proveedores' };
+      var porRuta = {};
+      datos.gente.forEach(function (g) {
+        var r = mismo[g.ruta] || g.ruta;
+        (porRuta[r] = porRuta[r] || []).push(g.nombre);
+      });
+      document.querySelectorAll('[data-ojito]').forEach(function (ojo) {
+        var quien = porRuta[ojo.getAttribute('data-ojito')] || [];
+        ojo.hidden = quien.length === 0;
+        ojo.setAttribute('title', quienEsta(quien));
+        ojo.setAttribute('aria-label', quienEsta(quien));
+        var n = ojo.querySelector('b');
+        if (n) { n.textContent = quien.length; n.hidden = quien.length < 2; }
+      });
+
+      /* De paso, los dos contadores del menú: si otra persona acaba de cargar
+         un extracto, lo que queda por justificar sube sin recargar. */
+      var pend = document.querySelector('[data-pend]');
+      if (pend) {
+        pend.textContent = datos.pend > 999 ? '999+' : datos.pend;
+        pend.hidden = datos.pend === 0;
+        var renglon = pend.closest('a');
+        if (renglon) renglon.classList.toggle('tiene-pendientes', datos.pend > 0);
+      }
+      var rep = document.querySelector('[data-rep]');
+      if (rep) rep.textContent = datos.rep > 999 ? '999+' : datos.rep;
+    }
+
+    function latir() {
+      if (pidiendo || document.hidden || Date.now() - ultimoToque > QUIETO) return;
+      pidiendo = true;
+      fetch('?r=presencia&en=' + encodeURIComponent(PRES.ruta) + '&ref=' + PRES.ref,
+            { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { if (d) pintar(d); })
+        .catch(function () { /* sin conexión: se reintenta al siguiente latido */ })
+        .then(function () { pidiendo = false; });
+    }
+
+    setInterval(latir, CADA);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) { ultimoToque = Date.now(); latir(); }
+    });
+  }
 })();

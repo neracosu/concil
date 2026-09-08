@@ -247,6 +247,38 @@ Guardar por `effective_date` deja el fin de semana sin fila; se guarda por
 paso correspondiente se salta en silencio. Al añadir una sección nueva, añade su
 ancla y su paso.
 
+**El rastro no guarda nunca el PIN, ni su forma.** `bitacora()` anota acción,
+autor, IP, navegador, ruta, método, sede y una huella de la sesión. De un
+intento fallido se anota **cuántos dígitos llegaron y por qué intento iba**,
+nunca cuáles. La huella de la sesión es `sha256(session_id())` recortada: con
+el identificador entero, quien leyera el registro podría suplantar a esa
+persona.
+
+**`ip` es prueba; `via` es pista.** `ip_cliente()` devuelve `REMOTE_ADDR`, lo
+único que no puede falsear quien llama. `X-Forwarded-For` y compañía las
+escribe el propio cliente, así que van a la columna `via` y se enseñan aparte.
+Hoy el servidor es Apache sin proxy delante y `via` va vacía; el día que entre
+un CDN, no hay que tocar nada.
+
+**La presencia se pregunta, no se empuja.** El navegador pide `?r=presencia`
+cada 20 s y el servidor contesta JSON. Nada de websockets: el hosting es
+compartido. El latido **no se manda** si la pestaña está de fondo o si hace
+más de cinco minutos que nadie toca nada — y eso no es solo ahorro: sin ello
+una pestaña olvidada renovaría `$_SESSION['visto']` para siempre y la sesión
+de ocho horas no caducaría nunca. `marcar_presencia()` distingue el latido de
+una visita real: por la ruta `presencia` conserva la pantalla que manda el
+navegador en `en` y **no** anota la visita.
+
+**`visitas` recibe una escritura por página.** Es la tabla que más rápido va a
+crecer. Medido con 100.000 filas: la pantalla de auditoría siempre parte del
+rango de fechas y el optimizador escoge `idx_vis_fecha` incluso filtrando por
+persona, así que el índice por usuario se quitó —era el «índice de más» de
+siempre, pagado en cada escritura—. Filtrar por una visita concreta **no lleva
+fechas**: la huella ya es estrecha y va por `idx_vis_sesion`; si le pusieras el
+rango por defecto, «ver esta visita» de algo de hace un mes no enseñaría nada.
+Se puede apagar entero desde Auditoría (`ajustes.rastro_navegacion`); lo que
+alguien **cambia** se guarda siempre y eso no se apaga.
+
 ## Tamaños y accesibilidad
 
 **Toda la hoja de estilos va en `rem`, no en píxeles.** Los 108 `font-size` se
@@ -255,6 +287,13 @@ renglones del menú) también. Es lo que hace que el selector de tamaño de letr
 —`:root[data-escala]`, tres pasos— mueva de verdad la interfaz entera y no solo
 el texto. **Si añades un `font-size` en píxeles, ese trozo se queda pequeño
 cuando alguien elija letra grande.**
+
+**`hidden` pierde contra cualquier clase con `display`.** La hoja del navegador
+tiene menos prioridad que la nuestra, así que `.nav{display:flex}` anulaba el
+atributo `hidden` y el menú se seguía viendo mientras se elige unidad. Está
+resuelto con un `[hidden]{display:none !important}` al principio de `app.css`;
+si escribes `display` en una clase que también se oculta por atributo, ya está
+cubierto.
 
 **44 px es el mínimo de lo que se pulsa.** Es lo que piden las guías de
 accesibilidad (WCAG 2.5.5) y lo que usan Apple y Material. Los renglones del
