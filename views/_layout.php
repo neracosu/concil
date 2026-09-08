@@ -61,6 +61,12 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <a href="?r=pendientes"  class="<?= $ruta === 'pendientes' ? 'on' : '' ?>">Por justificar
         <?php if ($pend > 0): ?><span class="cuenta"><?= $pend > 999 ? '999+' : $pend ?></span><?php endif ?></a>
       <a href="?r=movimientos" class="<?= $ruta === "movimientos" || $ruta === "movimiento" ? "on" : "" ?>">Movimientos</a>
+      <?php /* Solo aparece cuando hay algo que revisar: un enlace que casi
+               siempre lleva a «no hay nada» enseña a no mirarlo. */
+      $rep = contar_repetidos(); if ($rep > 0): ?>
+        <a href="?r=repetidos" class="<?= $ruta === 'repetidos' ? 'on' : '' ?>">Repetidos
+          <span class="cuenta cuenta-aviso"><?= $rep > 999 ? '999+' : $rep ?></span></a>
+      <?php endif ?>
       <a href="?r=reportes"    class="<?= $ruta === "reportes" ? "on" : "" ?>">Reportes</a>
       <div class="nav-titulo">Configuración</div>
       <a href="?r=reglas"     class="<?= $ruta === 'reglas' ? 'on' : '' ?>">Reglas de mapeo</a>

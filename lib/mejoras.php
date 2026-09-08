@@ -41,6 +41,64 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.4', 'tipo' => 'nuevo',
+            'titulo' => 'Subir el extracto es cargarlo, y si se equivocó se deshace',
+            'resumen' => 'Ya no hay que elegir el archivo y después darle a un botón: apenas lo sube, se '
+                       . 'carga. El sistema solo se detiene a preguntarle lo que el archivo no diga, como '
+                       . 'de qué banco es o a cuál de sus cuentas va. Y si cargó el que no era, se deshace '
+                       . 'entero desde la misma pantalla.',
+            'detalles' => [
+                'Lo que se pregunta se pregunta una vez: al mes siguiente ese extracto ya entra solo.',
+                'Antes de deshacer, el sistema le dice cuántos movimientos se van a quitar.',
+                'Si falta un dato, la pantalla se queda donde está y conserva el archivo: ya no hay que subirlo otra vez.',
+            ],
+        ],
+        [
+            'fecha' => '2026-09-08', 'version' => '2.3', 'tipo' => 'nuevo',
+            'titulo' => 'Le avisamos cuando una operación parece estar cargada dos veces',
+            'resumen' => 'Algunos bancos mueven al mes siguiente operaciones de los últimos días del mes. '
+                       . 'Cuando eso pasa la misma operación llega dos veces con dos fechas distintas y '
+                       . 'los totales la cuentan doble. Ahora se señalan y usted decide.',
+            'detalles' => [
+                'Aparecen en una pantalla nueva, la de Repetidos, con las dos operaciones una al lado de la otra.',
+                'Quitar la repetida deja los totales como son de verdad.',
+                'Si eran dos pagos iguales de verdad, se dejan y no se vuelven a señalar.',
+            ],
+        ],
+        [
+            'fecha' => '2026-09-08', 'version' => '2.2.4', 'tipo' => 'proteccion',
+            'titulo' => 'Varias cuentas en el mismo banco, cada extracto en la suya',
+            'resumen' => 'Una misma empresa puede tener varias cuentas en un mismo banco. El sistema solo '
+                       . 'miraba de qué banco era el archivo, así que un extracto podía entrar en la cuenta '
+                       . 'hermana sin que nadie lo notara. Ahora compara el número completo.',
+            'detalles' => [
+                'Cuando hay más de una cuenta suya en ese banco, la pantalla lo advierte en vez de adivinar.',
+                'En la lista de cuentas se ve en cuáles termina cada número, para no confundirlas.',
+                'Al crear una cuenta ya no se puede repetir un número que ya existe.',
+            ],
+        ],
+        [
+            'fecha' => '2026-09-08', 'version' => '2.2.3', 'tipo' => 'correccion',
+            'titulo' => 'Un dato que falte ya no le hace volver a subir todo',
+            'resumen' => 'Si la cuenta se quedaba sin nombre, la carga se caía, borraba los archivos ya '
+                       . 'subidos y no dejaba botón para regresar. Había que empezar de cero.',
+            'detalles' => [
+                'Ahora se comprueba que todo tenga destino antes de tocar nada.',
+                'Si algo falta, la pantalla se queda donde está y le señala cuál archivo es.',
+            ],
+        ],
+        [
+            'fecha' => '2026-09-08', 'version' => '2.2.2', 'tipo' => 'correccion',
+            'titulo' => 'Los totales los pone el sistema, no el resumen del banco',
+            'resumen' => 'Hay extractos que llegan con su propio resumen mal calculado. Mientras ese '
+                       . 'resumen mandaba, un archivo bueno se rechazaba entero y no entraba nada. Ahora '
+                       . 'el sistema suma las operaciones una por una y esa es la cifra que vale.',
+            'detalles' => [
+                'Si el resumen del banco no coincide, se le avisa, pero la carga entra igual.',
+                'Al terminar la carga se muestran las salidas y las entradas sumadas por el sistema.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-07', 'version' => '2.2.1', 'tipo' => 'correccion',
             'titulo' => 'La visita guiada con fondo claro ya deja ver el resto de la pantalla',
             'resumen' => 'Con el fondo claro, la visita guiada tapaba todo lo que no estaba explicando: '

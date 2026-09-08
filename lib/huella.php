@@ -293,6 +293,19 @@ function titular_declarado(array $filas, int $filaCab): array
 }
 
 /** Nombre del banco a partir del código de cuenta, si se reconoce. */
+/**
+ * Los bancos del país, para ofrecerlos cuando hay que escribir uno a mano.
+ * Cinco de los once extractos no dicen de qué banco son, así que alguien tiene
+ * que decirlo la primera vez; que sea eligiendo de una lista y no tecleando
+ * evita que la misma cuenta acabe con el banco escrito de tres maneras.
+ */
+function bancos_conocidos(): array
+{
+    $b = array_values(CODIGOS_BANCO);
+    sort($b, SORT_LOCALE_STRING);
+    return $b;
+}
+
 function banco_por_codigo(string $codigo): string
 {
     return CODIGOS_BANCO[$codigo] ?? '';

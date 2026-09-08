@@ -167,7 +167,11 @@ button{cursor:pointer}
 .btn:active{transform:translateY(1px)}
 .btn-oro{background:var(--oro);color:var(--sobre-oro);border-color:var(--oro);font-weight:600}
 .btn-oro:hover{background:var(--oro-claro);border-color:var(--oro-claro)}
-.btn-sm{padding:5px 10px;font-size:12.5px}
+.btn-sm{padding:6px 11px;font-size:13px}
+/* Los botones que se usan todos los días. Alto mínimo de 48px: por debajo de
+   44 cuesta acertarles, y este sistema lo usa gente que no quiere pelear con
+   la pantalla. */
+.btn-grande{padding:13px 22px;font-size:16px;font-weight:600;min-height:48px}
 .btn-peligro:hover{background:rgba(255,143,107,.14);border-color:var(--salida);color:var(--salida)}
 .btn[disabled]{opacity:.45;pointer-events:none}
 

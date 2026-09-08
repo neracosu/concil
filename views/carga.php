@@ -90,8 +90,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['lote'] = $lote;
         $paso = 'confirmar';
         if ($errores !== []) {
-            flash('mal', implode(' ', $errores));
+            $mensaje = ['tipo' => 'mal', 'texto' => implode(' ', $errores)];
         }
+
+        // Subir el extracto es cargarlo. Si el archivo no deja nada por
+        // confirmar —se sabe a qué cuenta va y su ficha está completa— entra
+        // solo, sin un botón de por medio que no aporta nada. La pantalla de
+        // preguntas aparece únicamente cuando hace falta preguntar algo.
+        $cuentas = cuentas();
+        $destinos = [];
+        $pendientes = [];
+        foreach ($lote as $i => $a) {
+            $sug = cuenta_sugerida($a, $cuentas);
+            $destinos[$i] = $sug ?? 'nueva';
+            $q = preguntas_de($a, $cuentas, $sug);
+            if ($q !== []) {
+                $pendientes[$i] = $q;
+            }
+        }
+        if ($lote !== [] && $pendientes === []) {
+            [$resultados, $fallidos] = procesar_lote($lote, $destinos, [], [], [], [[], [], []]);
+            limpiar_lote($fallidos === [] ? null : array_keys($fallidos));
+            $paso = 'resultado';
+        }
+    }
+
+    /* ---------- Deshacer una carga entera ---------- */
+    if ($accion === 'deshacer') {
+        try {
+            $r = deshacer_importacion((int) ($_POST['importacion'] ?? 0));
+            bitacora('importacion_deshecha', $r['archivo'] . ' · ' . $r['movimientos'] . ' movimientos');
+            flash('ok', 'Se deshizo la carga de «' . $r['archivo'] . '». Se quitaron '
+                . number_format($r['movimientos'], 0, ',', '.') . ' movimientos de ' . $r['cuenta'] . '.');
+        } catch (Throwable $ex) {
+            flash('mal', 'No se pudo deshacer: ' . $ex->getMessage());
+        }
+        redirigir('?r=carga');
     }
 
     /* ---------- Volver a la pantalla anterior sin perder lo subido ---------- */
@@ -132,7 +166,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($accion === 'importar' && $errFila === []) {
-        $fallidos = [];     // los que no entraron, para poder reintentar sin volver a subir
+        [$resultados, $fallidos] = procesar_lote($lote, $elegidas, $nuevas, $omitir,
+            (array) ($_POST['banco_nuevo'] ?? []),
+            [(array) ($_POST['f_numero'] ?? []), (array) ($_POST['f_titular'] ?? []), (array) ($_POST['f_rif'] ?? [])]);
+        limpiar_lote($fallidos === [] ? null : array_keys($fallidos));
+        $paso = 'resultado';
+    }
+}
+
+if ($paso === 'subir') {
+    limpiar_lote();
+}
+
+/**
+ * Importa lo que haya en el lote y devuelve [lo que pasó, los que fallaron].
+ *
+ * Vive en una función porque hay dos caminos hasta aquí: el archivo que entra
+ * solo en cuanto se sube, y el que necesitó que alguien confirmara algo antes.
+ */
+function procesar_lote(array $lote, array $elegidas, array $nuevas, array $omitir,
+                       array $bancos, array $ficha): array
+{
+    [$fNums, $fTits, $fRifs] = $ficha;
+    $resultados = [];
+    $fallidos = [];
 
         foreach ($lote as $i => $a) {
             if (!$a['ok'] || isset($omitir[$i]) || !is_file($a['ruta'])) {
@@ -141,9 +198,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 // Lo que se sepa de la ficha: lo escrito en la pantalla y, si
                 // no, lo que el propio extracto declara.
-                $fNum = trim((string) ($_POST['f_numero'][$i]  ?? '')) ?: (string) ($a['numero'] ?? '');
-                $fTit = trim((string) ($_POST['f_titular'][$i] ?? '')) ?: (string) ($a['titular'] ?? '');
-                $fRif = trim((string) ($_POST['f_rif'][$i]     ?? '')) ?: (string) ($a['rif'] ?? '');
+                $fNum = trim((string) ($fNums[$i] ?? '')) ?: (string) ($a['numero'] ?? '');
+                $fTit = trim((string) ($fTits[$i] ?? '')) ?: (string) ($a['titular'] ?? '');
+                $fRif = trim((string) ($fRifs[$i] ?? '')) ?: (string) ($a['rif'] ?? '');
+                if (str_contains($fNum, '*')) {
+                    $fNum = '';     // el número tapado no identifica la cuenta
+                }
 
                 $nueva = ($elegidas[$i] ?? '') === 'nueva' || (int) ($elegidas[$i] ?? 0) <= 0;
                 if ($nueva) {
@@ -153,7 +213,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // cuenta sin nombre no se puede ni elegir después.
                         throw new RuntimeException('escribe un nombre para la cuenta y vuelve a intentarlo.');
                     }
-                    $cid = cuenta_id($nombre, $a['banco']);
+                    // El banco puede venir escrito a mano: cinco de los once
+                    // extractos no dicen de qué banco son.
+                    $cid = cuenta_id($nombre, trim((string) ($bancos[$i] ?? '')) ?: (string) $a['banco']);
                 } else {
                     $cid = (int) $elegidas[$i];
                 }
@@ -193,15 +255,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Los que entraron ya no hacen falta. Los que fallaron se quedan en el
         // servidor para poder corregir el destino y reintentar sin volver a
         // subirlos: es lo que antes obligaba a empezar de cero.
-        limpiar_lote($fallidos === [] ? null : array_keys($fallidos));
-        $paso = 'resultado';
         $tot = array_sum(array_column($resultados, 'insertados'));
         bitacora('importacion', count($resultados) . ' archivo(s), ' . $tot . ' movimientos nuevos');
-    }
-}
-
-if ($paso === 'subir') {
-    limpiar_lote();
+    return [$resultados, $fallidos];
 }
 
 /**
@@ -250,17 +306,18 @@ encabezado_html('Cargar extractos', 'carga',
     <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
     <input type="hidden" name="accion" value="analizar">
     <div class="soltar" id="zonaSoltar" data-guia="soltar">
-      <b>Los archivos del banco van aquí</b>
-      <span>Arrástralos hasta este recuadro, o haz clic en el botón para buscarlos en tu computadora.</span>
+      <b>El extracto del banco va aquí</b>
+      <span>Arrástrelo hasta este recuadro, o haga clic para buscarlo en su computadora.
+            Se carga solo: únicamente le preguntamos lo que el archivo no diga.</span>
       <input type="file" name="archivos[]" id="archivos" multiple accept=".xlsx,.xls,.csv" hidden>
-      <label for="archivos" class="btn btn-oro" style="margin-top:18px;display:inline-flex">Elegir archivos</label>
-      <span style="display:block;margin-top:12px;font-size:12.5px;color:var(--tenue)">
-        Excel (.xlsx) o CSV · hasta <?= $limite ?> MB por archivo · puedes elegir varios a la vez
+      <label for="archivos" class="btn btn-oro btn-grande" style="margin-top:18px;display:inline-flex">Elegir el archivo</label>
+      <span style="display:block;margin-top:12px;font-size:13px;color:var(--tenue)">
+        Excel (.xlsx) o CSV · hasta <?= $limite ?> MB por archivo · puede elegir varios a la vez
       </span>
     </div>
     <ul class="lista-archivos" id="listaArchivos"></ul>
     <div class="acciones" style="margin-top:16px">
-      <button class="btn btn-oro" id="btnAnalizar">Revisar archivos</button>
+      <button class="btn btn-oro btn-grande" id="btnAnalizar">Cargar el extracto</button>
       <span id="avisoArchivos" style="align-self:center;color:var(--mudo);font-size:13px"></span>
     </div>
   </form>
@@ -289,7 +346,11 @@ encabezado_html('Cargar extractos', 'carga',
       // Lo que ya venía elegido en el intento anterior: si la pantalla se
       // repinta por un error, nadie tiene que volver a escribirlo.
       $prevCuenta = (array) ($_POST['cuenta'] ?? []);
-      $prevNombre = (array) ($_POST['cuenta_nueva'] ?? []); ?>
+      $prevNombre = (array) ($_POST['cuenta_nueva'] ?? []);
+      $prevBanco  = (array) ($_POST['banco_nuevo'] ?? []); ?>
+  <datalist id="listaBancos">
+    <?php foreach (bancos_conocidos() as $b): ?><option value="<?= e($b) ?>"><?php endforeach ?>
+  </datalist>
   <form method="post">
     <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
     <input type="hidden" name="accion" value="importar">
@@ -315,43 +376,10 @@ encabezado_html('Cargar extractos', 'carga',
                   // El número de cuenta manda sobre el nombre: el título que
                   // imprime el banco cambia de un archivo a otro y por eso una
                   // misma cuenta acababa registrada dos veces.
-                  $sug = null;
-                  $numArch = preg_replace('/\D/', '', (string) ($a['numero'] ?? ''));
-                  $tapado  = str_contains((string) ($a['numero'] ?? ''), '*');
-                  if ($numArch !== '' && !$tapado) {
-                      foreach ($cuentasLista as $c) {
-                          if (preg_replace('/\D/', '', (string) $c['numero']) === $numArch) { $sug = (int) $c['id']; }
-                      }
-                  }
-                  // El Exterior tapa el medio del número y deja ver la punta y
-                  // la cola («0115****0907»). Con eso basta para reconocer la
-                  // cuenta, y hace falta ahora que una empresa puede tener
-                  // varias en el mismo banco: sin esto habría que elegirla a
-                  // mano cada mes, que es como se cargan en la cuenta que no es.
-                  if ($sug === null && $tapado) {
-                      $ini = substr($numArch, 0, 4);
-                      $fin = substr($numArch, -4);
-                      $candidatas = [];
-                      foreach ($cuentasLista as $c) {
-                          $n = preg_replace('/\D/', '', (string) $c['numero']);
-                          if ($n !== '' && strlen($ini) === 4 && strlen($fin) === 4
-                              && str_starts_with($n, $ini) && str_ends_with($n, $fin)) {
-                              $candidatas[] = (int) $c['id'];
-                          }
-                      }
-                      if (count($candidatas) === 1) { $sug = $candidatas[0]; }
-                  }
-                  if ($sug === null) {
-                      foreach ($cuentasLista as $c) {
-                          if (norm($c['nombre']) === norm($a['cuenta'])) { $sug = (int) $c['id']; }
-                      }
-                  }
-                  // Y si no, la única cuenta que haya de ese banco. Con dos del
-                  // mismo banco no se propone ninguna: elegir por el usuario
-                  // cuál de las dos es sería adivinar.
-                  $mismoBanco = $a['banco'] === '' ? [] : array_values(array_filter($cuentasLista,
-                      fn($c) => norm((string) $c['banco']) === norm($a['banco'])));
-                  if ($sug === null && count($mismoBanco) === 1) { $sug = (int) $mismoBanco[0]['id']; }
+                  // La misma función que decide si el archivo puede entrar
+                  // solo: aquí y allá tiene que proponer lo mismo.
+                  $sug = cuenta_sugerida($a, $cuentasLista);
+                  $mismoBanco = cuentas_del_banco((string) $a['banco'], $cuentasLista);
                   if (isset($prevCuenta[$i])) {
                       $sug = $prevCuenta[$i] === 'nueva' ? null : (int) $prevCuenta[$i];
                   }
@@ -370,6 +398,15 @@ encabezado_html('Cargar extractos', 'carga',
                        value="<?= e($prevNombre[$i] ?? $a['cuenta']) ?>" placeholder="Ej.: BANESCO corriente">
               </div>
             </div>
+            <?php if ((string) $a['banco'] === ''): ?>
+              <div style="margin-top:10px;max-width:320px">
+                <label>¿De qué banco es este extracto?</label>
+                <input type="text" name="banco_nuevo[<?= $i ?>]" maxlength="120"
+                       value="<?= e($prevBanco[$i] ?? '') ?>"
+                       placeholder="Ej.: Banco de Venezuela" list="listaBancos">
+                <span class="nota">Este archivo no lo dice por ninguna parte, así que hay que escribirlo una vez.</span>
+              </div>
+            <?php endif ?>
             <?php if (count($mismoBanco) > 1): ?>
               <div class="aviso aviso-nota" style="margin-top:14px">
                 <b>Hay <?= count($mismoBanco) ?> cuentas suyas en <?= e($a['banco']) ?>.</b>
@@ -471,7 +508,20 @@ encabezado_html('Cargar extractos', 'carga',
                   <span class="nota" style="color:var(--pendiente);display:block;font-size:12px"><?= e($r['aviso']) ?></span>
                 <?php endif ?>
               <?php endif ?></td>
-            <td><?= e($r['cuenta'] ?? '—') ?></td>
+            <td><?= e($r['cuenta'] ?? '—') ?>
+              <?php if (!empty($r['importacion'])): $res = resumen_importacion((int) $r['importacion']); ?>
+                <form method="post" style="margin-top:6px">
+                  <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+                  <input type="hidden" name="accion" value="deshacer">
+                  <input type="hidden" name="importacion" value="<?= (int) $r['importacion'] ?>">
+                  <button class="btn btn-sm" data-confirmar="Se van a quitar <?= number_format($res['movimientos'] ?? 0, 0, ',', '.') ?> movimientos de esta carga<?=
+                      !empty($res['clasificados']) ? ', ' . number_format($res['clasificados'], 0, ',', '.') . ' de ellos ya clasificados' : '' ?><?=
+                      !empty($res['pagos']) ? ', y se perderá el reparto de ' . $res['pagos'] . ' pago(s) entre facturas' : '' ?>. Esto no se puede deshacer. ¿Continuar?">
+                    Deshacer esta carga
+                  </button>
+                </form>
+              <?php endif ?>
+            </td>
             <td class="der num"><?= number_format((int) ($r['filas'] ?? 0), 0, ',', '.') ?></td>
             <td class="der num" style="color:var(--entrada)"><?= number_format((int) ($r['insertados'] ?? 0), 0, ',', '.') ?></td>
             <td class="der num" style="color:var(--mudo)"><?= number_format((int) ($r['duplicados'] ?? 0), 0, ',', '.') ?></td>

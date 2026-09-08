@@ -67,6 +67,19 @@
         var n = entrada.files.length;
         aviso.textContent = n === 0 ? '' : (n === 1 ? '1 archivo listo' : n + ' archivos listos');
       }
+
+      // Subir el extracto es cargarlo: el botón de en medio no aportaba nada y
+      // había que descubrirlo. El formulario se va solo en cuanto hay archivo.
+      // El botón sigue existiendo por si este script no llega a correr.
+      if (entrada.files.length > 0 && entrada.form) {
+        zona.classList.add('subiendo');
+        var boton = document.getElementById('btnAnalizar');
+        if (boton) {
+          boton.disabled = true;
+          boton.textContent = entrada.files.length === 1 ? 'Cargando el extracto…' : 'Cargando los extractos…';
+        }
+        if (entrada.form.requestSubmit) { entrada.form.requestSubmit(); } else { entrada.form.submit(); }
+      }
     });
   }
 

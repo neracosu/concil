@@ -178,6 +178,30 @@ expresiones regulares con comodín: `COMISI.{0,3}N CR.{0,3}DITO`.
 (Banesco), negativo es débito. Cuando trae `Débito` y `Crédito` separadas, se
 toma el valor absoluto de cada una.
 
+**Subir el extracto es cargarlo.** Desde el 08/09/2026 no hay botón intermedio:
+`analizar` calcula `cuenta_sugerida()` y `preguntas_de()`, y si no queda nada
+que preguntar llama a `procesar_lote()` en la misma petición. La pantalla de
+confirmar solo aparece cuando falta algo —a qué cuenta va, de qué banco es, o
+un dato de la ficha que ni la cuenta tiene ni el archivo trae—. Si tocas una de
+esas dos funciones, acuérdate de que la vista y la decisión automática tienen
+que proponer lo mismo o el archivo entrará en un sitio distinto al que se
+enseña.
+
+**Se puede deshacer una carga entera** con `deshacer_importacion()`. Limpia a
+mano el `traspaso_id` de las parejas antes de borrar, porque esa columna no
+tiene clave foránea. Los `pagos_factura` sí caen por FK: eso es trabajo de una
+persona que se pierde, así que la pantalla lo avisa contándolo antes.
+
+**Los repetidos por fecha corrida se marcan, no se rechazan.** Bicentenario y el
+Tesoro mueven al mes siguiente operaciones de fin de mes; como la fecha entra en
+la firma, el control de duplicados no las ve. `marcar_repetidos()` corre después
+de la carga y escribe `posible_repetido` y `repetido_de`. Dos caminos: con
+referencia útil basta con ella y el monto, con ventana de 31 días —medido sobre
+los movimientos reales, no marca ni una fila de más—; sin ella (el Tesoro trae
+2.373 filas con un «0») se compara el concepto y la ventana baja a 3 días. Si
+aflojas esa segunda ventana, la pantalla de Repetidos se llena de ruido y deja
+de mirarse.
+
 **Duplicados.** La clave es `UNIQUE (firma, ocurrencia)` con `INSERT IGNORE`. La
 ocurrencia es el número de vez que esa firma aparece **dentro del archivo que se
 está importando**. No la cambies por un contador global: rompería la carga de

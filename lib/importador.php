@@ -459,6 +459,9 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     recordar_formato($info['huella']['clave'], $info['banco'], $info['huella'], $m);
     anotar_arranque($cuentaId, $info['saldo_inicial'] ?? null, $fechaMin);
     anotar_numero($cuentaId, (string) ($info['numero'] ?? ''));
+    // Los repetidos por fecha corrida se buscan con el archivo ya dentro: la
+    // pareja está en una carga anterior y hace falta compararla en la base.
+    $repetidos = marcar_repetidos($cuentaId, $impId);
     // Las comisiones que no se reconocen por su texto necesitan ver la pareja,
     // así que se resuelven cuando el archivo entero ya está guardado.
     $automaticos += aplicar_comisiones($cuentaId);
@@ -481,6 +484,7 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
         'duplicados'  => $duplicados,
         'auto'        => $automaticos,
         'ignoradas'   => $ignoradas,
+        'repetidos'   => $repetidos,
         'cuadre'      => $cuadre,
     ];
 }
@@ -620,6 +624,168 @@ function choque_de_banco(int $cuentaId, array $a): string
     return 'este archivo es de ' . $delArchivo . ' (la cuenta que trae dentro empieza por '
          . $codigo . ') y se estaba guardando en «' . $c['nombre'] . '», que es de '
          . $c['banco'] . '. No se guardó nada.';
+}
+
+/**
+ * Qué se llevaría por delante deshacer una carga. Se enseña antes de tocar
+ * nada: hay cosas que no vuelven, como el reparto de un pago entre facturas.
+ */
+function resumen_importacion(int $impId): array
+{
+    $pdo = db();
+    $s = $pdo->prepare('SELECT i.archivo, i.creado_en, i.insertados, c.nombre cuenta, c.sede_id
+                          FROM importaciones i LEFT JOIN cuentas c ON c.id = i.cuenta_id
+                         WHERE i.id = ?');
+    $s->execute([$impId]);
+    $i = $s->fetch();
+    if ($i === false || (int) $i['sede_id'] !== (int) sede_actual()) {
+        return [];      // de otra unidad de negocio, o ya no existe
+    }
+    $c = $pdo->prepare('SELECT COUNT(*) n,
+                               SUM(categoria_id IS NOT NULL) clasificados,
+                               SUM(traspaso_id IS NOT NULL) traspasos
+                          FROM movimientos WHERE importacion_id = ?');
+    $c->execute([$impId]);
+    $r = $c->fetch() ?: [];
+    $p = $pdo->prepare('SELECT COUNT(*) FROM pagos_factura p
+                          JOIN movimientos m ON m.id = p.movimiento_id
+                         WHERE m.importacion_id = ?');
+    $p->execute([$impId]);
+    return [
+        'archivo'      => (string) $i['archivo'],
+        'cuenta'       => (string) $i['cuenta'],
+        'creado_en'    => (string) $i['creado_en'],
+        'movimientos'  => (int) ($r['n'] ?? 0),
+        'clasificados' => (int) ($r['clasificados'] ?? 0),
+        'traspasos'    => (int) ($r['traspasos'] ?? 0),
+        'pagos'        => (int) $p->fetchColumn(),
+    ];
+}
+
+/**
+ * Deshace una carga entera: se lleva sus movimientos y la propia fila del
+ * historial, como si nunca se hubiera subido.
+ *
+ * Hace falta desde que el extracto se carga solo al subirlo: si alguien sube el
+ * archivo que no era, tiene que poder devolverlo sin llamar a nadie. Solo toca
+ * cargas de la unidad de negocio activa.
+ */
+function deshacer_importacion(int $impId): array
+{
+    $r = resumen_importacion($impId);
+    if ($r === []) {
+        throw new RuntimeException('Esa carga no es de esta unidad de negocio.');
+    }
+    $pdo = db();
+    $pdo->beginTransaction();
+    // La pareja de un traspaso apunta a estas filas y su columna no tiene clave
+    // foránea: si no se limpia aquí, queda señalando a un movimiento que ya no
+    // existe y el detalle del otro lado revienta al abrirlo.
+    $pdo->prepare('UPDATE movimientos p
+                     JOIN movimientos m ON m.id = p.traspaso_id
+                      SET p.traspaso_id = NULL
+                    WHERE m.importacion_id = ?')->execute([$impId]);
+    // Los pagos repartidos a facturas caen por clave foránea; va avisado en la
+    // pantalla porque eso sí es trabajo de una persona que se pierde.
+    $pdo->prepare('DELETE FROM movimientos WHERE importacion_id = ?')->execute([$impId]);
+    $pdo->prepare('DELETE FROM importaciones WHERE id = ?')->execute([$impId]);
+    $pdo->commit();
+    return $r;
+}
+
+/**
+ * Señala las operaciones que parecen ser una que ya estaba, con la fecha
+ * corrida. Bicentenario y el Tesoro mueven al mes siguiente operaciones de los
+ * últimos días del mes; como la fecha entra en la firma, el control de
+ * duplicados no las ve y la misma operación queda dos veces.
+ *
+ * No se borra nada: el equipo pidió que entren todas y se marquen, para que
+ * alguien las mire y decida. Se revisan en la pantalla de Repetidos.
+ *
+ * Dos caminos, porque no todos los bancos dan una referencia que sirva:
+ *  - Con referencia de verdad basta con ella y el monto; sobre los 8.001
+ *    movimientos reales no señala ni una fila de más ni a un mes de distancia,
+ *    así que la ventana puede ser ancha.
+ *  - Sin referencia (el Tesoro trae 2.373 filas con un «0») hay que comparar el
+ *    concepto, que sí se repite de verdad, así que la ventana se cierra a tres
+ *    días. Medido sobre esos mismos movimientos: 2 filas.
+ */
+function marcar_repetidos(int $cuentaId, int $impId): int
+{
+    $pdo = db();
+    $n = 0;
+
+    // El JOIN busca la pareja más vieja (v.id < n.id), que es la que se quedó
+    // con la fecha buena. Marcar la vieja dejaría el histórico moviéndose.
+    $comun = 'JOIN movimientos v
+                ON v.cuenta_id = n.cuenta_id AND v.id < n.id
+               AND v.debito = n.debito AND v.credito = n.credito
+               AND v.fecha <> n.fecha
+             SET n.posible_repetido = 1, n.repetido_de = v.id
+           WHERE n.importacion_id = ? AND n.posible_repetido = 0';
+
+    $fuerte = $pdo->prepare("UPDATE movimientos n $comun
+               AND v.referencia = n.referencia
+               AND ABS(DATEDIFF(v.fecha, n.fecha)) <= 31
+               AND n.referencia NOT IN ('', '0') AND CHAR_LENGTH(n.referencia) >= 4");
+    $fuerte->execute([$impId]);
+    $n += $fuerte->rowCount();
+
+    $debil = $pdo->prepare("UPDATE movimientos n $comun
+               AND v.concepto = n.concepto AND n.concepto <> ''
+               AND ABS(DATEDIFF(v.fecha, n.fecha)) <= 3
+               AND (n.referencia IN ('', '0') OR CHAR_LENGTH(n.referencia) < 4)");
+    $debil->execute([$impId]);
+    return $n + $debil->rowCount();
+}
+
+/** Cuántas operaciones están esperando que alguien diga si se repiten. */
+function contar_repetidos(): int
+{
+    return (int) db()->query('SELECT COUNT(*) FROM movimientos m
+                               WHERE m.posible_repetido = 1 AND ' . filtro_sede('m'))->fetchColumn();
+}
+
+/** Las parejas señaladas, la nueva junto a la que ya estaba. */
+function repetidos_pendientes(int $limite = 300): array
+{
+    $sql = 'SELECT n.id, n.fecha, n.referencia, n.concepto, n.debito, n.credito, n.tipo,
+                   n.categoria_id, c.nombre cuenta,
+                   v.id AS vid, v.fecha AS vfecha, v.concepto AS vconcepto,
+                   i.archivo, i.creado_en AS cargado
+              FROM movimientos n
+              JOIN cuentas c ON c.id = n.cuenta_id
+         LEFT JOIN movimientos v ON v.id = n.repetido_de
+         LEFT JOIN importaciones i ON i.id = n.importacion_id
+             WHERE n.posible_repetido = 1 AND ' . filtro_sede('n') . '
+          ORDER BY n.fecha DESC, n.id DESC
+             LIMIT ' . (int) $limite;
+    return db()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Resuelve una pareja señalada. «quitar» borra la operación repetida —que es
+ * lo que deja los totales como son de verdad— y «dejar» la da por buena.
+ * Nunca toca la vieja: la que se revisa es siempre la que llegó después.
+ */
+function resolver_repetido(int $id, string $que): bool
+{
+    $pdo = db();
+    $s = $pdo->prepare('SELECT COUNT(*) FROM movimientos m WHERE m.id = ? AND ' . filtro_sede('m'));
+    $s->execute([$id]);
+    if ((int) $s->fetchColumn() === 0) {
+        return false;               // de otra unidad de negocio
+    }
+    if ($que === 'quitar') {
+        // La pareja de un traspaso apunta aquí y su columna no tiene clave
+        // foránea: sin esto quedaría señalando a un movimiento que ya no está.
+        $pdo->prepare('UPDATE movimientos SET traspaso_id = NULL WHERE traspaso_id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM movimientos WHERE id = ?')->execute([$id]);
+        return true;
+    }
+    $pdo->prepare('UPDATE movimientos SET posible_repetido = 0, repetido_de = NULL WHERE id = ?')
+        ->execute([$id]);
+    return true;
 }
 
 /**
@@ -763,6 +929,107 @@ function fusionar_cuentas(int $origen, int $destino): array
  * un nombre que sale del título del archivo — y ese título cambia de un mes a
  * otro, que es como acabaron existiendo dos «Venezuela» distintas.
  */
+/** Las cuentas registradas de ese banco. Vacío si el archivo no dice cuál es. */
+function cuentas_del_banco(string $banco, array $cuentas): array
+{
+    if ($banco === '') {
+        return [];
+    }
+    return array_values(array_filter($cuentas, fn($c) => norm((string) $c['banco']) === norm($banco)));
+}
+
+/**
+ * A qué cuenta lleva este archivo, o null si no se puede saber sin preguntar.
+ *
+ * Nunca adivina: con dos cuentas del mismo banco y sin número que las separe,
+ * devuelve null y quien carga elige. Es lo que evita que un extracto entre en
+ * la cuenta hermana.
+ */
+function cuenta_sugerida(array $a, array $cuentas): ?int
+{
+    $crudo   = (string) ($a['numero'] ?? '');
+    $numArch = preg_replace('/\D/', '', $crudo);
+    $tapado  = str_contains($crudo, '*');
+
+    if ($numArch !== '' && !$tapado) {
+        foreach ($cuentas as $c) {
+            if (preg_replace('/\D/', '', (string) $c['numero']) === $numArch) {
+                return (int) $c['id'];
+            }
+        }
+    }
+    // El Exterior tapa el medio y deja ver la punta y la cola («0115****0907»).
+    if ($tapado && strlen($numArch) >= 8) {
+        $ini = substr($numArch, 0, 4);
+        $fin = substr($numArch, -4);
+        $cand = [];
+        foreach ($cuentas as $c) {
+            $n = preg_replace('/\D/', '', (string) $c['numero']);
+            if ($n !== '' && str_starts_with($n, $ini) && str_ends_with($n, $fin)) {
+                $cand[] = (int) $c['id'];
+            }
+        }
+        if (count($cand) === 1) {
+            return $cand[0];
+        }
+    }
+    foreach ($cuentas as $c) {
+        if (norm((string) $c['nombre']) === norm((string) $a['cuenta']) && (string) $a['cuenta'] !== '') {
+            return (int) $c['id'];
+        }
+    }
+    $mismas = cuentas_del_banco((string) $a['banco'], $cuentas);
+    return count($mismas) === 1 ? (int) $mismas[0]['id'] : null;
+}
+
+/**
+ * Qué hay que preguntarle a quien carga, porque el archivo no lo trae.
+ *
+ * Si devuelve vacío no hay nada que confirmar y el archivo entra solo: la idea
+ * es que suban el extracto y se cargue, sin pasos intermedios que no aportan.
+ * Lo que se pregunta se pregunta una vez —la ficha de la cuenta queda escrita
+ * y el mes siguiente ya no hace falta—.
+ */
+function preguntas_de(array $a, array $cuentas, ?int $sug): array
+{
+    if (empty($a['ok'])) {
+        return ['formato'];
+    }
+    $q = [];
+    if ($sug === null) {
+        $q[] = 'cuenta';
+        if ((string) $a['banco'] === '') {
+            // Cinco de los once extractos no dicen de qué banco son. Si además
+            // hay que crear la cuenta, alguien tiene que escribirlo.
+            $q[] = 'banco';
+        }
+        return $q;                  // sin cuenta no se puede mirar su ficha
+    }
+    $ficha = null;
+    foreach ($cuentas as $c) {
+        if ((int) $c['id'] === $sug) {
+            $ficha = $c;
+        }
+    }
+    if ($ficha === null) {
+        return ['cuenta'];
+    }
+    // Solo falta lo que ni la cuenta tiene ni el archivo trae: si el extracto
+    // imprime el número, no hay nada que preguntar.
+    $mezcla = [
+        'numero'  => trim((string) $ficha['numero'])  ?: (string) ($a['numero'] ?? ''),
+        'titular' => trim((string) $ficha['titular']) ?: (string) ($a['titular'] ?? ''),
+        'rif'     => trim((string) $ficha['rif'])     ?: (string) ($a['rif'] ?? ''),
+    ];
+    if (str_contains((string) $mezcla['numero'], '*')) {
+        $mezcla['numero'] = '';     // enmascarado no sirve de número
+    }
+    if (ficha_incompleta($mezcla) !== []) {
+        $q[] = 'ficha';
+    }
+    return $q;
+}
+
 function ficha_incompleta(array $cuenta): array
 {
     $falta = [];

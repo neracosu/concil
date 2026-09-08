@@ -180,6 +180,24 @@ function migrar(): void
         $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_prov (proveedor_id)');
     }
 
+    // Operaciones que parecen la misma corrida de fecha. Bicentenario y el
+    // Tesoro mueven al mes siguiente operaciones de los últimos días, y como la
+    // fecha entra en la firma, la misma operación entra dos veces sin que el
+    // control de duplicados la vea. Se marcan y se revisan a mano: el equipo
+    // pidió que entren todas y se señalen, no que se queden fuera.
+    columna_si_falta($pdo, 'movimientos', 'posible_repetido', 'TINYINT(1) NOT NULL DEFAULT 0');
+    columna_si_falta($pdo, 'movimientos', 'repetido_de',      'BIGINT NULL');
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_repetido')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_repetido (cuenta_id, posible_repetido)');
+    }
+    // Los dos caminos por los que se busca la pareja de una operación.
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_ref')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_ref (cuenta_id, referencia)');
+    }
+    if (!indice_existe($pdo, 'movimientos', 'idx_mov_concepto')) {
+        $pdo->exec('ALTER TABLE movimientos ADD KEY idx_mov_concepto (cuenta_id, concepto(60))');
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS bitacora (
         id        BIGINT AUTO_INCREMENT PRIMARY KEY,
         accion    VARCHAR(60) NOT NULL,
