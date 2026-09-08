@@ -217,6 +217,14 @@ function guia_pasos(): array
         ],
 
         [
+            'ruta' => 'panel', 'sel' => '[data-guia="cifras"]',
+            'titulo' => 'Cuando una operación llega dos veces',
+            'texto' => 'Algunos bancos mueven al mes siguiente operaciones de los últimos días del mes. '
+                     . 'Cuando eso pasa, la misma operación entra dos veces con dos fechas y los totales '
+                     . 'la cuentan doble. El sistema las <b>señala</b> y aparece <b>Repetidos</b> en el menú.',
+            'nota' => 'Solo sale cuando hay algo que revisar. Quitar la repetida deja los totales como son.',
+        ],
+        [
             'ruta' => 'reglas', 'sel' => '[data-guia="traspasos"]',
             'titulo' => 'El dinero que se mueve entre sus cuentas',
             'texto' => 'Cuando pasa plata de una cuenta suya a otra salen <b>dos apuntes</b>: uno que sale '
@@ -230,6 +238,14 @@ function guia_pasos(): array
             'texto' => 'Aquí elige cómo quiere ver la pantalla. <b>Automático</b> se pone como esté '
                      . 'su computadora; los otros dos mandan siempre.',
             'nota' => 'Lo que elija le sigue a cualquier computadora donde entre.',
+        ],
+        [
+            'ruta' => 'ajustes', 'sel' => '[data-guia="escala"]', 'lado' => 'derecha',
+            'titulo' => 'Si la letra le queda chica',
+            'texto' => 'Estas tres letras cambian el tamaño de todo: no solo el texto, también los '
+                     . 'botones y los renglones del menú. <b>Elija la que le resulte cómoda</b> y '
+                     . 'trabaje sin acercarse a la pantalla.',
+            'nota' => 'Es cosa de cada quien: cambiarlo no le mueve nada a sus compañeros.',
         ],
 
         [

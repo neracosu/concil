@@ -31,8 +31,12 @@ $ultimas = db()->query("SELECT i.*, c.nombre cuenta FROM importaciones i
                            AND EXISTS (SELECT 1 FROM movimientos m WHERE m.importacion_id = i.id)
                       ORDER BY i.id DESC LIMIT 6")->fetchAll();
 
-$acciones = '<a class="btn btn-oro" href="?r=carga">Cargar extractos</a>'
-    . ($pend > 0 ? '<a class="btn" href="?r=pendientes">Justificar ' . $pend . '</a>' : '');
+// Justificar es lo que se hace todos los días; cargar, una vez al mes. Manda
+// el trabajo pendiente, y en el tamaño grande, que es el que se encuentra.
+$acciones = ($pend > 0
+        ? '<a class="btn btn-oro btn-grande" href="?r=pendientes">Justificar ' . $pend . ' movimientos</a>'
+        : '')
+    . '<a class="btn' . ($pend > 0 ? '' : ' btn-oro') . ' btn-grande" href="?r=carga">Cargar extractos</a>';
 
 encabezado_html('Panel', 'panel',
     'Débitos del ' . e(date('d/m/Y', strtotime($f['desde'] ?: $hoy))) . ' al ' . e(date('d/m/Y', strtotime($f['hasta'] ?: $hoy))),
@@ -47,8 +51,13 @@ encabezado_html('Panel', 'panel',
     <select name="cuenta" data-auto>
       <option value="">Todas las cuentas</option>
       <?php foreach ($cuentasLista as $c): ?>
-        <option value="<?= $c['id'] ?>" <?= $f['cuenta'] === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nombre']) ?></option>
+        <option value="<?= $c['id'] ?>" <?= $f['cuenta'] === (int) $c['id'] ? 'selected' : '' ?>><?= e(etiqueta_cuenta($c)) ?></option>
       <?php endforeach ?>
+    </select>
+  </div>
+  <div><label>Banco</label>
+    <select name="banco" data-auto><option value="">Todos los bancos</option>
+      <?php foreach (bancos_de_sede() as $b): ?><option value="<?= e($b) ?>" <?= ($f['banco'] ?? '') === $b ? 'selected' : '' ?>><?= e($b) ?></option><?php endforeach ?>
     </select>
   </div>
   <div class="filtros-pie"><button class="btn">Aplicar</button></div>
@@ -65,11 +74,12 @@ encabezado_html('Panel', 'panel',
     <div class="valor" style="color:var(--entrada)"><?= number_format($pctJust, 1, ',', '.') ?>%</div>
     <div class="pie">Bs <?= bs($justificado, 0) ?></div>
   </div>
-  <div class="cifra <?= ($res['pend'] ?? 0) > 0 ? 'aviso' : '' ?>">
+  <a class="cifra <?= ($res['pend'] ?? 0) > 0 ? 'aviso' : '' ?>" href="?r=pendientes">
     <div class="rotulo">Por justificar</div>
     <div class="valor"><?= number_format((int) ($res['pend'] ?? 0), 0, ',', '.') ?></div>
     <div class="pie">Bs <?= bs((float) ($res['pend_bs'] ?? 0), 0) ?></div>
-  </div>
+    <?php if (($res['pend'] ?? 0) > 0): ?><span class="llamada">Justificarlos ahora →</span><?php endif ?>
+  </a>
   <?php $dispon = 0.0; foreach ($cuentasLista as $cc) { $dispon += saldo_cuenta((int) $cc['id'], $f['hasta'] ?: null)['saldo']; } ?>
   <div class="cifra">
     <div class="rotulo">Disponible en <?= count($cuentasLista) ?> cuentas</div>

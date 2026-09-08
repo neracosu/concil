@@ -9,6 +9,10 @@ function filtros(): array
         'desde'     => preg_match('/^\d{4}-\d{2}-\d{2}$/', $g['desde'] ?? '') ? $g['desde'] : '',
         'hasta'     => preg_match('/^\d{4}-\d{2}-\d{2}$/', $g['hasta'] ?? '') ? $g['hasta'] : '',
         'cuenta'    => (int) ($g['cuenta'] ?? 0),
+        // Todas las cuentas de un banco a la vez. Hace falta desde que una
+        // empresa puede tener cuatro cuentas en el mismo banco: mirarlas una
+        // por una para saber cuánto se movió allí no es forma.
+        'banco'     => trim((string) ($g['banco'] ?? '')),
         'categoria' => isset($g['categoria']) && $g['categoria'] !== '' ? (int) $g['categoria'] : null,
         'tipo'      => in_array($g['tipo'] ?? 'D', ['D', 'C', ''], true) ? ($g['tipo'] ?? 'D') : 'D',
         'estado'    => in_array($g['estado'] ?? '', ['pendiente', 'conciliado'], true) ? $g['estado'] : '',
@@ -30,6 +34,10 @@ function where_filtros(array $f): array
     if ($f['desde'] !== '')            { $w[] = 'm.fecha >= ?';        $p[] = $f['desde']; }
     if ($f['hasta'] !== '')            { $w[] = 'm.fecha <= ?';        $p[] = $f['hasta']; }
     if ($f['cuenta'] > 0)              { $w[] = 'm.cuenta_id = ?';     $p[] = $f['cuenta']; }
+    if (($f['banco'] ?? '') !== '') {
+        $ids = array_column(array_filter(cuentas(), fn($c) => (string) $c['banco'] === $f['banco']), 'id');
+        $w[] = $ids === [] ? '0' : 'm.cuenta_id IN (' . implode(',', array_map('intval', $ids)) . ')';
+    }
     if ($f['tipo'] !== '')             { $w[] = 'm.tipo = ?';          $p[] = $f['tipo']; }
     if ($f['benef'] !== '')            { $w[] = 'm.beneficiario = ?';  $p[] = $f['benef']; }
     if (($f['proveedor'] ?? 0) > 0)    { $w[] = 'm.proveedor_id = ?'; $p[] = $f['proveedor']; }
@@ -135,6 +143,33 @@ function cuentas(): array
     $s = db()->prepare('SELECT * FROM cuentas WHERE sede_id = ? ORDER BY nombre');
     $s->execute([$id]);
     return $s->fetchAll();
+}
+
+/**
+ * Cómo se nombra una cuenta cuando hay varias del mismo banco. El nombre solo
+ * no basta: cuatro cuentas de Banco de Venezuela se llaman parecido y lo único
+ * que las distingue es el número.
+ */
+function etiqueta_cuenta(array $c): string
+{
+    $n = preg_replace('/\D/', '', (string) ($c['numero'] ?? ''));
+    return (string) $c['nombre']
+         . ((string) ($c['banco'] ?? '') !== '' ? ' — ' . $c['banco'] : '')
+         . (strlen($n) >= 4 ? ' ·' . substr($n, -4) : '');
+}
+
+/** Los bancos donde esta unidad de negocio tiene cuentas, sin repetir. */
+function bancos_de_sede(): array
+{
+    $b = [];
+    foreach (cuentas() as $c) {
+        $n = trim((string) $c['banco']);
+        if ($n !== '' && !in_array($n, $b, true)) {
+            $b[] = $n;
+        }
+    }
+    sort($b, SORT_LOCALE_STRING);
+    return $b;
 }
 
 function categorias(): array

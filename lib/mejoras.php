@@ -41,6 +41,42 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.5', 'tipo' => 'nuevo',
+            'titulo' => 'Si la letra le queda chica, agrándela',
+            'resumen' => 'Al final del menú, junto a los colores, hay tres letras A. Elija la que le '
+                       . 'resulte cómoda y crece todo: el texto, los botones y los renglones del menú. '
+                       . 'Es cosa de cada quien y le sigue a cualquier computadora donde entre.',
+            'detalles' => [
+                'Tres tamaños: normal, grande y muy grande.',
+                'Respeta además lo que usted tenga configurado en su navegador.',
+            ],
+        ],
+        [
+            'fecha' => '2026-09-08', 'version' => '2.4.2', 'tipo' => 'mejora',
+            'titulo' => 'Encontrar una cuenta entre varias del mismo banco',
+            'resumen' => 'Cuando una empresa tiene cuatro cuentas en el mismo banco, dar con la correcta '
+                       . 'recorriendo la lista con la vista es lento y uno se equivoca. Ahora se busca '
+                       . 'escribiendo, y se puede mirar un banco entero de una vez.',
+            'detalles' => [
+                'En Cuentas, un buscador que busca por banco, número, nombre o titular.',
+                'En el panel, los movimientos, los pendientes y los reportes: filtro por banco.',
+                'En las listas, cada cuenta muestra en qué números termina, para no confundirlas.',
+            ],
+        ],
+        [
+            'fecha' => '2026-09-08', 'version' => '2.4.1', 'tipo' => 'mejora',
+            'titulo' => 'Letras y botones más grandes, y el pendiente se ve de lejos',
+            'resumen' => 'El equipo avisó que las letras del menú eran muy chicas, que costaba ubicar los '
+                       . 'botones y que el número de movimientos por justificar casi había que acercarse '
+                       . 'a la pantalla para leerlo. Se rehizo todo eso.',
+            'detalles' => [
+                'El menú se lee más grande y cada opción es más fácil de acertar.',
+                'Los botones son más grandes y están más separados entre sí.',
+                'Lo que queda por justificar va en grande, con su renglón encendido mientras quede algo.',
+                'Desde el panel se llega a justificar de un clic, y es lo primero que se ofrece.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.4', 'tipo' => 'nuevo',
             'titulo' => 'Subir el extracto es cargarlo, y si se equivocó se deshace',
             'resumen' => 'Ya no hay que elegir el archivo y después darle a un botón: apenas lo sube, se '

@@ -241,6 +241,25 @@ Guardar por `effective_date` deja el fin de semana sin fila; se guarda por
 paso correspondiente se salta en silencio. Al añadir una sección nueva, añade su
 ancla y su paso.
 
+## Tamaños y accesibilidad
+
+**Toda la hoja de estilos va en `rem`, no en píxeles.** Los 108 `font-size` se
+convirtieron el 08/09/2026, y los blancos de lo que se pulsa (botones, campos,
+renglones del menú) también. Es lo que hace que el selector de tamaño de letra
+—`:root[data-escala]`, tres pasos— mueva de verdad la interfaz entera y no solo
+el texto. **Si añades un `font-size` en píxeles, ese trozo se queda pequeño
+cuando alguien elija letra grande.**
+
+**44 px es el mínimo de lo que se pulsa.** Es lo que piden las guías de
+accesibilidad (WCAG 2.5.5) y lo que usan Apple y Material. Los renglones del
+menú van a 46 y `.btn-grande` a 48, para la acción principal de cada pantalla.
+Lo pidió el equipo: a la gente del departamento le costaba ubicar los botones.
+
+**El número de pendientes es el corazón de la pantalla.** Va en `.nav .cuenta`
+como pastilla sólida y enciende su renglón con `.tiene-pendientes` mientras
+quede algo. Antes eran 11 px sobre un fondo casi transparente y había que
+acercarse a leerlo. Si tocas eso, acuérdate de por qué está así.
+
 ## La marca
 
 El producto se llama **CONCIL** y el crédito es **by VIP Soft**. Se escribe

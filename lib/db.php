@@ -306,6 +306,9 @@ function migrar(): void
     columna_si_falta($pdo, 'usuarios', 'pantalla', "VARCHAR(40) NOT NULL DEFAULT ''");
     // Claro u oscuro. Vacío quiere decir «como esté el equipo».
     columna_si_falta($pdo, 'usuarios', 'tema',     "VARCHAR(6) NOT NULL DEFAULT ''");
+    // Tamaño de la letra. El equipo pidió poder agrandarla: hay quien trabaja
+    // aquí todo el día y a quien 15px le obliga a acercarse a la pantalla.
+    columna_si_falta($pdo, 'usuarios', 'escala',   "VARCHAR(8) NOT NULL DEFAULT ''");
 
     // La bitácora pasa a registrar también el autor, no solo la acción.
     columna_si_falta($pdo, 'bitacora', 'usuario_id', 'INT NULL');

@@ -359,7 +359,11 @@ if ($modo === 'grupos'):
         <input type="text" name="texto" value="<?= e($f['texto']) ?>" placeholder="Ej.: CORPOELEC, TRFOTJ, nombre del proveedor…"></div>
       <div><label>Cuenta</label>
         <select name="cuenta" data-auto><option value="">Todas</option>
-          <?php foreach (cuentas() as $c): ?><option value="<?= $c['id'] ?>" <?= $f['cuenta'] === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nombre']) ?></option><?php endforeach ?>
+          <?php foreach (cuentas() as $c): ?><option value="<?= $c['id'] ?>" <?= $f['cuenta'] === (int) $c['id'] ? 'selected' : '' ?>><?= e(etiqueta_cuenta($c)) ?></option><?php endforeach ?>
+        </select></div>
+      <div><label>Banco</label>
+        <select name="banco" data-auto><option value="">Todos los bancos</option>
+          <?php foreach (bancos_de_sede() as $b): ?><option value="<?= e($b) ?>" <?= ($f['banco'] ?? '') === $b ? 'selected' : '' ?>><?= e($b) ?></option><?php endforeach ?>
         </select></div>
       <div><label>Desde</label><input type="date" name="desde" value="<?= e($f['desde']) ?>"></div>
       <div><label>Hasta</label><input type="date" name="hasta" value="<?= e($f['hasta']) ?>"></div>

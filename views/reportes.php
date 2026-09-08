@@ -74,8 +74,12 @@ encabezado_html('Reportes', 'reportes',
   <div><label>Hasta</label><input type="date" name="hasta" value="<?= e($f['hasta']) ?>" data-auto></div>
   <div><label>Cuenta</label>
     <select name="cuenta" data-auto><option value="">Todas</option>
-      <?php foreach (cuentas() as $c): ?><option value="<?= $c['id'] ?>" <?= $f['cuenta'] === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nombre']) ?></option><?php endforeach ?>
+      <?php foreach (cuentas() as $c): ?><option value="<?= $c['id'] ?>" <?= $f['cuenta'] === (int) $c['id'] ? 'selected' : '' ?>><?= e(etiqueta_cuenta($c)) ?></option><?php endforeach ?>
     </select></div>
+    <div><label>Banco</label>
+      <select name="banco" data-auto><option value="">Todos los bancos</option>
+        <?php foreach (bancos_de_sede() as $b): ?><option value="<?= e($b) ?>" <?= ($f['banco'] ?? '') === $b ? 'selected' : '' ?>><?= e($b) ?></option><?php endforeach ?>
+      </select></div>
   <div><label>Tipo</label>
     <select name="tipo" data-auto>
       <option value="D" <?= $f['tipo'] === 'D' ? 'selected' : '' ?>>Débitos (salidas)</option>

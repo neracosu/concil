@@ -83,6 +83,26 @@
     });
   }
 
+  /* --- Buscar dentro de una tabla, escribiendo ---
+     Con varias cuentas del mismo banco, encontrar la correcta recorriendo la
+     lista con la vista es lento. Filtra sobre lo que ya está en la página, así
+     que responde al instante y no vuelve a preguntarle al servidor. */
+  document.querySelectorAll('[data-filtra-tabla]').forEach(function (caja) {
+    var tabla = document.getElementById(caja.getAttribute('data-filtra-tabla'));
+    if (!tabla) return;
+    caja.addEventListener('input', function () {
+      var q = caja.value.trim().toLowerCase();
+      var visibles = 0;
+      tabla.querySelectorAll('tbody tr').forEach(function (fila) {
+        var hay = q === '' || fila.textContent.toLowerCase().indexOf(q) !== -1;
+        fila.hidden = !hay;
+        if (hay) visibles++;
+      });
+      var aviso = document.getElementById('sinResultados');
+      if (aviso) aviso.hidden = visibles > 0;
+    });
+  });
+
   /* --- Confirmar acciones destructivas --- */
   document.querySelectorAll('[data-confirmar]').forEach(function (el) {
     el.addEventListener('click', function (ev) {

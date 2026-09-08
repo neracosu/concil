@@ -93,6 +93,34 @@ function fijar_tema(string $t): void
     ]);
 }
 
+/**
+ * El tamaño de letra que eligió esta persona. Vacío quiere decir el normal.
+ * Como toda la hoja de estilos va en rem, esto mueve también los botones y los
+ * renglones del menú, no solo el texto.
+ */
+function escala(): string
+{
+    $u = usuario_actual();
+    $e = (string) ($u['escala'] ?? ($_COOKIE['CONCILESCALA'] ?? ''));
+    return in_array($e, ['grande', 'enorme'], true) ? $e : '';
+}
+
+/** Deja anotado el tamaño en la ficha y en la galleta, como el modo claro. */
+function fijar_escala(string $e): void
+{
+    $e = in_array($e, ['grande', 'enorme'], true) ? $e : '';
+    $id = usuario_id_actual();
+    if ($id !== null) {
+        db()->prepare('UPDATE usuarios SET escala = ? WHERE id = ?')->execute([$e, $id]);
+    }
+    setcookie('CONCILESCALA', $e, [
+        'expires'  => time() + 31536000,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
 /** El id de quien está trabajando, para dejarlo anotado en lo que toque. */
 function usuario_id_actual(): ?int
 {

@@ -118,9 +118,20 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
     </div>
   <?php endif ?>
 
+  <?php /* Con cuatro cuentas del mismo banco, recorrer la lista con la vista es
+           lento y se equivoca uno. Se busca escribiendo, y busca en todo:
+           nombre, banco, número y titular. */ ?>
+  <div class="filtros" style="margin-bottom:12px">
+    <div style="flex:1;min-width:240px">
+      <label for="buscarCuenta">Buscar una cuenta</label>
+      <input type="text" id="buscarCuenta" data-filtra-tabla="tablaCuentas"
+             placeholder="Escriba el banco, el número o el nombre. Ej.: Venezuela, 2539, nómina">
+    </div>
+  </div>
+
   <div class="marco-tabla" data-guia="lista">
     <div class="tabla-scroll">
-      <table>
+      <table id="tablaCuentas">
         <thead><tr><th>Cuenta</th><th>Período cargado</th><th class="der">Entradas Bs</th><th class="der">Salidas Bs</th>
           <th class="der">Saldo Bs</th><th class="der">Pendientes</th><th></th></tr></thead>
         <tbody>

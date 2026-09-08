@@ -69,6 +69,13 @@ if (autenticado() && ($_POST['accion'] ?? '') === 'tema') {
     redirigir('?r=' . $ruta . (isset($_GET['id']) ? '&id=' . (int) $_GET['id'] : ''));
 }
 
+// El tamaño de la letra, por el mismo camino y por la misma razón.
+if (autenticado() && ($_POST['accion'] ?? '') === 'escala') {
+    exigir_csrf();
+    fijar_escala((string) ($_POST['escala'] ?? ''));
+    redirigir('?r=' . $ruta . (isset($_GET['id']) ? '&id=' . (int) $_GET['id'] : ''));
+}
+
 // Cambiar de unidad de negocio. Va por POST y con testigo porque descarta la
 // carga pendiente y borra sus archivos: un GET lo dispararía cualquier página
 // ajena con una imagen incrustada.

@@ -5,7 +5,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
     global $mensaje;
     $pend = pendientes_total();
     ?><!doctype html>
-<html lang="es"<?= tema() !== '' ? ' data-tema="' . e(tema()) . '"' : '' ?>>
+<html lang="es"<?= tema() !== '' ? ' data-tema="' . e(tema()) . '"' : '' ?><?= escala() !== '' ? ' data-escala="' . e(escala()) . '"' : '' ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -14,7 +14,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
 <meta name="application-name" content="<?= e(APP_NOMBRE) ?>">
 <meta name="author" content="<?= e(APP_MARCA) ?>">
 <link rel="icon" type="image/png" href="/icon.png">
-<link rel="stylesheet" href="assets/app.css?v=16">
+<link rel="stylesheet" href="assets/app.css?v=18">
 </head>
 <body>
 <div class="app">
@@ -58,7 +58,10 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
       <div class="nav-titulo">Trabajo diario</div>
       <a href="?r=panel"       class="<?= $ruta === 'panel' ? 'on' : '' ?>">Panel</a>
       <a href="?r=carga"       class="<?= $ruta === 'carga' ? 'on' : '' ?>">Cargar extractos</a>
-      <a href="?r=pendientes"  class="<?= $ruta === 'pendientes' ? 'on' : '' ?>">Por justificar
+      <?php /* Es a lo que la gente entra. Mientras quede algo, el renglón se
+               enciende y el número va en grande: no hay que acercarse a la
+               pantalla para saber cuánto trabajo queda. */ ?>
+      <a href="?r=pendientes" class="<?= $ruta === 'pendientes' ? 'on' : '' ?><?= $pend > 0 ? ' tiene-pendientes' : '' ?>">Por justificar
         <?php if ($pend > 0): ?><span class="cuenta"><?= $pend > 999 ? '999+' : $pend ?></span><?php endif ?></a>
       <a href="?r=movimientos" class="<?= $ruta === "movimientos" || $ruta === "movimiento" ? "on" : "" ?>">Movimientos</a>
       <?php /* Solo aparece cuando hay algo que revisar: un enlace que casi
@@ -87,6 +90,7 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
           <span><b><?= e($yo['nombre']) ?></b><span><?= $yo['maestro'] ? 'Maestro' : 'Mi perfil' ?></span></span>
         </a>
       <?php endif ?>
+      <p class="tema-rotulo">Cómo se ve</p>
       <form method="post" class="tema" data-guia="tema">
         <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
         <input type="hidden" name="accion" value="tema">
@@ -96,6 +100,19 @@ function encabezado_html(string $titulo, string $ruta, ?string $subtitulo = null
                   ['oscuro', 'Oscuro', 'Fondo negro']] as [$v, $rot, $ayuda]): ?>
           <button name="tema" value="<?= e($v) ?>" title="<?= e($ayuda) ?>"
                   class="<?= $ahora === $v ? 'on' : '' ?>"><?= e($rot) ?></button>
+        <?php endforeach ?>
+      </form>
+      <p class="tema-rotulo">Tamaño de la letra</p>
+      <form method="post" class="tema tema-escala" data-guia="escala">
+        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+        <input type="hidden" name="accion" value="escala">
+        <?php $tam = escala();
+        foreach ([['', 'A', 'Letra normal'],
+                  ['grande', 'A', 'Letra grande'],
+                  ['enorme', 'A', 'Letra muy grande']] as $k => [$v, $rot, $ayuda]): ?>
+          <button name="escala" value="<?= e($v) ?>" title="<?= e($ayuda) ?>"
+                  style="font-size:<?= [13, 16, 19][$k] ?>px"
+                  class="<?= $tam === $v ? 'on' : '' ?>"><?= e($rot) ?></button>
         <?php endforeach ?>
       </form>
       <a href="?r=salir">Cerrar sesión</a>
@@ -142,7 +159,7 @@ window.GUIA = <?= json_encode([
     'pasos' => guia_pasos(),
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 </script>
-<script src="assets/app.js?v=11"></script>
+<script src="assets/app.js?v=12"></script>
 <script src="assets/guia.js?v=11"></script>
 </body>
 </html>
