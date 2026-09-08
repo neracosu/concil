@@ -41,6 +41,18 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-08', 'version' => '2.7.2', 'tipo' => 'correccion',
+            'titulo' => 'Al pasar de página ya no se repite ni se pierde nada',
+            'resumen' => 'Cuando dos grupos de pagos sumaban exactamente lo mismo, o dos proveedores se '
+                       . 'llamaban igual, no había nada que decidiera cuál iba primero. Al pasar a la '
+                       . 'página siguiente, uno podía volver a salir y otro no aparecer nunca. Ahora el '
+                       . 'orden es siempre el mismo, y lo que hay en la lista se ve completo.',
+            'detalles' => [
+                'Pasaba en «Por justificar» cuando se ve por grupos, y en el listado de proveedores.',
+                'Si alguna vez le cuadró mal un conteo revisando por páginas, podía ser esto.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7.1', 'tipo' => 'correccion',
             'titulo' => 'El reporte estaba juntando renglones que no van juntos',
             'resumen' => 'La pantalla de Reportes agrupaba mal: en vez de sumar por lo que usted elige '
