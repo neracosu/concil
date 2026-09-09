@@ -41,6 +41,20 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-09', 'version' => '2.7.9', 'tipo' => 'correccion',
+            'titulo' => 'El saldo de Banplus mostraba el del principio del día',
+            'resumen' => 'En las cuentas de Banplus, el saldo que enseñaba la pantalla no era con el '
+                       . 'que cerró el día, sino con el que arrancó. Banplus entrega el archivo al '
+                       . 'revés —lo más reciente arriba—, y el sistema se estaba quedando con la '
+                       . 'última línea. Ya toma la que cierra, venga como venga el archivo.',
+            'detalles' => [
+                'Se vio el 9 de septiembre en Banplus AMK: decía 45.619,71 cuando el banco cerró el '
+                . 'día 8 en 71.729,77. Ninguna otra cuenta estaba mostrando de más ni de menos.',
+                'No hubo que volver a subir nada: los movimientos siempre estuvieron bien '
+                . 'guardados, lo que fallaba era cuál de ellos se enseñaba.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-08', 'version' => '2.7.8', 'tipo' => 'mejora',
             'titulo' => 'Su trabajo del semestre ya está adentro',
             'resumen' => 'Se cargó el libro de auditoría que lleva el departamento: 32.263 '

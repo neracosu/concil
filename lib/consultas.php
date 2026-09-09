@@ -211,6 +211,43 @@ function url(array $cambios = [], ?string $ruta = null): string
 }
 
 /**
+ * Con qué saldo cerró el día, entre las filas de esa fecha.
+ *
+ * No vale quedarse con la última fila del archivo. Banplus entrega el extracto
+ * al revés —la primera línea es la más reciente—, así que «la última» era la
+ * más vieja del día: el 09/09/2026 la pantalla mostraba 45.619,71 donde el
+ * banco decía 71.729,77, y el saldo de arranque que había cargado la persona
+ * ni siquiera se miraba, porque el dato del banco manda.
+ *
+ * Se encadena por el propio saldo, que funciona en los dos sentidos: a cada
+ * fila se le resta su movimiento y sale el saldo con el que llegó, así que la
+ * fila de cierre es la única cuyo saldo no es el de llegada de ninguna otra.
+ * Devuelve null si el encadenamiento no resuelve —falta una fila, o dos dejan
+ * el mismo saldo—: ahí no se adivina, decide quien llama.
+ */
+function saldo_de_cierre(array $filas): ?float
+{
+    if (count($filas) < 2) {
+        return $filas === [] ? null : (float) $filas[0]['saldo'];
+    }
+    // En céntimos: comparar sumas de decimales en coma flotante falla sola.
+    $cent = static fn(float $v): int => (int) round($v * 100);
+
+    $llegada = [];
+    foreach ($filas as $f) {
+        $mov = (float) $f['credito'] - (float) $f['debito'];
+        $llegada[$cent((float) $f['saldo'] - $mov)] = true;
+    }
+    $cierre = [];
+    foreach ($filas as $f) {
+        if (!isset($llegada[$cent((float) $f['saldo'])])) {
+            $cierre[] = (float) $f['saldo'];
+        }
+    }
+    return count($cierre) === 1 ? $cierre[0] : null;
+}
+
+/**
  * Saldo de una cuenta.
  * Si el banco entrega la columna de saldo (Bancamiga), manda ese dato: es el
  * saldo real informado. Si no, se calcula desde el saldo de arranque que se
@@ -261,13 +298,16 @@ function saldos_de_cuentas(array $ids, ?string $hasta = null): array
         // Si el banco informó saldo, ese manda: es el saldo real, no uno
         // reconstruido. Se busca solo en las cuentas que lo tienen.
         if ($a['f_saldo'] !== null) {
-            $s = $pdo->prepare('SELECT saldo FROM movimientos
+            $s = $pdo->prepare('SELECT saldo, debito, credito FROM movimientos
                                  WHERE cuenta_id = ? AND fecha = ? AND saldo IS NOT NULL
-                              ORDER BY id DESC LIMIT 1');
+                              ORDER BY id');
             $s->execute([$cid, $a['f_saldo']]);
-            $v = $s->fetchColumn();
-            if ($v !== false) {
-                $r[$cid] = ['saldo' => (float) $v, 'fuente' => 'banco', 'fecha' => $a['f_saldo']];
+            $delDia = $s->fetchAll(PDO::FETCH_ASSOC);
+            if ($delDia !== []) {
+                // Si el encadenamiento no resuelve, la última fila del archivo,
+                // que es lo que se venía haciendo.
+                $v = saldo_de_cierre($delDia) ?? (float) end($delDia)['saldo'];
+                $r[$cid] = ['saldo' => $v, 'fuente' => 'banco', 'fecha' => $a['f_saldo']];
                 continue;
             }
         }
