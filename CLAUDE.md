@@ -162,6 +162,25 @@ cuenta (primeros 4 dígitos) detiene la importación. La cadena del saldo solo
 confirma: Banplus no entrega las filas en orden de saldo y Provincial las
 entrega al revés, así que **nunca** conviertas esa comprobación en un rechazo.
 
+**El saldo que se enseña no es «la última fila».** Costó tres avisos del equipo
+el 09/09/2026, todos el mismo día y los tres distintos. `saldo_de_cierre()` en
+`consultas.php` encadena por el propio saldo —a cada fila se le resta su
+movimiento y sale el saldo con el que llegó, así que la de cierre es la única
+que no es la llegada de ninguna otra—, y eso funciona venga el archivo como
+venga: **Banplus lo entrega al revés**, con lo más reciente arriba, y quedarse
+con la última fila mostraba el saldo con el que arrancó el día. Tres cosas más
+que hay que respetar ahí:
+
+- **Que el banco informe saldo no significa que sea el de hoy.** El Tesoro no
+  imprime saldo en ninguna fila, así que la última fecha *con* saldo era la del
+  libro y el extracto del día siguiente no contaba: faltaban diez millones. Si
+  hay movimientos después de ese día, se suman y la fuente pasa a `calculado`.
+- **El tope por defecto es hoy**, igual que en el panel. Bancrecer trae cinco
+  cargos fechados en octubre y noviembre y de ahí salía el saldo de la cuenta.
+- **Si la cadena no resuelve, no adivines.** Devuelve `null` y que decida quien
+  llama. Pasa de verdad: Bancrecer tiene el mismo día cargado dos veces con
+  montos distintos, del libro y del extracto.
+
 **Los totales del pie del archivo no mandan.** Totalizamos nosotros, fila por
 fila, y esa es la cifra que se guarda y se muestra. El resumen que el banco
 imprime al pie se compara y, si difiere, se avisa —nunca se rechaza la carga—.
