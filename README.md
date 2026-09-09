@@ -6,6 +6,12 @@
 
 *Conciliación bancaria · ¿en qué se fue el dinero?*
 
+![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777bb4)
+![MySQL 5.7+](https://img.shields.io/badge/MySQL-5.7%2B-00758f)
+![Sin dependencias](https://img.shields.io/badge/dependencias-ninguna-2e7d32)
+![Hosting compartido](https://img.shields.io/badge/destino-cPanel%20compartido-8c6520)
+![Interfaz en español](https://img.shields.io/badge/interfaz-espa%C3%B1ol-d4a857)
+
 </div>
 
 ---
@@ -19,28 +25,41 @@ banco no explica.
 
 ## Índice
 
-- [Qué problema resuelve](#qué-problema-resuelve)
-- [Cómo funciona](#cómo-funciona)
-- [Formatos de extracto soportados](#formatos-de-extracto-soportados)
-- [Unidades de negocio](#unidades-de-negocio)
-- [Proveedores y facturas](#proveedores-y-facturas)
-- [Requisitos](#requisitos)
-- [Instalación](#instalación)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Modelo de datos](#modelo-de-datos)
-- [Motor de reglas](#motor-de-reglas)
-- [Control de duplicados](#control-de-duplicados)
-- [Saldos](#saldos)
-- [Tasa del dólar](#tasa-del-dólar)
-- [Hora](#hora)
-- [Usuarios y rastro](#usuarios-y-rastro)
-- [Registro de fallos](#registro-de-fallos)
-- [Seguridad](#seguridad)
-- [Respaldo y restauración](#respaldo-y-restauración)
-- [Rendimiento](#rendimiento)
-- [Visita guiada](#visita-guiada)
-- [Decisiones de diseño](#decisiones-de-diseño)
-- [Limitaciones conocidas](#limitaciones-conocidas)
+**Qué es**
+[Qué problema resuelve](#qué-problema-resuelve) ·
+[Cómo funciona](#cómo-funciona) ·
+[Formatos de extracto](#formatos-de-extracto-soportados) ·
+[Unidades de negocio](#unidades-de-negocio) ·
+[Proveedores y facturas](#proveedores-y-facturas) ·
+[Tasa del dólar](#tasa-del-dólar) ·
+[Hora](#hora)
+
+**Ponerlo a andar**
+[Requisitos](#requisitos) ·
+[Instalación](#instalación) ·
+[Respaldo y restauración](#respaldo-y-restauración)
+
+**Por dentro**
+[Estructura del proyecto](#estructura-del-proyecto) ·
+[Modelo de datos](#modelo-de-datos) ·
+[Motor de reglas](#motor-de-reglas) ·
+[Control de duplicados](#control-de-duplicados) ·
+[Repetidos por fecha corrida](#repetidos-por-fecha-corrida) ·
+[Saldos](#saldos) ·
+[Registro de fallos](#registro-de-fallos) ·
+[Rendimiento](#rendimiento)
+
+**Quién lo usa**
+[Usuarios y rastro](#usuarios-y-rastro) ·
+[Seguridad](#seguridad) ·
+[Interfaz y accesibilidad](#interfaz-y-accesibilidad) ·
+[Visita guiada](#visita-guiada) ·
+[Versión y pantalla de Mejoras](#versión-y-pantalla-de-mejoras)
+
+**Lo que hay que saber antes de tocarlo**
+[Decisiones de diseño](#decisiones-de-diseño) ·
+[Limitaciones conocidas](#limitaciones-conocidas) ·
+[Documentación](#documentación)
 
 ---
 
@@ -63,9 +82,21 @@ CONCIL convierte esos archivos en una base consultable:
 - Exporta a Excel cualquier corte: por categoría, beneficiario, banco, mes o
   rango de fechas.
 
-En una instalación con once bancos y ~13.000 movimientos cargados, las reglas
-clasifican por sí solas la mayoría de los débitos; lo que queda es lo que solo
-sabe quien hizo el gasto.
+En la instalación que originó el sistema hay **22 cuentas** y el semestre
+completo cargado —32.263 movimientos de julio en adelante—. Las reglas
+clasifican por sí solas **nueve de cada diez** débitos; lo que queda es lo que
+solo sabe quien hizo el gasto.
+
+### En números
+
+| | |
+|---|:--|
+| **10 bancos** | reconocidos por la estructura del archivo, sin configurar nada |
+| **69 conceptos** | de comisión catalogados, de 11 bancos, cubiertos con 23 reglas |
+| **0 dependencias** | ni Composer ni Node; el lector y el escritor de XLSX son propios |
+| **29–40 ms** | lo que tarda una pantalla cualquiera |
+| **500.000** | movimientos sintéticos con los que se probó el rendimiento |
+| **35 pasos** | de visita guiada, que navega sola por las diez secciones |
 
 ## Cómo funciona
 
@@ -168,14 +199,30 @@ Tres evidencias, todas sacadas del contenido, en orden de fuerza:
    cuentas reales de las muestras, así que aplicarlo rechazaría cuentas
    legítimas. En su lugar, el número solo se acepta si está en la cabecera del
    extracto o si una celda de veinte dígitos se repite en todas las filas.
-2. **Los totales que el archivo declara en su pie.** Cuadran al céntimo: el
-   extracto de Bicentenario dice 2.599 débitos por 167.634.508,43 y eso es
-   exactamente lo que entra. Si no cuadran, `importar()` deshace la transacción
-   completa y no guarda nada.
+2. **Los totales que el archivo declara en su pie.** Se comparan con los
+   nuestros —que se calculan fila por fila— y **si difieren se avisa, nunca se
+   rechaza**. Fue al revés hasta el 08/09/2026 y hubo que cambiarlo: hay
+   extractos que llegan con su propio total mal sumado, y mientras ese pie
+   mandaba, un archivo bueno se perdía entero. `comparar_totales()` devuelve lo
+   nuestro y el aviso; las sumas quedan en `importaciones.suma_debito` y
+   `suma_credito`, y la diferencia en `descuadre`. Cuando el archivo está bien,
+   cuadran al céntimo.
 3. **La cadena del saldo** (`saldo anterior − débito + crédito`). Con el mapeo
    correcto encadena el 100 % de las filas; con las columnas cruzadas, ninguna.
    Solo sirve como confirmación: Banplus no viene en orden de saldo y Provincial
    viene al revés, así que un resultado bajo nunca rechaza el archivo.
+
+### Subir el extracto es cargarlo
+
+No hay botón intermedio: al soltar el archivo se analiza, se decide a qué cuenta
+va y, si no queda nada que preguntar, se importa **en la misma petición**. La
+pantalla de confirmación aparece solo cuando falta algo — a qué cuenta va, de
+qué banco es, o un dato de la ficha que ni la cuenta tiene ni el archivo trae.
+
+Se pueden soltar los archivos de **todos los bancos a la vez**. Y una carga
+entera se puede deshacer: `deshacer_importacion()` borra sus movimientos y su
+línea de historial, avisando antes de cuántos repartos a facturas se van a
+perder, porque eso sí es trabajo de una persona.
 
 ### Otros detalles que el lector resuelve
 
@@ -207,8 +254,9 @@ decisión de producto: así una regla aprendida en una tienda clasifica sola en
 las demás, y los informes de distintas unidades hablan el mismo idioma y se
 pueden comparar. Solo se separan las cuentas y los movimientos.
 
-El acceso sigue siendo un **único PIN** que ve todas las unidades y cambia entre
-ellas con el selector. No hay usuarios ni permisos por sede.
+Cada persona entra con **su propio PIN** y ve todas las unidades, cambiando
+entre ellas con el selector; no hay permisos por sede. Quién hizo qué queda
+firmado con su nombre — ver [Usuarios y rastro](#usuarios-y-rastro).
 
 **En cada inicio de sesión se elige unidad antes de ver nada.** Es una pantalla
 completa, no un aviso que se pueda saltar: mientras no se elija, el menú está
@@ -441,8 +489,10 @@ lib/
   exportar.php         Escritura de CSV y XLSX
   seed.php             Categorías y reglas iniciales
   auth.php             Acceso por PIN, sesión, CSRF
+  usuarios.php         Personas, presencia en vivo, bitácora y rastro
   proveedores.php      Fichas de proveedor, facturas, reparto de un pago
-  guia.php             Textos de la visita guiada
+  guia.php             Textos de la visita guiada y ayuda de cada pantalla
+  mejoras.php          El historial de mejoras, del que sale la versión
   registro.php         Registro de fallos: qué pasó, dónde y cómo
   carga.php            Incluidor de conveniencia para scripts CLI
 
@@ -451,7 +501,7 @@ views/
   _facturas.php        Panel de reparto de un pago entre facturas (compartido)
   login.php            Acceso por PIN
   panel.php            Resumen del período y saldos por cuenta
-  carga.php            Subida en dos pasos con confirmación de cuenta
+  carga.php            Subida: analiza e importa; solo pregunta si falta algo
   pendientes.php       Bandeja de justificación, agrupada por patrón
   movimientos.php      Consulta con filtros y exportación
   movimiento.php       Detalle y corrección de un movimiento
@@ -477,7 +527,14 @@ assets/
   app.css              Estilos (paleta de marca, tablas densas, guía)
   app.js               PIN, zona de carga, confirmaciones, reparto de pagos
   guia.js              Motor de la visita guiada entre secciones
+
+docs/
+  visita-guiada.md         Cómo está hecha la visita guiada y cómo replicarla
+  versionado-y-mejoras.md  El historial como única fuente de la versión
 ```
+
+`lib/carga.php` es un incluidor de conveniencia: un `require` de ese archivo deja
+todo el núcleo disponible para un script de línea de comandos.
 
 ## Modelo de datos
 
@@ -503,6 +560,13 @@ El esquema se crea y se actualiza solo, en `migrar()` (`lib/db.php`). Las
 columnas nuevas se añaden con `columna_si_falta()`, que consulta
 `information_schema` antes de alterar la tabla; ejecutar la migración varias
 veces no tiene efecto.
+
+`migrar()` corre en **cada petición**, así que se salta entera cuando
+`ajustes.esquema` ya dice la versión en curso: las 55 consultas a
+`information_schema` costaban 80 ms por página y crecían con cada columna
+nueva. La contrapartida es una regla que hay que respetar — **quien añada una
+columna o un índice tiene que subir `ESQUEMA_VERSION`**, o su migración nunca
+llega a correr en el servidor.
 
 ## Motor de reglas
 
@@ -595,14 +659,60 @@ el comportamiento correcto en los tres casos:
 - Cargar un extracto acumulativo → solo entra lo que no estaba.
 - Tres líneas idénticas hoy y cinco mañana → entran dos.
 
+## Repetidos por fecha corrida
+
+El control de duplicados no ve una operación que el banco vuelve a listar **con
+otra fecha**, porque la fecha entra en la firma. Bicentenario y el Tesoro mueven
+al mes siguiente operaciones de los últimos días del mes, y esa operación queda
+dos veces en los totales.
+
+No se rechaza ni se borra nada: `marcar_repetidos()` corre después de cada carga
+y escribe `posible_repetido` y `repetido_de`, y la pantalla **Repetidos** —que
+solo aparece en el menú cuando hay algo que revisar— los pone delante de una
+persona para que decida.
+
+Dos caminos, porque no todos los bancos dan una referencia que sirva:
+
+| | Se compara | Ventana |
+|---|---|---|
+| Con referencia útil | referencia + monto | 31 días |
+| Sin ella (el Tesoro trae 2.373 filas con un «0») | concepto + monto | 3 días |
+
+Las ventanas están medidas sobre los movimientos reales, no elegidas a ojo: con
+esos números no señala ni una fila de más. Aflojar la segunda llena la pantalla
+de ruido, y una pantalla con ruido deja de mirarse.
+
 ## Saldos
 
-Cuando el extracto trae columna de saldo (Bancamiga), ese es el saldo que se
-muestra: es el que informa el banco. Cuando no la trae, el saldo se calcula como
-`saldo_inicial + créditos − débitos` desde `saldo_fecha`.
+Cuando el banco informa saldo en sus filas, ese es el saldo que se muestra: es
+el dato del banco. Cuando no lo informa, se calcula como
+`saldo_inicial + créditos − débitos` desde `saldo_fecha`, y si la cuenta no
+tiene saldo de arranque la interfaz dice **«falta saldo inicial»** en vez de
+inventar una cifra.
 
-Si la cuenta no tiene saldo de arranque cargado, la interfaz lo indica con
-**«falta saldo inicial»** en lugar de mostrar una cifra que no puede conocer.
+**El saldo del día no es «la última fila».** Costó tres avisos del equipo el
+mismo día, todos distintos. `saldo_de_cierre()` no se queda con ninguna fila por
+su posición: **encadena por el propio saldo**. A cada fila se le resta su
+movimiento y sale el saldo con el que llegó; la de cierre es la única que no es
+la llegada de ninguna otra. Así funciona venga el archivo como venga —Banplus lo
+entrega al revés, con lo más reciente arriba— y sin depender del orden de nadie.
+
+Tres reglas más, cada una de un caso real:
+
+- **Que el banco informe saldo no significa que sea el de hoy.** El Banco del
+  Tesoro no imprime saldo en ninguna fila, así que la última fecha *con* saldo
+  era la del libro y el extracto del día siguiente no contaba. Si hay
+  movimientos posteriores a esa fecha, se suman y la fuente pasa a `calculado`.
+- **El tope por defecto es hoy.** Un extracto con una fecha mal tecleada —cinco
+  cargos fechados en noviembre— hacía que la cuenta enseñara el saldo del
+  futuro.
+- **Si la cadena no resuelve, no se adivina.** Devuelve `null` y decide quien
+  llama. Pasa de verdad cuando el mismo día está cargado dos veces con montos
+  distintos, del libro y del extracto.
+
+El saldo de todas las cuentas se resuelve **en una sola pasada**
+(`saldos_de_cuentas()`), no con una consulta por cuenta: ver
+[Rendimiento](#rendimiento).
 
 ## Registro de fallos
 
@@ -791,9 +901,43 @@ actual—, y lo que salió cambió cuatro cosas del código:
 - **Lo que no se puede reclamar, no se calcula**: el aviso de montos repetidos
   mira los últimos 180 días.
 
+- **Lo que corre en cada petición se paga en cada petición.** `migrar()`
+  comprobaba 55 columnas contra `information_schema` en cada página: 80 ms que
+  crecían con el esquema. Ahora se salta entera cuando la versión guardada
+  coincide con `ESQUEMA_VERSION`.
+
 Al medir en hosting compartido hay que tomar la mediana de varias tomas: la
 misma pantalla puede dar 1,1 s y 6,4 s seguidas. OPcache está activo desde el
 31/08/2026 y reduce el render alrededor de un tercio.
+
+## Interfaz y accesibilidad
+
+La usa gente que lleva todo el día en la pantalla y que no necesariamente
+trabaja con sistemas. Cuatro decisiones que salieron de verlos usarla:
+
+**Toda la hoja de estilos va en `rem`, nunca en píxeles** — los 108 `font-size` y
+también los blancos de lo que se pulsa. Es lo que hace que el **selector de
+tamaño de letra** (tres pasos, en el menú) mueva la interfaz entera y no solo el
+texto. Un `font-size` en píxeles se queda pequeño cuando alguien elige letra
+grande, y se nota enseguida.
+
+**44 px es el mínimo de lo que se pulsa**, que es lo que piden las guías de
+accesibilidad (WCAG 2.5.5) y lo que usan Apple y Material. Los renglones del
+menú van a 46 y la acción principal de cada pantalla a 48. Lo pidió el equipo:
+les costaba ubicar los botones.
+
+**Los botones de un renglón se quedan pegados al borde derecho** de la tabla,
+con sombra para que se vea que hay más detrás. Sin eso, en una tabla más ancha
+que la pantalla se van fuera y no se descubren: con 22 cuentas cargadas, el
+usuario dio por hecho que no se podían editar.
+
+**Fondo claro, oscuro o el de la computadora**, a elección de cada quien y
+guardado con su usuario, así que le sigue a cualquier equipo donde entre.
+
+Y una que no se ve pero se nota: **lo que la gente teclea se corrige, y se le
+dice**. `normalizar_nombre()` arregla los acentos que se caen al escribir en
+mayúsculas y las erratas de la casa, y la pantalla avisa de qué cambió. Corregir
+en silencio no vale: quien escribió tiene que ver qué quedó guardado.
 
 ## Visita guiada
 
@@ -809,6 +953,37 @@ vista correspondiente, y los pasos cuyo objetivo no esté presente se saltan.
 
 Además, cada pantalla lleva una frase de ayuda fija bajo su título.
 
+> Cómo está hecha por dentro y cómo replicarla en otro proyecto:
+> [`docs/visita-guiada.md`](docs/visita-guiada.md). El sistema de versiones y la
+> pantalla de Mejoras están documentados igual en
+> [`docs/versionado-y-mejoras.md`](docs/versionado-y-mejoras.md).
+
+## Versión y pantalla de Mejoras
+
+**El número de versión no está escrito en ninguna parte.** Sale de la primera
+entrada de `mejoras()` (`lib/mejoras.php`), que es el historial de todo lo que el
+sistema ha aprendido a hacer, contado para quien lo usa. De ahí salen a la vez el
+número que aparece en el menú, en la pantalla de acceso y dentro de los archivos
+exportados, y la **pantalla de Mejoras** que ve el equipo.
+
+Es una sola fuente a propósito: un número por un lado y un changelog por otro
+terminan diciendo cosas distintas, y el changelog acaba escrito en un idioma que
+solo entiende quien programa.
+
+Se anota solo lo que alguien nota. Los acomodos internos, la documentación y los
+cambios de forma del código viven en el git log, que es su sitio. Cuatro tipos
+—**Nuevo**, **Mejora**, **Corrección** y **Protección**—, y el número sube en el
+mismo gesto de escribir la entrada: `nuevo` sube el del medio, lo demás el
+último.
+
+Que el número del menú sea un **enlace** a esa pantalla es lo que convierte el
+versionado en producto: se ve la cifra, se hace clic, y ahí está lo que trae. Y
+el pie de la pantalla invita a pedir más — de ahí salen la mitad de las
+peticiones.
+
+> Cómo replicarlo en otro proyecto, con el código completo:
+> [`docs/versionado-y-mejoras.md`](docs/versionado-y-mejoras.md).
+
 ## Decisiones de diseño
 
 **Solo se clasifican los débitos.** Los créditos se importan y se consultan
@@ -817,8 +992,11 @@ categoría: en la operación que originó el sistema los ingresos son miles de
 abonos de punto de venta cuya clasificación no aporta. La estructura los soporta;
 activarlos es quitar el filtro `tipo = 'D'`.
 
-**Un solo PIN compartido.** El sistema lo usan pocas personas de confianza. No
-hay usuarios individuales, y por eso la bitácora registra acciones, no autores.
+**Un PIN por persona, y nada más que el PIN.** No hay nombre de usuario que
+escribir: los seis dígitos identifican a quien entra. Es lo más corto que
+permite seguir firmando cada acción con su autor, que es lo que pedía
+auditoría. Empezó siendo un PIN compartido para todo el equipo y se cambió en
+cuanto la pregunta dejó de ser «qué se hizo» y pasó a ser «quién lo hizo».
 
 **PHP sin dependencias.** El destino es hosting cPanel compartido, donde no hay
 Node persistente. El cuello de botella real es el parseo del XLSX y MySQL, iguales
@@ -850,6 +1028,14 @@ banco.
 - **Los XLS de Excel 97-2003 no se leen.** Se avisa y se pide guardarlos como
   `.xlsx`. Sí se leen las tablas HTML con extensión `.xls`, que es lo que
   entrega el Banco del Tesoro.
+
+## Documentación
+
+| Documento | De qué trata |
+|---|---|
+| [`docs/visita-guiada.md`](docs/visita-guiada.md) | La visita guiada por dentro: el motor, los estilos, cómo se escriben los pasos y cómo llevarla a otro proyecto o a otro stack. |
+| [`docs/versionado-y-mejoras.md`](docs/versionado-y-mejoras.md) | El historial como única fuente de la versión: qué significa cada número, cómo se anota una mejora y cómo replicarlo. |
+| [`CLAUDE.md`](CLAUDE.md) | Convenciones del repositorio y las trampas conocidas, para quien vaya a tocar el código. |
 
 ## Créditos
 
