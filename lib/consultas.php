@@ -249,9 +249,9 @@ function saldo_de_cierre(array $filas): ?float
 
 /**
  * Saldo de una cuenta.
- * Si el banco entrega la columna de saldo (Bancamiga), manda ese dato: es el
- * saldo real informado. Si no, se calcula desde el saldo de arranque que se
- * cargue en la ficha de la cuenta.
+ * Si el banco entrega la columna de saldo, se parte de ese dato —es el saldo
+ * real informado— y se le suma lo que se haya cargado después. Si no lo
+ * entrega, se calcula desde el saldo de arranque de la ficha de la cuenta.
  */
 function saldo_cuenta(int $cuentaId, ?string $hasta = null): array
 {
@@ -276,8 +276,13 @@ function saldos_de_cuentas(array $ids, ?string $hasta = null): array
         return [];
     }
     $pdo = db();
-    $en   = implode(',', $ids);
-    $tope = $hasta ? ' AND fecha <= ' . $pdo->quote($hasta) : '';
+    $en = implode(',', $ids);
+    // Nunca más allá de hoy, como el panel: basta una fecha mal tecleada en un
+    // extracto para que el saldo de la cuenta sea el de un día que no ha
+    // llegado. Bancrecer trae cinco cargos fechados en octubre y noviembre, y
+    // la pantalla estaba enseñando el saldo de noviembre como el de hoy.
+    $hasta = $hasta ?: date('Y-m-d');
+    $tope = ' AND fecha <= ' . $pdo->quote($hasta);
 
     // Una sola pasada, y sin tocar una fila de datos: todo lo que se pide está
     // dentro de idx_mov_saldos.
@@ -307,6 +312,20 @@ function saldos_de_cuentas(array $ids, ?string $hasta = null): array
                 // Si el encadenamiento no resuelve, la última fila del archivo,
                 // que es lo que se venía haciendo.
                 $v = saldo_de_cierre($delDia) ?? (float) end($delDia)['saldo'];
+                // Y lo cargado después de ese día hay que sumarlo. El Tesoro no
+                // imprime saldo en ninguna fila, así que su archivo del 08/09
+                // dejaba la cuenta enseñando el saldo del 07/09 y faltaban diez
+                // millones. Solo se pregunta si de verdad hay algo después.
+                if ($a['f'] > $a['f_saldo']) {
+                    $p = $pdo->prepare("SELECT COALESCE(SUM(credito),0) cre, COALESCE(SUM(debito),0) deb
+                                          FROM movimientos
+                                         WHERE cuenta_id = ? AND fecha > ?" . $tope);
+                    $p->execute([$cid, $a['f_saldo']]);
+                    $x = $p->fetch(PDO::FETCH_ASSOC);
+                    $r[$cid] = ['saldo'  => $v + (float) $x['cre'] - (float) $x['deb'],
+                                'fuente' => 'calculado', 'fecha' => $a['f']];
+                    continue;
+                }
                 $r[$cid] = ['saldo' => $v, 'fuente' => 'banco', 'fecha' => $a['f_saldo']];
                 continue;
             }

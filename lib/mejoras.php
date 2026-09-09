@@ -41,6 +41,26 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-09', 'version' => '2.7.10', 'tipo' => 'correccion',
+            'titulo' => 'El saldo del Tesoro y el de Bancrecer también estaban mal',
+            'resumen' => 'Misma pantalla, dos motivos distintos. El Tesoro no imprime el saldo en '
+                       . 'ninguna línea de su archivo, así que la cuenta se quedaba enseñando el '
+                       . 'saldo del día anterior aunque usted ya hubiera subido el del día. Y en '
+                       . 'Bancrecer, cinco cargos vienen fechados en octubre y noviembre, y la '
+                       . 'pantalla estaba dando por bueno el saldo de noviembre como si fuera el '
+                       . 'de hoy.',
+            'detalles' => [
+                'El Tesoro pasó de 715.244,64 a 10.480.610,14, que es el saldo del día 7 más todo '
+                . 'lo que se movió el día 8.',
+                'Bancrecer pasó de 21.014,30 a 15.770,91: el cierre del 8 de septiembre, que es el '
+                . 'último día que ya ocurrió.',
+                'Ninguna cuenta enseña ya un saldo con fecha posterior a hoy.',
+                'REVISAR: el libro del semestre trae para Bancrecer tres cargos del 8 de '
+                . 'septiembre con montos distintos a los del extracto de ese mismo día. Hay que '
+                . 'mirar cuáles son los buenos.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-09', 'version' => '2.7.9', 'tipo' => 'correccion',
             'titulo' => 'El saldo de Banplus mostraba el del principio del día',
             'resumen' => 'En las cuentas de Banplus, el saldo que enseñaba la pantalla no era con el '
