@@ -41,6 +41,25 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-10', 'version' => '2.7.12', 'tipo' => 'mejora',
+            'titulo' => 'Al cargar, el sistema avisa si quedó un día sin extracto',
+            'resumen' => 'Esta mañana el saldo del Tesoro de Armor Pets no cuadraba con el banco, y '
+                       . 'el archivo estaba bien: lo que faltaba era el extracto del martes 8, que '
+                       . 'nunca se subió. El sistema sumó el saldo del 7 con los movimientos del 9 '
+                       . 'sin decir que en medio había un día en blanco. Ahora, al terminar la '
+                       . 'carga, si entre lo que ya estaba y lo que acaba de entrar quedó un día '
+                       . 'hábil sin un solo movimiento, lo dice con nombre y fecha: «Del martes '
+                       . '08/09 no hay nada en esta cuenta. ¿Falta un extracto?».',
+            'detalles' => [
+                'Solo avisa en cuentas que se mueven todos los días hábiles. En una cuenta con tres '
+                . 'movimientos al mes, un día sin nada es lo normal y no se dice nada.',
+                'Los feriados no los conoce, así que un feriado entre semana puede dar un aviso de '
+                . 'más. Por eso pregunta en vez de afirmar.',
+                'Probado sobre las 22 cargas de ayer y hoy: solo avisó en la del Tesoro de Armor '
+                . 'Pets, y era cierto.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-10', 'version' => '2.7.11', 'tipo' => 'correccion',
             'titulo' => 'Repetidos por revisar avisaba de operaciones que no lo estaban',
             'resumen' => 'El primer día que el equipo abrió esa pantalla encontró tres avisos, y los '

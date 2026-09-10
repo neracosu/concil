@@ -323,6 +323,19 @@ está clasificado y si tiene facturas (`pagos_factura` cae por FK al borrar).
 `resolver_repetido()` limpia `traspaso_id` **y** `repetido_de` de quien apunte a
 la fila que se borra: ninguna de las dos tiene clave foránea.
 
+**Un día sin extracto no se nota solo.** El saldo `calculado` suma el último
+saldo conocido con todo lo cargado después, así que si un día se quedó sin
+subir, la cuenta enseña una cifra coherente y falsa. Le pasó a Tesoro Armor Pets
+el 10/09/2026: el libro llegaba al 7, el extracto nuevo era del 9, y el 8 nunca
+entró —el del Tesoro de Armor Market sí, y las dos cuentas son del mismo banco—.
+`dias_sin_cargar()` mira, con el archivo ya dentro, los días hábiles en blanco
+entre lo que había y lo que entró, y `importar()` lo devuelve en `laguna` para
+que la pantalla de carga lo pregunte. **Solo en cuentas que se mueven a diario**
+(8 de cada 10 días hábiles de las tres semanas anteriores): en Banco Plaza, con
+tres movimientos al mes, un día vacío no dice nada. No conoce los feriados, y
+por eso el texto pregunta. No mira los huecos *dentro* del archivo: un extracto
+mensual con un feriado en medio no es un extracto que falte. Probado en seco
+sobre 22 cargas reales antes de estrenarlo: una sola alarma, y era cierta.
 **Duplicados.** La clave es `UNIQUE (firma, ocurrencia)` con `INSERT IGNORE`. La
 ocurrencia es el número de vez que esa firma aparece **dentro del archivo que se
 está importando**. No la cambies por un contador global: rompería la carga de

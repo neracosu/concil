@@ -486,6 +486,10 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
         'ignoradas'   => $ignoradas,
         'repetidos'   => $repetidos,
         'cuadre'      => $cuadre,
+        // Con el archivo ya dentro se ve si entre lo que había y lo que entró
+        // quedó un día hábil en blanco: Tesoro Armor Pets estuvo dos días sin
+        // el 08/09 y nadie lo supo hasta que el saldo no cuadró.
+        'laguna'      => aviso_dias_sin_cargar(dias_sin_cargar($cuentaId, $impId)),
     ];
 }
 
@@ -766,6 +770,90 @@ function marcar_repetidos(int $cuentaId, int $impId): int
                        AND o.debito = n.debito AND o.credito = n.credito) <= 2");
     $debil->execute([$impId]);
     return $n + $debil->rowCount();
+}
+
+/**
+ * Días hábiles que quedaron sin un solo movimiento entre lo que ya estaba y lo
+ * que acaba de entrar, en una cuenta que se mueve a diario.
+ *
+ * El 10/09/2026 Tesoro Armor Pets enseñaba un saldo que no cuadraba con el
+ * banco, y la causa no estaba ni en el archivo ni en el código: el 08/09 nunca
+ * se había subido. El libro llegaba al 7, el extracto nuevo era del 9, y el
+ * sistema sumó uno con otro sin decir que en medio faltaba un día. Con once
+ * bancos y dos o tres archivos por banco cada mañana, va a volver a pasar.
+ *
+ * Solo se avisa en cuentas que se mueven casi todos los días hábiles: en una
+ * con tres movimientos al mes, un día sin nada es lo normal y el aviso sería
+ * ruido. Los feriados no se conocen —un feriado entre semana da un aviso de
+ * más—, por eso el texto pregunta en vez de afirmar. Se miran los huecos a los
+ * dos lados del archivo, no los de adentro: un extracto mensual con un feriado
+ * en medio no es un extracto que falte.
+ */
+function dias_sin_cargar(int $cuentaId, int $impId): array
+{
+    $pdo = db();
+    $r = $pdo->prepare('SELECT MIN(fecha), MAX(fecha) FROM movimientos WHERE importacion_id = ?');
+    $r->execute([$impId]);
+    [$desde, $hasta] = $r->fetch(PDO::FETCH_NUM);
+    if ($desde === null) {
+        return [];
+    }
+    $hoy = date('Y-m-d');
+    $ini = date('Y-m-d', strtotime("$desde -21 days"));
+    $fin = min($hoy, date('Y-m-d', strtotime("$hasta +21 days")));
+
+    // Una sola consulta, dentro de idx_mov_cuenta (cuenta_id, fecha).
+    $q = $pdo->prepare('SELECT DISTINCT fecha FROM movimientos
+                          WHERE cuenta_id = ? AND fecha BETWEEN ? AND ? ORDER BY fecha');
+    $q->execute([$cuentaId, $ini, $fin]);
+    $con = array_fill_keys($q->fetchAll(PDO::FETCH_COLUMN), true);
+
+    $habiles = static function (string $a, string $b): array {   // los de (a, b), sin los extremos
+        $out = [];
+        for ($d = strtotime("$a +1 day"); $d < strtotime($b); $d += 86400) {
+            if ((int) date('N', $d) < 6) {
+                $out[] = date('Y-m-d', $d);
+            }
+        }
+        return $out;
+    };
+
+    // ¿Se mueve a diario? Se mira lo anterior al archivo: si en esas tres
+    // semanas tuvo movimientos en al menos 8 de cada 10 días hábiles, un día
+    // en blanco es noticia. Si no, no se sabe y no se dice nada.
+    $previos = $habiles(date('Y-m-d', strtotime("$ini -1 day")), $desde);
+    $activos = count(array_filter($previos, static fn($d) => isset($con[$d])));
+    if ($previos === [] || $activos / count($previos) < 0.8) {
+        return [];
+    }
+
+    $antes = array_filter(array_keys($con), static fn($d) => $d < $desde);
+    $despues = array_filter(array_keys($con), static fn($d) => $d > $hasta);
+    $huecos = [];
+    if ($antes !== []) {
+        $huecos = $habiles(max($antes), $desde);
+    }
+    if ($despues !== []) {
+        $huecos = array_merge($huecos, $habiles($hasta, min($despues)));
+    }
+    return array_values(array_filter($huecos, static fn($d) => !isset($con[$d])));
+}
+
+/** La frase para la pantalla de carga; vacía si no falta nada. */
+function aviso_dias_sin_cargar(array $dias): string
+{
+    if ($dias === []) {
+        return '';
+    }
+    $nombres = [1 => 'lunes', 'martes', 'miércoles', 'jueves', 'viernes'];
+    $texto = static fn(string $d) => $nombres[(int) date('N', strtotime($d))] . ' ' . date('d/m', strtotime($d));
+    if (count($dias) === 1) {
+        return 'Del ' . $texto($dias[0]) . ' no hay nada en esta cuenta, y se mueve todos los días hábiles. ¿Falta un extracto?';
+    }
+    $lista = array_map($texto, array_slice($dias, 0, 5));
+    $mas = count($dias) - count($lista);
+    return 'No hay nada en esta cuenta del ' . implode(', ', $lista) . ($mas > 0 ? " y $mas días más" : '')
+        . ', y se mueve todos los días hábiles. ¿Falta algún extracto?';
 }
 
 /** Cuántas operaciones están esperando que alguien diga si se repiten. */

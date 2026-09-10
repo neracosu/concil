@@ -504,6 +504,9 @@ encabezado_html('Cargar extractos', 'carga',
                 <?php if (!empty($r['cuadre']['discrepa'])): ?>
                   <span class="nota" style="color:var(--pendiente);display:block;font-size:12px"><?= e($r['cuadre']['discrepa']) ?></span>
                 <?php endif ?>
+                <?php if (!empty($r['laguna'])): ?>
+                  <span class="nota" style="color:var(--pendiente);display:block;font-size:12px"><b><?= e($r['laguna']) ?></b></span>
+                <?php endif ?>
                 <?php if (!empty($r['aviso'])): ?>
                   <span class="nota" style="color:var(--pendiente);display:block;font-size:12px"><?= e($r['aviso']) ?></span>
                 <?php endif ?>
