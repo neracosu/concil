@@ -41,6 +41,29 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-10', 'version' => '2.7.11', 'tipo' => 'correccion',
+            'titulo' => 'Repetidos por revisar avisaba de operaciones que no lo estaban',
+            'resumen' => 'El primer día que el equipo abrió esa pantalla encontró tres avisos, y los '
+                       . 'tres eran operaciones buenas: dos transferencias iguales con dos días de '
+                       . 'diferencia, dos cobros de punto de venta de Bs 1,00 y la comisión por '
+                       . 'cédula inválida del 7 y la del 9. El sistema confiaba en el número de '
+                       . 'referencia, y algunos bancos escriben ahí un código que se repite en '
+                       . 'cientos de renglones: Bicentenario lo pone en todos los del punto de venta '
+                       . 'y Banesco repite el de quien envía en cada transferencia que recibe de él. '
+                       . 'Ahora una referencia solo cuenta si identifica una operación, y los cobros '
+                       . 'que el banco hace un día sí y otro también ya no se señalan.',
+            'detalles' => [
+                'Medido sobre todo lo cargado hasta hoy: de 17 avisos que había dado, 16 eran '
+                . 'operaciones buenas. Con la regla nueva habría dado 9.',
+                'Cuando una sí está repetida, ahora usted elige cuál de las dos se quita. Antes '
+                . 'se borraba siempre la que llegó ahora, que es la del extracto del banco; si la '
+                . 'que ya estaba vino del libro que se llevaba a mano, la fecha mala puede ser la '
+                . 'suya. Cada lado dice de qué archivo vino, si ya está clasificado y si tiene '
+                . 'facturas relacionadas, para que la decisión se tome viendo todo.',
+                'El cuadro de «marcar todas» de esa pantalla no hacía nada. Ya marca.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-09', 'version' => '2.7.10', 'tipo' => 'correccion',
             'titulo' => 'El saldo del Tesoro y el de Bancrecer también estaban mal',
             'resumen' => 'Misma pantalla, dos motivos distintos. El Tesoro no imprime el saldo en '

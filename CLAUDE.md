@@ -292,11 +292,36 @@ persona que se pierde, así que la pantalla lo avisa contándolo antes.
 Tesoro mueven al mes siguiente operaciones de fin de mes; como la fecha entra en
 la firma, el control de duplicados no las ve. `marcar_repetidos()` corre después
 de la carga y escribe `posible_repetido` y `repetido_de`. Dos caminos: con
-referencia útil basta con ella y el monto, con ventana de 31 días —medido sobre
-los movimientos reales, no marca ni una fila de más—; sin ella (el Tesoro trae
-2.373 filas con un «0») se compara el concepto y la ventana baja a 3 días. Si
-aflojas esa segunda ventana, la pantalla de Repetidos se llena de ruido y deja
-de mirarse.
+referencia útil basta con ella y el monto, con ventana de 31 días; sin ella (el
+Tesoro trae 2.373 filas con un «0») se compara el concepto y la ventana baja a
+3 días. Si aflojas esa segunda ventana, la pantalla de Repetidos se llena de
+ruido y deja de mirarse.
+
+**«Referencia útil» no es «referencia larga».** El primer día que contabilidad
+abrió esa pantalla (10/09/2026) encontró tres avisos y los tres eran operaciones
+buenas. Bicentenario escribe el mismo código (`23012008`) en 1.267 renglones de
+punto de venta, y Banesco repite el identificador del remitente en cada
+transferencia que recibe de él: con esas, la regla quedaba comparando «mismo
+monto en 31 días». Una referencia vale solo si **el banco no se la pone a
+operaciones de otro monto** (`$refPropia`, un `NOT EXISTS` por `idx_mov_ref`).
+Y el camino del concepto descarta lo que el banco **cobra un día sí y otro
+también**: si ese concepto con ese monto aparece en más de dos fechas, es un
+cobro que se repite, no una operación cargada dos veces. Dos cosas que no hay
+que hacer, medidas sobre los 32.629 movimientos cargados: mandar las filas de
+referencia reusada al camino del concepto (las marcas pasaban de 17 a 324) y
+exigir «referencia única» sin más (una referencia verdadera aparece dos veces
+justo cuando está repetida). Con la regla de hoy, de esas 17 históricas
+quedaban 9; **16 de las 17 eran falsas**. Antes de tocar la regla, simula sobre
+lo cargado y mira las parejas una por una, no solo el total.
+
+**Al quitar un repetido, la persona elige cuál de los dos se va.** Hasta el
+10/09/2026 se borraba siempre la nueva, con la premisa de que la vieja traía la
+fecha buena. Con el libro del semestre dejó de ser cierto: «la que ya estaba» se
+tecleó a mano —Bancrecer traía 16 con el día y el mes al revés— y la nueva es la
+del extracto del banco. La pantalla muestra de qué archivo vino cada lado, si
+está clasificado y si tiene facturas (`pagos_factura` cae por FK al borrar).
+`resolver_repetido()` limpia `traspaso_id` **y** `repetido_de` de quien apunte a
+la fila que se borra: ninguna de las dos tiene clave foránea.
 
 **Duplicados.** La clave es `UNIQUE (firma, ocurrencia)` con `INSERT IGNORE`. La
 ocurrencia es el número de vez que esa firma aparece **dentro del archivo que se

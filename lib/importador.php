@@ -705,10 +705,17 @@ function deshacer_importacion(int $impId): array
  * Dos caminos, porque no todos los bancos dan una referencia que sirva:
  *  - Con referencia de verdad basta con ella y el monto; sobre los 8.001
  *    movimientos reales no señala ni una fila de más ni a un mes de distancia,
- *    así que la ventana puede ser ancha.
+ *    así que la ventana puede ser ancha. «De verdad» quiere decir que el banco
+ *    no se la pone también a operaciones de otro monto: ver $refPropia.
  *  - Sin referencia (el Tesoro trae 2.373 filas con un «0») hay que comparar el
  *    concepto, que sí se repite de verdad, así que la ventana se cierra a tres
- *    días. Medido sobre esos mismos movimientos: 2 filas.
+ *    días y se descarta lo que el banco cobra un día sí y otro también.
+ *
+ * Las filas con una referencia larga pero reusada no entran por ningún camino,
+ * a propósito. Mandarlas al del concepto se midió el 10/09/2026 sobre los
+ * 32.629 movimientos cargados: las marcas pasaban de 17 a 324, casi todas
+ * comisiones iguales en días seguidos. Una referencia que no identifica nada
+ * más el concepto siguen sin ser prueba de que la operación entró dos veces.
  */
 function marcar_repetidos(int $cuentaId, int $impId): int
 {
@@ -724,17 +731,39 @@ function marcar_repetidos(int $cuentaId, int $impId): int
              SET n.posible_repetido = 1, n.repetido_de = v.id
            WHERE n.importacion_id = ? AND n.posible_repetido = 0';
 
+    // Una referencia larga no basta: vale solo si el banco no se la pone también
+    // a operaciones de otro monto. Bicentenario escribe el mismo código en 1.267
+    // renglones de punto de venta y Banesco repite el del remitente en cada
+    // transferencia que recibe de él, así que con esas la regla quedaba
+    // comparando «mismo monto en 31 días» y señaló dos cobros buenos el
+    // 10/09/2026, el primer día que contabilidad abrió la pantalla. Va por
+    // idx_mov_ref (cuenta_id, referencia): 3 ms para un extracto de 263 filas.
+    $refPropia = "n.referencia NOT IN ('', '0') AND CHAR_LENGTH(n.referencia) >= 4
+                  AND NOT EXISTS (SELECT 1 FROM movimientos o
+                                   WHERE o.cuenta_id = n.cuenta_id
+                                     AND o.referencia = n.referencia
+                                     AND (o.debito <> n.debito OR o.credito <> n.credito))";
+
     $fuerte = $pdo->prepare("UPDATE movimientos n $comun
                AND v.referencia = n.referencia
                AND ABS(DATEDIFF(v.fecha, n.fecha)) <= 31
-               AND n.referencia NOT IN ('', '0') AND CHAR_LENGTH(n.referencia) >= 4");
+               AND $refPropia");
     $fuerte->execute([$impId]);
     $n += $fuerte->rowCount();
 
+    // Sin referencia solo queda el concepto, y hay que descartar lo que el banco
+    // cobra todos los días: el Tesoro carga los mismos 14,00 de «COMIS.RECHAZO
+    // PAGO INMEDIATO» en seis fechas distintas y cada extracto señalaba el del
+    // día anterior. Si ese cobro, con ese monto, aparece en más de dos fechas,
+    // es un cobro que se repite y no una operación cargada dos veces. Cuesta
+    // 20 ms en un extracto del día y un segundo en el libro del semestre.
     $debil = $pdo->prepare("UPDATE movimientos n $comun
                AND v.concepto = n.concepto AND n.concepto <> ''
                AND ABS(DATEDIFF(v.fecha, n.fecha)) <= 3
-               AND (n.referencia IN ('', '0') OR CHAR_LENGTH(n.referencia) < 4)");
+               AND (n.referencia IN ('', '0') OR CHAR_LENGTH(n.referencia) < 4)
+               AND (SELECT COUNT(DISTINCT o.fecha) FROM movimientos o
+                     WHERE o.cuenta_id = n.cuenta_id AND o.concepto = n.concepto
+                       AND o.debito = n.debito AND o.credito = n.credito) <= 2");
     $debil->execute([$impId]);
     return $n + $debil->rowCount();
 }
@@ -749,14 +778,21 @@ function contar_repetidos(): int
 /** Las parejas señaladas, la nueva junto a la que ya estaba. */
 function repetidos_pendientes(int $limite = 300): array
 {
+    // De cada lado se trae de qué archivo vino, si ya está clasificado y cuántas
+    // facturas tiene relacionadas: es lo que hace falta para decidir cuál de los
+    // dos se quita, y lo segundo se pierde al borrar (pagos_factura cae por FK).
     $sql = 'SELECT n.id, n.fecha, n.referencia, n.concepto, n.debito, n.credito, n.tipo,
                    n.categoria_id, c.nombre cuenta,
                    v.id AS vid, v.fecha AS vfecha, v.concepto AS vconcepto,
-                   i.archivo, i.creado_en AS cargado
+                   v.categoria_id AS vcategoria_id, iv.archivo AS varchivo,
+                   i.archivo, i.creado_en AS cargado,
+                   (SELECT COUNT(*) FROM pagos_factura pf WHERE pf.movimiento_id = n.id) AS facturas,
+                   (SELECT COUNT(*) FROM pagos_factura pf WHERE pf.movimiento_id = v.id) AS vfacturas
               FROM movimientos n
               JOIN cuentas c ON c.id = n.cuenta_id
          LEFT JOIN movimientos v ON v.id = n.repetido_de
          LEFT JOIN importaciones i ON i.id = n.importacion_id
+         LEFT JOIN importaciones iv ON iv.id = v.importacion_id
              WHERE n.posible_repetido = 1 AND ' . filtro_sede('n') . '
           ORDER BY n.fecha DESC, n.id DESC
              LIMIT ' . (int) $limite;
@@ -764,27 +800,50 @@ function repetidos_pendientes(int $limite = 300): array
 }
 
 /**
- * Resuelve una pareja señalada. «quitar» borra la operación repetida —que es
- * lo que deja los totales como son de verdad— y «dejar» la da por buena.
- * Nunca toca la vieja: la que se revisa es siempre la que llegó después.
+ * Resuelve una pareja señalada. «quitar» borra una de las dos —que es lo que
+ * deja los totales como son de verdad— y «dejar» las da por buenas.
+ *
+ * $cual dice cuál se borra: 'nueva', la que llegó después, o 'vieja', la que ya
+ * estaba. Hasta el 10/09/2026 siempre se borraba la nueva, dando por hecho que
+ * la vieja traía la fecha buena. Dejó de ser cierto con el libro del semestre:
+ * ahí «la que ya estaba» se tecleó a mano y la fecha mala puede ser la suya
+ * —Bancrecer traía 16 con el día y el mes al revés—, mientras que la nueva es
+ * la del extracto del banco. Quién tiene razón lo decide la persona mirando
+ * de dónde vino cada una.
  */
-function resolver_repetido(int $id, string $que): bool
+function resolver_repetido(int $id, string $que, string $cual = 'nueva'): bool
 {
     $pdo = db();
-    $s = $pdo->prepare('SELECT COUNT(*) FROM movimientos m WHERE m.id = ? AND ' . filtro_sede('m'));
+    $s = $pdo->prepare('SELECT repetido_de FROM movimientos m WHERE m.id = ? AND ' . filtro_sede('m'));
     $s->execute([$id]);
-    if ((int) $s->fetchColumn() === 0) {
+    $fila = $s->fetch(PDO::FETCH_ASSOC);
+    if ($fila === false) {
         return false;               // de otra unidad de negocio
     }
-    if ($que === 'quitar') {
-        // La pareja de un traspaso apunta aquí y su columna no tiene clave
-        // foránea: sin esto quedaría señalando a un movimiento que ya no está.
-        $pdo->prepare('UPDATE movimientos SET traspaso_id = NULL WHERE traspaso_id = ?')->execute([$id]);
-        $pdo->prepare('DELETE FROM movimientos WHERE id = ?')->execute([$id]);
+    if ($que !== 'quitar') {
+        $pdo->prepare('UPDATE movimientos SET posible_repetido = 0, repetido_de = NULL WHERE id = ?')
+            ->execute([$id]);
         return true;
     }
-    $pdo->prepare('UPDATE movimientos SET posible_repetido = 0, repetido_de = NULL WHERE id = ?')
-        ->execute([$id]);
+
+    $borrar = $id;
+    if ($cual === 'vieja') {
+        $borrar = (int) $fila['repetido_de'];
+        if ($borrar === 0) {
+            return false;           // la vieja ya no está: no hay qué quitar
+        }
+        // La nueva se queda como la buena, así que deja de estar señalada.
+        $pdo->prepare('UPDATE movimientos SET posible_repetido = 0, repetido_de = NULL WHERE id = ?')
+            ->execute([$id]);
+    }
+
+    // Ni traspaso_id ni repetido_de tienen clave foránea: sin esto otras filas
+    // quedarían señalando a un movimiento que ya no está, y en la pantalla de
+    // Repetidos la pareja saldría como «ya no está» sin que nadie la quitara.
+    $pdo->prepare('UPDATE movimientos SET traspaso_id = NULL WHERE traspaso_id = ?')->execute([$borrar]);
+    $pdo->prepare('UPDATE movimientos SET posible_repetido = 0, repetido_de = NULL WHERE repetido_de = ?')
+        ->execute([$borrar]);
+    $pdo->prepare('DELETE FROM movimientos WHERE id = ?')->execute([$borrar]);
     return true;
 }
 
