@@ -107,8 +107,41 @@ encabezado_html('Panel', 'panel',
   } ?>
   <div class="cifra">
     <div class="rotulo">Disponible en <?= count($cuentasLista) ?> cuentas</div>
-    <div class="valor" style="color:<?= $dispon < 0 ? 'var(--salida)' : 'var(--texto)' ?>">Bs <?= bs($dispon, 0) ?></div>
+    <div class="valor<?= $dispon < 0 ? ' negativo' : '' ?>">Bs <?= bs($dispon, 0) ?></div>
     <div class="pie"><?= $ultimas ? 'Última carga ' . e(date('d/m H:i', strtotime($ultimas[0]['creado_en']))) : 'Sin cargas aún' ?></div>
+  </div>
+</div>
+
+<?php /* Los saldos van antes que nada: es lo primero que el equipo viene a ver.
+         Estaban al final de la página y en una laptop había que bajar dos
+         pantallas para encontrarlos. Lo pidió el equipo el 10/09/2026. */ ?>
+<div class="marco-tabla" style="margin-bottom:16px" data-guia="saldos">
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Cuenta</th><th class="der">Entradas Bs</th><th class="der">Salidas Bs</th>
+        <th class="der">Neto del período</th><th class="der">Saldo Bs</th><th>Última carga</th></tr></thead>
+      <tbody>
+      <?php $saldoTotal = 0.0; foreach (saldos_por_cuenta($f) as $sc): $saldoTotal += $sc['saldo']['saldo']; ?>
+        <tr>
+          <td><a href="<?= e(url(['cuenta' => $sc['id'], 'p' => 1], 'movimientos')) ?>"><b><?= e($sc['nombre']) ?></b></a>
+            <span class="origen" style="display:block"><?= e($sc['banco']) ?></span></td>
+          <td class="der num" style="color:var(--entrada)"><?= bs((float) $sc['entradas'], 0) ?></td>
+          <td class="der num" style="color:var(--salida)"><?= bs((float) $sc['salidas'], 0) ?></td>
+          <td class="der num" style="color:<?= $sc['neto'] < 0 ? 'var(--salida)' : 'var(--entrada)' ?>">
+            <?= ($sc['neto'] >= 0 ? '+' : '') . bs($sc['neto'], 0) ?></td>
+          <td class="der num<?= $sc['saldo']['saldo'] < 0 ? ' negativo' : '' ?>" style="white-space:nowrap">
+            <?= bs($sc['saldo']['saldo']) ?>
+            <span class="origen" style="display:block"><?= $sc['saldo']['fuente'] === 'banco' ? 'según el banco'
+                : ($sc['saldo']['fuente'] === 'calculado' ? 'calculado' : '⚠ falta saldo inicial') ?></span></td>
+          <td class="fecha"><?= $sc['ultima'] ? e(date('d/m/Y', strtotime($sc['ultima']))) : '—' ?></td>
+        </tr>
+      <?php endforeach ?>
+      </tbody>
+      <tfoot><tr style="background:var(--panel-2);font-weight:600">
+        <td>Disponible consolidado</td><td colspan="3"></td>
+        <td class="der num<?= $saldoTotal < 0 ? ' negativo' : '' ?>" style="font-size:0.9375rem"><?= bs($saldoTotal) ?></td><td></td>
+      </tr></tfoot>
+    </table>
   </div>
 </div>
 
@@ -150,36 +183,6 @@ encabezado_html('Panel', 'panel',
   <?php else: ?>
     <div class="vacio"><b>Todavía no hay débitos en este período</b>Ajusta las fechas o carga un extracto.</div>
   <?php endif ?>
-</div>
-
-<div class="marco-tabla" style="margin-bottom:16px" data-guia="saldos">
-  <div class="tabla-scroll">
-    <table>
-      <thead><tr><th>Cuenta</th><th class="der">Entradas Bs</th><th class="der">Salidas Bs</th>
-        <th class="der">Neto del período</th><th class="der">Saldo Bs</th><th>Última carga</th></tr></thead>
-      <tbody>
-      <?php $saldoTotal = 0.0; foreach (saldos_por_cuenta($f) as $sc): $saldoTotal += $sc['saldo']['saldo']; ?>
-        <tr>
-          <td><a href="<?= e(url(['cuenta' => $sc['id'], 'p' => 1], 'movimientos')) ?>"><b><?= e($sc['nombre']) ?></b></a>
-            <span class="origen" style="display:block"><?= e($sc['banco']) ?></span></td>
-          <td class="der num" style="color:var(--entrada)"><?= bs((float) $sc['entradas'], 0) ?></td>
-          <td class="der num" style="color:var(--salida)"><?= bs((float) $sc['salidas'], 0) ?></td>
-          <td class="der num" style="color:<?= $sc['neto'] < 0 ? 'var(--salida)' : 'var(--entrada)' ?>">
-            <?= ($sc['neto'] >= 0 ? '+' : '') . bs($sc['neto'], 0) ?></td>
-          <td class="der num" style="color:<?= $sc['saldo']['saldo'] < 0 ? 'var(--salida)' : 'var(--texto)' ?>">
-            <?= bs($sc['saldo']['saldo']) ?>
-            <span class="origen" style="display:block"><?= $sc['saldo']['fuente'] === 'banco' ? 'según el banco'
-                : ($sc['saldo']['fuente'] === 'calculado' ? 'calculado' : '⚠ falta saldo inicial') ?></span></td>
-          <td class="fecha"><?= $sc['ultima'] ? e(date('d/m/Y', strtotime($sc['ultima']))) : '—' ?></td>
-        </tr>
-      <?php endforeach ?>
-      </tbody>
-      <tfoot><tr style="background:var(--panel-2);font-weight:600">
-        <td>Disponible consolidado</td><td colspan="3"></td>
-        <td class="der num" style="font-size:15px"><?= bs($saldoTotal) ?></td><td></td>
-      </tr></tfoot>
-    </table>
-  </div>
 </div>
 
 <div class="rejilla rejilla-2">

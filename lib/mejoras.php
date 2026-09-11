@@ -41,6 +41,23 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-10', 'version' => '2.7.13', 'tipo' => 'mejora',
+            'titulo' => 'Los saldos de cada cuenta, a la vista y en rojo cuando quedan en negativo',
+            'resumen' => 'El equipo pidió poder ver los saldos de los bancos de un vistazo. En el '
+                       . 'panel, la tabla con el saldo de cada cuenta estaba al final de la página y '
+                       . 'en una laptop había que bajar dos pantallas para encontrarla: ahora va justo '
+                       . 'debajo de las cifras del período. En Cuentas, el saldo estaba al final de '
+                       . 'cada renglón, donde en una pantalla pequeña quedaba tapado por los botones: '
+                       . 'ahora va pegado al nombre de la cuenta. Y en todas partes, un saldo en '
+                       . 'negativo se pinta en rojo; en positivo se queda como estaba.',
+            'detalles' => [
+                'También en el listado de movimientos: la columna «Saldo Bs» que trae el banco se pone '
+                . 'en rojo si el saldo quedó por debajo de cero.',
+                'Hoy ninguna de las 22 cuentas está en negativo, así que el rojo no se va a ver hasta '
+                . 'que haga falta.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-10', 'version' => '2.7.12', 'tipo' => 'mejora',
             'titulo' => 'Al cargar, el sistema avisa si quedó un día sin extracto',
             'resumen' => 'Esta mañana el saldo del Tesoro de Armor Pets no cuadraba con el banco, y '

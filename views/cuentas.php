@@ -153,8 +153,8 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
   <div class="marco-tabla" data-guia="lista">
     <div class="tabla-scroll">
       <table id="tablaCuentas">
-        <thead><tr><th>Cuenta</th><th>Período cargado</th><th class="der">Entradas Bs</th><th class="der">Salidas Bs</th>
-          <th class="der">Saldo Bs</th><th class="der">Pendientes</th><th></th></tr></thead>
+        <thead><tr><th>Cuenta</th><th class="der">Saldo Bs</th><th>Período cargado</th><th class="der">Entradas Bs</th>
+          <th class="der">Salidas Bs</th><th class="der">Pendientes</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($lista as $c): ?>
           <tr>
@@ -163,14 +163,17 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
               <?php $falta = ficha_incompleta($c); if ($falta !== []): ?>
                 <span class="etq vacia" style="margin-top:4px;display:inline-block">Sin identificar: falta <?= e(implode(', ', $falta)) ?></span>
               <?php endif ?></td>
-            <td class="fecha"><?= $c['f1'] ? e(date('d/m/Y', strtotime($c['f1'])) . ' → ' . date('d/m/Y', strtotime($c['f2']))) : '—' ?></td>
-            <td class="der num" style="color:var(--entrada)"><?= bs((float) $c['cre'], 0) ?></td>
-            <td class="der num" style="color:var(--salida)"><?= bs((float) $c['deb'], 0) ?></td>
-            <?php $sal = $saldos[(int) $c['id']] ?? ['saldo' => 0.0, 'fuente' => 'parcial']; ?>
-            <td class="der num" style="color:<?= $sal['saldo'] < 0 ? 'var(--salida)' : 'var(--texto)' ?>">
+            <?php /* El saldo va junto al nombre a propósito: es lo que se viene a
+                     mirar, y al final de la fila quedaba fuera de la pantalla en una
+                     laptop, tapado por los botones. Lo pidió el equipo el 10/09/2026. */
+                  $sal = $saldos[(int) $c['id']] ?? ['saldo' => 0.0, 'fuente' => 'parcial']; ?>
+            <td class="der num<?= $sal['saldo'] < 0 ? ' negativo' : '' ?>" style="white-space:nowrap">
               <?= bs($sal['saldo']) ?>
               <span class="origen" style="display:block"><?= $sal['fuente'] === 'banco' ? 'según el banco'
                   : ($sal['fuente'] === 'calculado' ? 'calculado' : 'falta saldo inicial') ?></span></td>
+            <td class="fecha"><?= $c['f1'] ? e(date('d/m/Y', strtotime($c['f1'])) . ' → ' . date('d/m/Y', strtotime($c['f2']))) : '—' ?></td>
+            <td class="der num" style="color:var(--entrada)"><?= bs((float) $c['cre'], 0) ?></td>
+            <td class="der num" style="color:var(--salida)"><?= bs((float) $c['deb'], 0) ?></td>
             <td class="der num" style="color:<?= $c['pend'] > 0 ? 'var(--pendiente)' : 'var(--tenue)' ?>"><?= number_format((int) $c['pend'], 0, ',', '.') ?></td>
             <td class="acciones-fijas">
               <a class="btn btn-sm" href="?r=movimientos&cuenta=<?= $c['id'] ?>">Ver</a>

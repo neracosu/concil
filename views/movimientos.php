@@ -172,7 +172,7 @@ function opciones_categoria(array $cats, ?int $sel): void
           <td class="monto <?= $m['tipo'] === 'C' ? 'c' : 'd' ?>">
             <span class="barra" style="width:<?= number_format($anch, 1, '.', '') ?>%"></span>
             <span><?= bs($monto) ?></span></td>
-          <td class="der num" style="color:var(--mudo);white-space:nowrap">
+          <td class="der num<?= $m['saldo'] !== null && (float) $m['saldo'] < 0 ? ' negativo' : '' ?>" style="color:var(--mudo);white-space:nowrap">
             <?= $m['saldo'] === null ? '—' : bs((float) $m['saldo']) ?></td>
           <td class="der num" style="color:var(--mudo);white-space:nowrap"><?= e(tasa_texto($m['tasa_bcv'])) ?></td>
         </tr>
