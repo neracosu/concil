@@ -253,11 +253,26 @@ extractos reales alcanza; si son cientos, algo está mal.
 **Las comisiones tienen dos caminos y hay que respetar los dos.** La mayoría de
 los bancos las nombra y basta una regla de texto; Banesco cobra la comisión del
 pago móvil con el mismo concepto que el pago, así que solo se distingue por ser
-el 0,3 % de un movimiento con su misma referencia. Ese tipo de regla
+un porcentaje fijo de un movimiento con su misma referencia. Ese tipo de regla
 (`proporcion`) no pasa por `casar_regla()` —que mira un movimiento aislado— sino
 por `aplicar_comisiones()`, una pasada aparte. Si añades tipos de regla nuevos,
 acuérdate de excluirlos en `casar_regla()` o el `default` de `coincide()` los
 tratará como «contiene» y casarán con cualquier cosa.
+
+**Y la pareja de la comisión puede ser un crédito.** Hasta el 10/09/2026
+`aplicar_comisiones()` solo emparejaba dos débitos (el pago móvil que sale y su
+0,3 %), y el equipo encontró que las comisiones de Banesco CASHEA se quedaban
+todas en pendientes: son el **1,5 % del cobro que entra**, un débito pegado a un
+crédito con la misma referencia y el mismo texto. Ahora se miran las dos
+parejas, y `reaplicar_reglas()` también las busca. En la pareja con crédito la
+referencia tiene que ser de verdad (seis caracteres y no todo ceros): contra
+los miles de créditos que el Tesoro marca con «0», cualquier proporción aparece
+por azar. En la de dos débitos no hace falta, y quitarla perdería comisiones
+reales del Exterior y el BNC con referencias de cinco cifras. Antes de tocar
+una tasa o la tolerancia, ensaya en seco sobre lo cargado y cuenta **las filas
+que el UPDATE tocaría**, no los grupos que casan: 361 grupos del Tesoro daban
+al 0,3 % y ninguno iba a cambiar, porque el menor ya estaba clasificado por su
+texto y el pendiente era el pago.
 
 **La normalización manda.** `norm()` pasa a mayúsculas, quita acentos y sustituye
 todo lo que no sea alfanumérico por un espacio. Los patrones de las reglas se
@@ -470,6 +485,15 @@ fuera y no se descubren: con 22 cuentas cargadas, el usuario dio por hecho que
 no se podían editar. Y el enlace de editar lleva `#ficha`, que es el ancla del
 formulario: si no, la página recarga arriba, el formulario queda abajo y parece
 que el botón no hizo nada.
+
+**Lo que se viene a mirar va pegado al nombre, no al final del renglón.** El
+saldo de Cuentas estaba en la penúltima columna y en una laptop quedaba fuera
+de la pantalla, tapado por los botones fijos: el equipo pidió el 10/09/2026
+«poder visualizar los saldos» cuando llevaban dos días entrando a esa pantalla
+cincuenta veces. Antes de decidir dónde va una columna, mira en `visitas` qué
+pantalla usa la gente para eso. Y un saldo en negativo lleva la clase
+`.negativo`, no un `style` a mano: es la misma regla en el panel, en Cuentas y
+en Movimientos.
 
 **44 px es el mínimo de lo que se pulsa.** Es lo que piden las guías de
 accesibilidad (WCAG 2.5.5) y lo que usan Apple y Material. Los renglones del

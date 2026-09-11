@@ -122,6 +122,9 @@ function reaplicar_reglas(bool $incluirYaMapeados = false, ?int $cuentaId = null
         $hit->execute([$rid]);
     }
     $pdo->commit();
+    // Las comisiones que se reconocen por su pareja y no por su texto también
+    // cuentan aquí: si no, «Volver a aplicar las reglas» las dejaba fuera.
+    $n += aplicar_comisiones($cuentaId);
     return $n;
 }
 
@@ -133,11 +136,19 @@ function reaplicar_reglas(bool $incluirYaMapeados = false, ?int $cuentaId = null
  * la origina: en Banesco, la comisión de un pago móvil se llama también
  * «Banesco Pago Movil», así que ninguna regla de texto puede separarlas. Lo que
  * sí las distingue es que comparten la referencia con el movimiento que las
- * causó y son un porcentaje fijo de él: 0,3 % en la mayoría de los bancos.
+ * causó y son un porcentaje fijo de él.
  *
- * Medido sobre julio de 2026: 162 de 163 parejas de Banesco están exactamente
- * en el 0,3 %. La única que se salía era un cargo de Movistar al 14 %, que la
- * tolerancia estrecha descarta sola.
+ * Hay dos parejas posibles, y hacen falta las dos:
+ * - Un pago móvil que SALE y su comisión: dos débitos con la misma referencia,
+ *   y el menor es el 0,3 % del mayor. Medido sobre julio de 2026: 162 de 163
+ *   parejas de Banesco están exactamente en el 0,3 %; la única que se salía
+ *   era un cargo de Movistar al 14 %, que la tolerancia estrecha descarta sola.
+ * - Un pago móvil que ENTRA y su comisión: un crédito y un débito con la misma
+ *   referencia, y el débito es el 1,5 % del crédito. Lo reportó el equipo el
+ *   10/09/2026 con Banesco CASHEA. Medido sobre lo cargado: 145 parejas de esa
+ *   cuenta y 54 de Banesco Armor Market están en el 1,5 % exacto. Hasta ese
+ *   día solo se miraba la primera pareja, y la comisión de cada cobro por pago
+ *   móvil se quedaba en pendientes con el mismo texto que el cobro.
  *
  * Se aplica como pasada aparte porque necesita ver la pareja, y no un
  * movimiento aislado como el resto del motor.
@@ -150,18 +161,35 @@ function aplicar_comisiones(?int $cuentaId = null): int
         return 0;
     }
 
-    $where = "m.tipo = 'D' AND m.referencia <> '' AND " . filtro_sede();
+    $where = "m.tipo = 'D' AND m.debito > 0 AND " . filtro_sede();
     if ($cuentaId) {
         $where .= ' AND m.cuenta_id = ' . (int) $cuentaId;
     }
 
-    // Referencias con más de un débito: solo ahí puede haber una pareja.
-    $grupos = $pdo->query("SELECT m.cuenta_id, m.referencia,
-                                  MIN(m.debito) menor, MAX(m.debito) mayor
+    // Pareja 1: referencias con más de un débito; el menor es la comisión.
+    // Aquí vale cualquier referencia: entre dos débitos la proporción exacta
+    // ya es prueba suficiente, y el Exterior y el BNC usan referencias de
+    // cinco cifras para comisiones que son de verdad.
+    $salidas = $pdo->query("SELECT m.cuenta_id, m.referencia,
+                                   MIN(m.debito) menor, MAX(m.debito) mayor
+                              FROM movimientos m
+                             WHERE $where AND m.referencia <> ''
+                          GROUP BY m.cuenta_id, m.referencia
+                            HAVING COUNT(*) > 1 AND MAX(m.debito) > MIN(m.debito)")
+                   ->fetchAll();
+
+    // Pareja 2: un débito sin clasificar frente a cada crédito con su misma
+    // referencia. Se compara con cada crédito y no con el mayor de todos,
+    // porque Banesco repite la referencia del remitente en todo lo que recibe
+    // de él y la comisión es la de un cobro concreto. Y aquí la referencia sí
+    // tiene que ser una de verdad: contra los miles de créditos que el Tesoro
+    // marca con «0», cualquier proporción aparece por azar.
+    $cobros = $pdo->query("SELECT m.cuenta_id, m.referencia, m.debito menor, c.credito mayor
                              FROM movimientos m
-                            WHERE $where
-                         GROUP BY m.cuenta_id, m.referencia
-                           HAVING COUNT(*) > 1 AND MIN(m.debito) > 0 AND MAX(m.debito) > MIN(m.debito)")
+                             JOIN movimientos c ON c.cuenta_id = m.cuenta_id AND c.referencia = m.referencia
+                                               AND c.tipo = 'C' AND c.credito > m.debito
+                            WHERE $where AND m.categoria_id IS NULL
+                              AND LENGTH(m.referencia) >= 6 AND m.referencia NOT REGEXP '^0+$'")
                   ->fetchAll();
 
     $marcar = $pdo->prepare("UPDATE movimientos
@@ -173,7 +201,7 @@ function aplicar_comisiones(?int $cuentaId = null): int
 
     $n = 0;
     $porRegla = [];
-    foreach ($grupos as $g) {
+    foreach ([...$salidas, ...$cobros] as $g) {
         $proporcion = (float) $g['menor'] / (float) $g['mayor'] * 100;
         foreach ($reglas as $r) {
             $tasa = (float) str_replace(',', '.', (string) $r['patron']);

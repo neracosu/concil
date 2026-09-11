@@ -30,7 +30,7 @@ function db(): PDO
  * aquí**, o la migración no llegará a correr en el servidor: se salta cuando la
  * base ya dice tener esta versión.
  */
-const ESQUEMA_VERSION = 8;
+const ESQUEMA_VERSION = 9;
 
 function migrar(): void
 {
@@ -526,6 +526,7 @@ function migrar(): void
 
     sembrar_comisiones($pdo);
     sembrar_desglose_comisiones($pdo);
+    sembrar_comision_cobros($pdo);
     sembrar_maestro($pdo);
 
     // Al final del todo: si algo de arriba falló, la próxima petición reintenta.
@@ -587,6 +588,33 @@ function sembrar_comisiones(PDO $pdo): void
     $ins->execute(['Comisiones · 0,3 % de un movimiento con la misma referencia', 'monto', 'proporcion',
                    '0.3', $cat, 'Banco', 75]);
     guardar_ajuste('reglas_comision', '1');
+}
+
+/**
+ * La comisión del pago móvil que ENTRA: el 1,5 % del cobro, con su misma
+ * referencia y su mismo texto. La regla del 0,3 % solo cubría el pago móvil
+ * que sale, y el equipo encontró el 10/09/2026 que las comisiones de Banesco
+ * CASHEA se quedaban todas en pendientes. Va a «Pago móvil», que es la
+ * categoría del desglose de comisiones; si no existiera, a la general.
+ */
+function sembrar_comision_cobros(PDO $pdo): void
+{
+    if (ajuste('reglas_comision_cobro') === '1') {
+        return;
+    }
+    $cat = $pdo->query("SELECT id FROM categorias WHERE nombre = 'Pago móvil' LIMIT 1")->fetchColumn();
+    if ($cat === false) {
+        $cat = $pdo->query("SELECT id FROM categorias WHERE nombre LIKE '%omisiones bancarias%' LIMIT 1")
+                   ->fetchColumn();
+    }
+    if ($cat === false) {
+        return;                 // aún no se sembraron las categorías
+    }
+    $pdo->prepare('INSERT INTO reglas (nombre, campo, tipo, patron, categoria_id, beneficiario, prioridad)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)')
+        ->execute(['Comisiones · 1,5 % de un cobro con la misma referencia (pago móvil que entra)',
+                   'monto', 'proporcion', '1.5', (int) $cat, 'Banco', 75]);
+    guardar_ajuste('reglas_comision_cobro', '1');
 }
 
 /** ¿Existe ese índice? Se usa para migrar claves sin repetir el ALTER. */

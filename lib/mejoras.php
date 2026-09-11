@@ -41,6 +41,24 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-10', 'version' => '2.7.14', 'tipo' => 'correccion',
+            'titulo' => 'Las comisiones del pago móvil de Banesco ya se reconocen solas',
+            'resumen' => 'El equipo avisó que las comisiones de los cobros por pago móvil de Banesco '
+                       . 'CASHEA se quedaban en «sin clasificar». El banco las cobra con el mismo '
+                       . 'texto y la misma referencia que el cobro, así que ninguna regla de texto '
+                       . 'puede verlas. El sistema ya sabía reconocer la comisión de un pago móvil '
+                       . 'que sale (el 0,3 % del pago), pero no la de uno que entra: es el 1,5 % '
+                       . 'del cobro. Ahora busca las dos, al cargar cada extracto y al pulsar '
+                       . '«Volver a aplicar las reglas».',
+            'detalles' => [
+                'Se comprobó sobre todo lo cargado: 145 comisiones de Banesco CASHEA y 54 de Banesco '
+                . 'Armor Market son exactamente el 1,5 % de su cobro. Las 10 que estaban pendientes '
+                . 'quedaron clasificadas hoy mismo en «Pago móvil», dentro de comisiones bancarias.',
+                'Solo se emparejan cuando la referencia es de verdad. El Tesoro escribe «0» en miles '
+                . 'de filas, y ahí no se compara nada.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-10', 'version' => '2.7.13', 'tipo' => 'mejora',
             'titulo' => 'Los saldos de cada cuenta, a la vista y en rojo cuando quedan en negativo',
             'resumen' => 'El equipo pidió poder ver los saldos de los bancos de un vistazo. En el '
