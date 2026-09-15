@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ->execute(['Nota del archivo · ' . $nota, 'nota', 'igual', norm($nota), $cat]);
         $n = reaplicar_reglas();
         bitacora('regla_sugerida', $nota);
-        flash('ok', "Regla creada desde la nota «$nota». $n movimiento(s) quedaron clasificados.");
+        flash('ok', "Regla creada desde la nota «{$nota}». $n movimiento(s) quedaron clasificados.");
         redirigir('?r=reglas');
     }
 

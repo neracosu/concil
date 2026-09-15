@@ -41,6 +41,33 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-15', 'version' => '2.7.16', 'tipo' => 'mejora',
+            'titulo' => 'Lo que auditoría anotó en su libro ya se ve en cada movimiento',
+            'resumen' => 'Cuando se cargó el libro de auditoría del semestre, el sistema usó la columna '
+                       . 'AUDITORIA solo para elegir la categoría, y el texto de cada fila se quedó '
+                       . 'fuera. Por eso el equipo estaba copiando a mano, uno por uno, lo que ya '
+                       . 'tenía escrito en el Excel. Con la versión del libro que mandaron el 15/09, '
+                       . 'ese texto pasó a la justificación de cada movimiento. Y en «Por justificar» '
+                       . 'se ve debajo del concepto y aparece ya escrito al abrir un movimiento: '
+                       . 'basta con elegir la categoría y guardar.',
+            'detalles' => [
+                '18.003 movimientos recibieron su justificación del libro: 7.068 de julio, 8.556 de '
+                . 'agosto y 2.379 de septiembre.',
+                'No se cambió nada de lo que ya estaba hecho. Ninguna justificación escrita por el '
+                . 'equipo se reemplazó y ninguna categoría se movió. De las 332 que el equipo ya había '
+                . 'escrito, 231 eran idénticas al libro.',
+                'Al justificar un grupo entero, si deja el cuadro en blanco cada movimiento conserva '
+                . 'su propia justificación.',
+            ],
+        ],
+        [
+            'fecha' => '2026-09-15', 'version' => '2.7.15', 'tipo' => 'correccion',
+            'titulo' => 'El aviso al crear una regla desde una nota ya dice cuál nota',
+            'resumen' => 'Al crear una regla desde la nota de un archivo, el mensaje de confirmación '
+                       . 'salía con las comillas vacías: «». La regla se guardaba bien; solo faltaba '
+                       . 'el texto en el aviso.',
+        ],
+        [
             'fecha' => '2026-09-10', 'version' => '2.7.14', 'tipo' => 'correccion',
             'titulo' => 'Las comisiones del pago móvil de Banesco ya se reconocen solas',
             'resumen' => 'El equipo avisó que las comisiones de los cobros por pago móvil de Banesco '

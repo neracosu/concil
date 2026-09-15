@@ -164,9 +164,13 @@ echo '</datalist>';
  * anidar formularios dentro de la tabla, los campos se atan al suyo con el
  * atributo form="…" y la etiqueta <form> se emite aparte, fuera de la tabla.
  */
-function form_clasificar(array $cats, string $accion, array $ocultos, string $patronSugerido, string $idForm, bool $suelto = false, ?array $mov = null): void
+function form_clasificar(array $cats, string $accion, array $ocultos, string $patronSugerido, string $idForm, bool $suelto = false, ?array $mov = null, int $conTexto = 0): void
 {
     $att = $suelto ? ' form="' . e($idForm) . '"' : '';
+    // Casi todo lo del libro de auditoría llega ya con su justificación. Si el
+    // cuadro saliera vacío, el equipo la volvería a copiar del Excel, que es
+    // justo el trabajo que había que ahorrarle.
+    $previa = $suelto && $mov !== null ? trim((string) ($mov['justificacion'] ?? '')) : '';
     // Las facturas solo se piden cuando se está justificando un único
     // movimiento: es su pago el que se reparte. El proveedor sí se puede
     // aplicar a todo el grupo de una vez.
@@ -208,7 +212,11 @@ function form_clasificar(array $cats, string $accion, array $ocultos, string $pa
       <?php endif ?>
       <div>
         <label>Justificación <span style="text-transform:none;letter-spacing:0">(para qué se usó el dinero)</span></label>
-        <textarea name="justificacion" maxlength="1000" rows="2" placeholder="Ej.: pago de la factura de agosto del servicio de internet de la sede Boleíta."<?= $att ?>></textarea>
+        <?php if ($conTexto > 0): ?>
+          <p class="origen" style="margin:0 0 6px"><?= $conTexto === 1 ? 'Uno de estos movimientos ya trae' : $conTexto . ' de estos movimientos ya traen' ?>
+            su justificación. Si deja este cuadro en blanco, cada uno conserva la suya; si escribe algo, se les pone a todos.</p>
+        <?php endif ?>
+        <textarea name="justificacion" maxlength="1000" rows="2" placeholder="Ej.: pago de la factura de agosto del servicio de internet de la sede Boleíta."<?= $att ?>><?= e($previa) ?></textarea>
       </div>
       <div style="border-top:1px solid var(--linea);padding-top:12px" <?= $idForm === 'g0' ? 'data-guia="regla"' : '' ?>>
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--texto);margin-bottom:10px">
@@ -258,6 +266,8 @@ if ($modo === 'grupos'):
                                   MIN(m.fecha) f1, MAX(m.fecha) f2,
                                   SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT m.concepto SEPARATOR '§'), '§', 1) ejemplo,
                                   SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT NULLIF(m.nota_banco,'') SEPARATOR '§'), '§', 1) nota,
+                                  SUM(TRIM(COALESCE(m.justificacion,'')) <> '') con_texto,
+                                  SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT NULLIF(TRIM(m.justificacion),'') SEPARATOR '§'), '§', 1) justif,
                                   GROUP_CONCAT(DISTINCT c.nombre SEPARATOR ', ') cuentas
                              FROM movimientos m JOIN cuentas c ON c.id = m.cuenta_id
                             WHERE m.tipo='D' AND m.categoria_id IS NULL AND " . filtro_sede() . "
@@ -276,7 +286,7 @@ if ($modo === 'grupos'):
         $marcas = implode(',', array_fill(0, count($claves), '?'));
         $sql = 'WITH x AS (
                   SELECT ' . GRUPO_SQL . " grupo, m.id, m.fecha, m.concepto, m.referencia,
-                         m.debito, m.nota_banco, c.nombre cuenta,
+                         m.debito, m.nota_banco, m.justificacion, c.nombre cuenta,
                          ROW_NUMBER() OVER (PARTITION BY " . GRUPO_SQL . ' ORDER BY m.fecha, m.id) rn
                     FROM movimientos m JOIN cuentas c ON c.id = m.cuenta_id
                    WHERE m.tipo = \'D\' AND m.categoria_id IS NULL AND ' . filtro_sede()
@@ -303,6 +313,15 @@ if ($modo === 'grupos'):
                 <?= e(mb_strimwidth($g['ejemplo'], 0, 76, '…')) ?>
                 <?php if ($g['nota']): ?> · nota del banco: <b><?= e($g['nota']) ?></b><?php endif ?>
               </div>
+              <?php if ((int) $g['con_texto'] > 0): ?>
+                <div style="font-size:0.8125rem;margin-top:5px">
+                  <?php if ((int) $g['n'] === 1): ?>
+                    Justificación: <b><?= e(mb_strimwidth((string) $g['justif'], 0, 160, '…')) ?></b>
+                  <?php else: ?>
+                    <b><?= (int) $g['con_texto'] ?> de <?= (int) $g['n'] ?></b> ya <?= (int) $g['con_texto'] === 1 ? 'trae' : 'traen' ?> su justificación: se ve en «Ver los conceptos».
+                  <?php endif ?>
+                </div>
+              <?php endif ?>
               <div class="origen" style="margin-top:6px">
                 <?= e($g['cuentas']) ?> ·
                 <?= e(date('d/m/Y', strtotime($g['f1']))) ?><?= $g['f1'] !== $g['f2'] ? ' al ' . e(date('d/m/Y', strtotime($g['f2']))) : '' ?>
@@ -326,7 +345,8 @@ if ($modo === 'grupos'):
                       <td class="fecha"><a href="?r=movimiento&amp;id=<?= (int) $d['id'] ?>"><?= e(date('d/m/y', strtotime($d['fecha']))) ?></a></td>
                       <td style="font-size:12.5px;color:var(--mudo);white-space:nowrap"><?= e($d['cuenta']) ?></td>
                       <td class="concepto"><span class="txt"><?= e($d['concepto']) ?></span>
-                        <?php if ($d['nota_banco']): ?><span class="nota"><?= e(mb_strimwidth((string) $d['nota_banco'], 0, 60, '…')) ?></span><?php endif ?></td>
+                        <?php if ($d['nota_banco']): ?><span class="nota"><?= e(mb_strimwidth((string) $d['nota_banco'], 0, 60, '…')) ?></span><?php endif ?>
+                        <?php if (trim((string) $d['justificacion']) !== ''): ?><span class="nota">Justificación: <b><?= e(mb_strimwidth((string) $d['justificacion'], 0, 120, '…')) ?></b></span><?php endif ?></td>
                       <td class="ref"><?= e($d['referencia']) ?></td>
                       <td class="der num"><?= bs((float) $d['debito']) ?></td>
                     </tr>
@@ -340,7 +360,7 @@ if ($modo === 'grupos'):
               <?php endif ?>
             </details>
           <?php endif ?>
-          <?php form_clasificar($cats, 'grupo', ['grupo' => $g['grupo']], sugerir_patron($g['grupo']), $idf) ?>
+          <?php form_clasificar($cats, 'grupo', ['grupo' => $g['grupo']], sugerir_patron($g['grupo']), $idf, false, null, (int) $g['con_texto']) ?>
           <div class="acciones" style="margin-top:14px">
             <button class="btn btn-oro" form="<?= $idf ?>">Justificar los <?= (int) $g['n'] ?></button>
             <a class="btn" href="<?= e(url(['modo' => 'lista', 'texto' => mb_substr($g['ejemplo'], 0, 40), 'p' => 1])) ?>">Ver uno por uno</a>
@@ -396,7 +416,8 @@ if ($modo === 'grupos'):
                 <td class="fecha"><?= e(date('d/m/y', strtotime($m['fecha']))) ?></td>
                 <td style="font-size:12.5px;color:var(--mudo)"><?= e($m['cuenta']) ?></td>
                 <td class="concepto"><span class="txt"><?= e($m['concepto']) ?></span>
-                  <?php if ($m['nota_banco']): ?><span class="nota"><?= e($m['nota_banco']) ?></span><?php endif ?></td>
+                  <?php if ($m['nota_banco']): ?><span class="nota"><?= e($m['nota_banco']) ?></span><?php endif ?>
+                  <?php if (trim((string) $m['justificacion']) !== ''): ?><span class="nota">Justificación: <b><?= e(mb_strimwidth((string) $m['justificacion'], 0, 120, '…')) ?></b></span><?php endif ?></td>
                 <td class="ref"><?= e($m['referencia']) ?></td>
                 <td class="monto d"><span class="barra" style="width:<?= number_format($anch, 1, '.', '') ?>%"></span><span><?= bs((float) $m['debito']) ?></span></td>
                 <td class="der num" style="color:var(--mudo);white-space:nowrap"><?= e(tasa_texto($m['tasa_bcv'])) ?></td>
