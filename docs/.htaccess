@@ -1,0 +1,5 @@
+# Nada de docs/ se sirve por web. Aquí llegan documentos de trabajo que traen
+# datos de la empresa: el 14/09/2026 la herramienta de cuentas por pagar que
+# dejaron en fase2/ salía con el RIF del grupo a cualquiera que tuviera el
+# enlace. Los .md ya estaban cerrados desde la raíz; esto cubre todo lo demás.
+Require all denied

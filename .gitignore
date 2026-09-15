@@ -22,3 +22,7 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# Documentos de trabajo de la segunda fase: traen datos de la empresa y el
+# repositorio es público.
+docs/fase2/
