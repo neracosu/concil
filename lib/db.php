@@ -30,7 +30,7 @@ function db(): PDO
  * aquí**, o la migración no llegará a correr en el servidor: se salta cuando la
  * base ya dice tener esta versión.
  */
-const ESQUEMA_VERSION = 9;
+const ESQUEMA_VERSION = 10;
 
 function migrar(): void
 {
@@ -312,6 +312,10 @@ function migrar(): void
     // Quién corrigió la tasa a mano. Una tasa escrita por una persona es una
     // afirmación, no un dato descargado, y hay que poder preguntarle a alguien.
     columna_si_falta($pdo, 'tasas', 'usuario_id', 'INT NULL');
+    // La fecha valor de la tasa que regía ese día. Cuando no coincide con la
+    // fecha, ese día no fue hábil, y administración no usa esa tasa sino la
+    // última que publicó el BCV: ver aplicar_tasa_publicada().
+    columna_si_falta($pdo, 'tasas', 'valor', 'DATE NULL');
 
     // Proveedores y facturas. El proveedor cuelga del movimiento porque todo
     // pago tiene destinatario; las facturas van aparte para que quepan los

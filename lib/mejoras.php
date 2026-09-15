@@ -52,7 +52,9 @@ function mejoras(): array
                 'El Excel que se exporta trae una columna nueva al final, «US$», con signo y sin redondear, '
                 . 'para que la suma de la columna cuadre. La tasa del BCV ahora también sale como número: '
                 . 'antes salía como texto y no servía para una fórmula.',
-                'Los sábados, domingos y feriados se usa la tasa que regía ese día, que es la del último día hábil.',
+                'Los sábados, domingos y feriados se usa la última tasa que publicó el BCV: la que sale el '
+                . 'viernes en la tarde con fecha valor del lunes, que es la que usa administración. Por eso '
+                . 'la tasa de esos días cambió en todo lo cargado; la de los días hábiles sigue igual.',
                 'Si un fin de semana nadie entraba al sistema, esos días se quedaban sin tasa y sus movimientos '
                 . 'sin dólares. Ahora el sistema trae solo los días que falten; los del 12 y el 13 de septiembre ya están.',
             ],

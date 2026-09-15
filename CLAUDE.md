@@ -391,6 +391,16 @@ valoró, así que el sábado y el domingo comparten el `effective_date` del vier
 Guardar por `effective_date` deja el fin de semana sin fila; se guarda por
 `date`. Una tasa con `origen = 'manual'` no la pisa la sincronización.
 
+**Pero el día no hábil no lleva la tasa que regía.** Administración usa la
+última que publicó el BCV —la del viernes por la tarde, con fecha valor del
+lunes—, y lo confirmó el usuario el 15/09/2026. `effective_date` va a
+`tasas.valor`; cuando no coincide con `fecha`, `aplicar_tasa_publicada()` le
+pone la tasa del siguiente día hábil, **ya guardada así** para que ninguna
+consulta tenga que saberlo. Corre al final de `guardar_tasas()` y de
+`corregir_tasa()`. El lunes 14/09/2026 no tuvo fecha valor propia: los feriados
+salen solos de la fuente, no hay que listarlos. Y no esperes que su hoja cuadre
+fila por fila: en días hábiles 1.913 filas usan la tasa del día anterior.
+
 **La visita guiada.** Los pasos de `lib/guia.php` apuntan a atributos
 `data-guia="..."` de las vistas. Si renombras o quitas uno de esos elementos, el
 paso correspondiente se salta en silencio. Al añadir una sección nueva, añade su

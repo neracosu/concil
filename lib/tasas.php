@@ -11,7 +11,9 @@
  * sigue leyéndose con las tasas de julio.
  *
  * La fuente publica un valor por día de calendario: los fines de semana y
- * feriados repiten la última tasa vigente. Pero aquí solo se pide la del día
+ * feriados repiten la última tasa vigente, y aquí se cambia por la última
+ * publicada, que es la que usa administración (aplicar_tasa_publicada()).
+ * Solo se pide la del día
  * cuando alguien abre el panel, así que un sábado sin nadie quedaba sin fila
  * —pasó el 12 y el 13/09/2026—: tasas_al_dia() rellena lo que falte.
  */
@@ -66,8 +68,9 @@ function guardar_tasas(array $dias): int
         // `effective_date` y guardar por ahí dejaría el fin de semana sin fila.
         $fecha = (string) ($d['date'] ?? $d['effective_date'] ?? '');
         $tasa  = (float) ($d['USD'] ?? 0);
+        $valor = (string) ($d['effective_date'] ?? '');
         if ($tasa > 0 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-            $limpias[$fecha] = $tasa;
+            $limpias[$fecha] = [$tasa, preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) ? $valor : null];
         }
     }
     if ($limpias === []) {
@@ -77,17 +80,22 @@ function guardar_tasas(array $dias): int
     $pdo = db();
     $n = 0;
     foreach (array_chunk($limpias, 200, true) as $trozo) {
-        $huecos = implode(',', array_fill(0, count($trozo), '(?,?,\'bcv\')'));
+        $huecos = implode(',', array_fill(0, count($trozo), '(?,?,?,\'bcv\')'));
         $args = [];
-        foreach ($trozo as $fecha => $tasa) {
+        foreach ($trozo as $fecha => [$tasa, $valor]) {
             $args[] = $fecha;
             $args[] = $tasa;
+            $args[] = $valor;
         }
-        $s = $pdo->prepare("INSERT INTO tasas (fecha, tasa, origen) VALUES $huecos
-                            ON DUPLICATE KEY UPDATE tasa = IF(origen = 'manual', tasa, VALUES(tasa))");
+        $s = $pdo->prepare("INSERT INTO tasas (fecha, tasa, valor, origen) VALUES $huecos
+                            ON DUPLICATE KEY UPDATE tasa = IF(origen = 'manual', tasa, VALUES(tasa)),
+                                                    valor = COALESCE(VALUES(valor), valor)");
         $s->execute($args);
         $n += count($trozo);
     }
+    // Lo recién guardado trae, para los días no hábiles, la tasa que regía; y
+    // un lunes recién llegado cambia la de su fin de semana.
+    aplicar_tasa_publicada();
     return $n;
 }
 
@@ -198,6 +206,7 @@ function corregir_tasa(string $fecha, float $tasa): array
                    ON DUPLICATE KEY UPDATE tasa = VALUES(tasa), origen = 'manual',
                                            usuario_id = VALUES(usuario_id)")
         ->execute([$fecha, $tasa, usuario_id_actual()]);
+    aplicar_tasa_publicada();
 
     $dia = date('d/m/Y', strtotime($fecha));
     $rastro = $antes
@@ -265,4 +274,47 @@ function en_dolares(array $m, int $decimales = 2): ?float
 function dolares_texto(?float $usd): string
 {
     return $usd === null ? '—' : number_format($usd, 2, ',', '.');
+}
+
+/**
+ * Los sábados, domingos y feriados administración no usa la tasa que regía ese
+ * día, sino la última que el BCV publicó antes: la que sale el viernes por la
+ * tarde con fecha valor del lunes. Lo confirmó el usuario el 15/09/2026, y es
+ * lo que más aparece en su hoja (el sábado 04/07, 667,05 y no 652,97).
+ *
+ * La fuente da para esos días la que regía, con su `effective_date` anterior a
+ * la fecha. Aquí se reconoce el día no hábil por eso —valor distinto de la
+ * fecha— y se le pone la tasa del siguiente día hábil, que ya estaba publicada.
+ * Se guarda así, ya aplicada, para que todas las pantallas, los repartos de
+ * facturas y la exportación la lean igual sin cambiar ninguna consulta.
+ *
+ * Mientras el siguiente día hábil no esté guardado (un sábado, antes de que
+ * llegue el lunes) el día se queda con la que regía; se corrige solo en cuanto
+ * entra. Una tasa escrita a mano en un día no hábil no se toca; la de un día
+ * hábil sí arrastra al fin de semana anterior, porque es la que se publicó.
+ */
+function aplicar_tasa_publicada(): int
+{
+    $pdo = db();
+    $filas = $pdo->query('SELECT fecha, tasa, valor, origen FROM tasas
+                           WHERE valor IS NOT NULL ORDER BY fecha DESC')->fetchAll();
+    $siguiente = null;
+    $cambios = [];
+    foreach ($filas as $r) {
+        if ($r['valor'] === $r['fecha']) {
+            $siguiente = (float) $r['tasa'];
+            continue;
+        }
+        if ($r['origen'] === 'manual' || $siguiente === null) {
+            continue;
+        }
+        if (abs((float) $r['tasa'] - $siguiente) > 0.000001) {
+            $cambios[$r['fecha']] = $siguiente;
+        }
+    }
+    $st = $pdo->prepare("UPDATE tasas SET tasa = ? WHERE fecha = ? AND origen <> 'manual'");
+    foreach ($cambios as $fecha => $tasa) {
+        $st->execute([$tasa, $fecha]);
+    }
+    return count($cambios);
 }
