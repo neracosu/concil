@@ -205,7 +205,7 @@ function guia_pasos(): array
             'ruta' => 'ajustes', 'sel' => '[data-guia="tasas"]',
             'titulo' => 'A cuánto estaba el dólar ese día',
             'texto' => 'Al lado de cada operación verá la tasa oficial del BCV <b>del día en que se hizo</b>, '
-                     . 'no la de hoy. Es la que necesita administración para sacar sus cuentas.',
+                     . 'no la de hoy, y <b>cuánto representa en dólares</b>: en negativo lo que sale, en positivo lo que entra.',
             'nota' => 'Se busca sola una vez al día. Si algún día faltara, con este botón las trae todas.',
         ],
         [

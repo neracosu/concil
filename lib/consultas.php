@@ -127,6 +127,26 @@ function resumen(array $f): array
     return $s->fetch() ?: [];
 }
 
+/**
+ * El total del filtro en dólares, cada movimiento a la tasa de su día y con el
+ * signo de en_dolares(). Va aparte de resumen() a propósito: resumen() lo usa
+ * también el panel, la pantalla que más se abre, y unirle las tasas lo
+ * encarecería para una cifra que el panel no enseña.
+ */
+function resumen_dolares(array $f): array
+{
+    [$w, $p] = where_filtros($f);
+    [$monto, $signo] = $f['tipo'] === 'C' ? ['m.credito', 1] : ['m.debito', -1];
+    $s = db()->prepare("SELECT COALESCE(SUM($monto / t.tasa), 0) * $signo usd,
+                               COALESCE(SUM($monto > 0 AND t.tasa IS NULL), 0) sin_tasa
+                          FROM movimientos m
+                     LEFT JOIN tasas t ON t.fecha = m.fecha
+                         WHERE $w");
+    $s->execute($p);
+    $r = $s->fetch() ?: [];
+    return ['usd' => round((float) ($r['usd'] ?? 0), 2) + 0.0, 'sin_tasa' => (int) ($r['sin_tasa'] ?? 0)];
+}
+
 /** Reparto por categoría del conjunto filtrado. Alimenta la cinta de conciliación. */
 function por_categoria(array $f, int $limite = 40): array
 {

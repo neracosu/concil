@@ -41,6 +41,23 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-15', 'version' => '2.7.17', 'tipo' => 'mejora',
+            'titulo' => 'Cada movimiento, también en dólares',
+            'resumen' => 'El equipo pidió ver cuánto representa cada operación en dólares, como en la '
+                       . 'columna CAMBIO de su hoja. Ahora, al lado del monto en bolívares, aparece su '
+                       . 'equivalente en dólares a la tasa del BCV del día en que se hizo: en negativo lo '
+                       . 'que sale y en positivo lo que entra. Se ve en «Por justificar», en Movimientos y '
+                       . 'en la ficha de cada movimiento, y los totales de arriba también salen en dólares.',
+            'detalles' => [
+                'El Excel que se exporta trae una columna nueva al final, «US$», con signo y sin redondear, '
+                . 'para que la suma de la columna cuadre. La tasa del BCV ahora también sale como número: '
+                . 'antes salía como texto y no servía para una fórmula.',
+                'Los sábados, domingos y feriados se usa la tasa que regía ese día, que es la del último día hábil.',
+                'Si un fin de semana nadie entraba al sistema, esos días se quedaban sin tasa y sus movimientos '
+                . 'sin dólares. Ahora el sistema trae solo los días que falten; los del 12 y el 13 de septiembre ya están.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-15', 'version' => '2.7.16', 'tipo' => 'mejora',
             'titulo' => 'Lo que auditoría anotó en su libro ya se ve en cada movimiento',
             'resumen' => 'Cuando se cargó el libro de auditoría del semestre, el sistema usó la columna '

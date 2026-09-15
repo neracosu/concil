@@ -130,9 +130,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $cats = categorias();
 $total = pendientes_total();
-$totalBs = (float) $pdo->query("SELECT COALESCE(SUM(m.debito),0) FROM movimientos m
-                                 WHERE m.tipo='D' AND m.categoria_id IS NULL
-                                   AND " . filtro_sede())->fetchColumn();
+$totales = $pdo->query("SELECT COALESCE(SUM(m.debito),0) bs, -COALESCE(SUM(m.debito / t.tasa),0) usd
+                          FROM movimientos m LEFT JOIN tasas t ON t.fecha = m.fecha
+                         WHERE m.tipo='D' AND m.categoria_id IS NULL
+                           AND " . filtro_sede())->fetch();
+$totalBs = (float) $totales['bs'];
 
 $acciones = '<span data-guia="modo"><a class="btn' . ($modo === 'grupos' ? ' btn-oro' : '') . '" href="' . e(url(['modo' => 'grupos', 'p' => 1])) . '">Por patrón</a>'
           . '<a class="btn' . ($modo === 'lista' ? ' btn-oro' : '') . '" href="' . e(url(['modo' => 'lista', 'p' => 1])) . '">Uno por uno</a></span>';
@@ -140,6 +142,7 @@ $acciones = '<span data-guia="modo"><a class="btn' . ($modo === 'grupos' ? ' btn
 encabezado_html('Por justificar', 'pendientes',
     $total > 0
         ? number_format($total, 0, ',', '.') . ' débitos sin clasificar · <b class="num" style="color:var(--pendiente)">Bs ' . bs($totalBs, 0) . '</b>'
+          . ' · <b class="num">US$ ' . e(dolares_texto(round((float) $totales['usd'], 2) + 0.0)) . '</b>'
         : 'Todo al día.',
     $acciones);
 
@@ -148,7 +151,7 @@ $sugProv = nombres_proveedor();
 
 if ($total === 0) {
     echo '<div class="marco-tabla"><div class="vacio"><b>No queda nada por justificar</b>'
-       . 'Cuando cargues el próximo extracto, aquí aparecerá lo que las reglas no reconozcan.</div></div>';
+       . 'Cuando cargue el próximo extracto, aquí aparecerá lo que las reglas no reconozcan.</div></div>';
     pie_html();
     return;
 }
@@ -268,8 +271,10 @@ if ($modo === 'grupos'):
                                   SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT NULLIF(m.nota_banco,'') SEPARATOR '§'), '§', 1) nota,
                                   SUM(TRIM(COALESCE(m.justificacion,'')) <> '') con_texto,
                                   SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT NULLIF(TRIM(m.justificacion),'') SEPARATOR '§'), '§', 1) justif,
-                                  GROUP_CONCAT(DISTINCT c.nombre SEPARATOR ', ') cuentas
+                                  GROUP_CONCAT(DISTINCT c.nombre SEPARATOR ', ') cuentas,
+                                  -SUM(m.debito / t.tasa) usd, SUM(t.tasa IS NULL) sin_tasa
                              FROM movimientos m JOIN cuentas c ON c.id = m.cuenta_id
+                        LEFT JOIN tasas t ON t.fecha = m.fecha
                             WHERE m.tipo='D' AND m.categoria_id IS NULL AND " . filtro_sede() . "
                          GROUP BY " . GRUPO_SQL . "
                          ORDER BY total DESC, " . GRUPO_SQL . "
@@ -286,9 +291,10 @@ if ($modo === 'grupos'):
         $marcas = implode(',', array_fill(0, count($claves), '?'));
         $sql = 'WITH x AS (
                   SELECT ' . GRUPO_SQL . " grupo, m.id, m.fecha, m.concepto, m.referencia,
-                         m.debito, m.nota_banco, m.justificacion, c.nombre cuenta,
+                         m.tipo, m.debito, m.credito, m.nota_banco, m.justificacion, c.nombre cuenta, t.tasa tasa_bcv,
                          ROW_NUMBER() OVER (PARTITION BY " . GRUPO_SQL . ' ORDER BY m.fecha, m.id) rn
                     FROM movimientos m JOIN cuentas c ON c.id = m.cuenta_id
+               LEFT JOIN tasas t ON t.fecha = m.fecha
                    WHERE m.tipo = \'D\' AND m.categoria_id IS NULL AND ' . filtro_sede()
                  . ' AND ' . GRUPO_SQL . " IN ($marcas)
                 )
@@ -299,8 +305,8 @@ if ($modo === 'grupos'):
     }
     ?>
     <div class="aviso aviso-nota">
-      Se agrupan los conceptos que solo cambian en los números. Clasifica el grupo completo de una vez;
-      si guardas la regla, los próximos extractos ya llegan clasificados.
+      Se agrupan los conceptos que solo cambian en los números. Justifique el grupo completo de una vez;
+      si guarda la regla, los próximos extractos ya llegan clasificados.
     </div>
 
     <div class="pila">
@@ -329,6 +335,10 @@ if ($modo === 'grupos'):
             </div>
             <div style="text-align:right;white-space:nowrap">
               <div class="num" style="font-size:20px;color:var(--salida)">Bs <?= bs((float) $g['total']) ?></div>
+              <div class="num negativo" style="font-size:0.9375rem">US$ <?= e(dolares_texto($g['usd'] === null ? null : round((float) $g['usd'], 2) + 0.0)) ?></div>
+              <?php if ((int) $g['sin_tasa'] > 0 && $g['usd'] !== null): ?>
+                <div class="origen"><?= (int) $g['sin_tasa'] ?> sin tasa del BCV, fuera de esa suma</div>
+              <?php endif ?>
               <div class="origen"><?= number_format((int) $g['n'], 0, ',', '.') ?> movimiento<?= $g['n'] == 1 ? '' : 's' ?></div>
             </div>
           </div>
@@ -338,7 +348,7 @@ if ($modo === 'grupos'):
               <div class="tabla-scroll">
                 <table>
                   <thead><tr><th>Fecha</th><th>Cuenta</th><th>Concepto tal como vino del banco</th>
-                    <th>Referencia</th><th class="der">Débito Bs</th></tr></thead>
+                    <th>Referencia</th><th class="der">Débito Bs</th><th class="der">US$</th></tr></thead>
                   <tbody>
                   <?php foreach ($filas as $d): ?>
                     <tr>
@@ -349,6 +359,8 @@ if ($modo === 'grupos'):
                         <?php if (trim((string) $d['justificacion']) !== ''): ?><span class="nota">Justificación: <b><?= e(mb_strimwidth((string) $d['justificacion'], 0, 120, '…')) ?></b></span><?php endif ?></td>
                       <td class="ref"><?= e($d['referencia']) ?></td>
                       <td class="der num"><?= bs((float) $d['debito']) ?></td>
+                      <?php $dol = en_dolares($d); ?>
+                      <td class="der num<?= $dol !== null && $dol < 0 ? ' negativo' : '' ?>"><?= e(dolares_texto($dol)) ?></td>
                     </tr>
                   <?php endforeach ?>
                   </tbody>
@@ -406,8 +418,9 @@ if ($modo === 'grupos'):
             <thead><tr>
               <th style="width:34px"><input type="checkbox" id="marcarTodos" style="width:auto" aria-label="Marcar todos"></th>
               <th>Fecha</th><th>Cuenta</th><th>Concepto</th><th>Referencia</th><th class="der">Débito Bs</th>
+              <th class="der" title="A la tasa del BCV del día de la operación">US$</th>
               <th class="der" title="Tasa oficial del BCV el día de la operación">Tasa BCV</th>
-              <th style="width:120px"></th>
+              <th class="acciones-fijas" style="width:120px"></th>
             </tr></thead>
             <tbody>
             <?php foreach ($lista['filas'] as $m): $anch = $maxMonto > 0 ? (float) $m['debito'] / $maxMonto * 100 : 0; ?>
@@ -420,12 +433,14 @@ if ($modo === 'grupos'):
                   <?php if (trim((string) $m['justificacion']) !== ''): ?><span class="nota">Justificación: <b><?= e(mb_strimwidth((string) $m['justificacion'], 0, 120, '…')) ?></b></span><?php endif ?></td>
                 <td class="ref"><?= e($m['referencia']) ?></td>
                 <td class="monto d"><span class="barra" style="width:<?= number_format($anch, 1, '.', '') ?>%"></span><span><?= bs((float) $m['debito']) ?></span></td>
+                <?php $dol = en_dolares($m); ?>
+                <td class="der num<?= $dol !== null && $dol < 0 ? ' negativo' : '' ?>" style="white-space:nowrap"><?= e(dolares_texto($dol)) ?></td>
                 <td class="der num" style="color:var(--mudo);white-space:nowrap"><?= e(tasa_texto($m['tasa_bcv'])) ?></td>
-                <td class="der"><button type="button" class="btn btn-sm" data-abrir="j<?= $m['id'] ?>"
+                <td class="der acciones-fijas"><button type="button" class="btn btn-sm" data-abrir="j<?= $m['id'] ?>"
                         aria-expanded="false" aria-controls="j<?= $m['id'] ?>">Justificar</button></td>
               </tr>
               <tr class="fila-justificar" id="j<?= $m['id'] ?>" hidden>
-                <td colspan="8">
+                <td colspan="9">
                   <?php form_clasificar($cats, 'seleccion', ['ids[]' => (string) $m['id']],
                                         sugerir_patron((string) $m['concepto']), 'fr' . $m['id'], true, $m) ?>
                   <div class="acciones" style="margin-top:12px">

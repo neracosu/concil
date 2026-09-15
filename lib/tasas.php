@@ -11,11 +11,14 @@
  * sigue leyéndose con las tasas de julio.
  *
  * La fuente publica un valor por día de calendario: los fines de semana y
- * feriados repiten la última tasa vigente, así que no quedan huecos.
+ * feriados repiten la última tasa vigente. Pero aquí solo se pide la del día
+ * cuando alguien abre el panel, así que un sábado sin nadie quedaba sin fila
+ * —pasó el 12 y el 13/09/2026—: tasas_al_dia() rellena lo que falte.
  */
 
 const TASAS_HISTORICO = 'https://bcv.today/api/v1/history.json';
 const TASAS_HOY       = 'https://bcv.today/api/v1/rate.json';
+const TASAS_DIA       = 'https://bcv.today/api/v1/history/%s.json';
 
 /**
  * Descarga un JSON. Devuelve null ante cualquier problema: quedarse sin tasas
@@ -120,9 +123,24 @@ function tasas_al_dia(): void
         return;
     }
     // La primera vez no hay nada guardado: se trae el histórico entero para que
-    // lo ya importado quede con su tasa desde el primer momento.
-    $vacio = (int) db()->query('SELECT COUNT(*) FROM tasas')->fetchColumn() === 0;
-    sincronizar_tasas($vacio);
+    // lo ya importado quede con su tasa desde el primer momento. Lo mismo si
+    // pasó más de una semana sin que nadie entrara: una llamada sale más barata
+    // que diez sueltas.
+    $ultima = (string) db()->query('SELECT MAX(fecha) FROM tasas')->fetchColumn();
+    if ($ultima === '' || $ultima < date('Y-m-d', strtotime("$hoy -8 days"))) {
+        sincronizar_tasas(true);
+        return;
+    }
+    sincronizar_tasas(false);
+    // Los días entre la última guardada y hoy. Sin ellos, los movimientos de un
+    // fin de semana se quedan sin tasa y sin su equivalente en dólares, porque
+    // las listas la buscan por la fecha exacta.
+    for ($d = date('Y-m-d', strtotime("$ultima +1 day")); $d < $hoy; $d = date('Y-m-d', strtotime("$d +1 day"))) {
+        $dato = traer_json(sprintf(TASAS_DIA, $d), 6);
+        if ($dato !== null) {
+            guardar_tasas([$dato]);
+        }
+    }
 }
 
 /**
@@ -222,4 +240,29 @@ function estado_tasas(): array
 function tasa_texto(int|float|string|null $t): string
 {
     return ($t === null || $t === '') ? '—' : number_format((float) $t, 2, ',', '.');
+}
+
+/**
+ * Lo que representa el movimiento en dólares a la tasa de su día, con signo:
+ * negativo lo que sale y positivo lo que entra. Así lo lleva administración en
+ * la columna CAMBIO de su hoja —las 34.428 filas del libro son monto ÷ tasa—, y
+ * así una columna entera se suma sin separar débitos de créditos.
+ *
+ * Espera `tipo`, `debito`, `credito` y `tasa_bcv`, que es como llega cada fila
+ * de las consultas. Sin tasa ese día no hay equivalente: null.
+ */
+function en_dolares(array $m, int $decimales = 2): ?float
+{
+    $tasa = (float) ($m['tasa_bcv'] ?? 0);
+    if ($tasa <= 0) {
+        return null;
+    }
+    $bs = ($m['tipo'] ?? 'D') === 'C' ? (float) $m['credito'] : -(float) $m['debito'];
+    // + 0.0 quita el «-0»: un cargo de un bolívar da -0,00 y eso no se lee.
+    return round($bs / $tasa, $decimales) + 0.0;
+}
+
+function dolares_texto(?float $usd): string
+{
+    return $usd === null ? '—' : number_format($usd, 2, ',', '.');
 }

@@ -133,6 +133,12 @@ encabezado_html('Movimiento', 'movimientos',
       <div class="dato"><dt><?= $m['tipo'] === 'D' ? 'Débito' : 'Crédito' ?></dt>
         <dd style="color:var(--<?= $m['tipo'] === 'D' ? 'salida' : 'entrada' ?>);font-size:16px">
           Bs <?= bs((float) ($m['tipo'] === 'D' ? $m['debito'] : $m['credito'])) ?></dd></div>
+      <div class="dato"><dt>En dólares</dt>
+        <dd><?php $dol = en_dolares($m); if ($dol === null): ?>—
+          <span class="origen" style="display:block">no hay tasa del BCV para ese día</span>
+        <?php else: ?><span class="num<?= $dol < 0 ? ' negativo' : '' ?>">US$ <?= e(dolares_texto($dol)) ?></span>
+          <span class="origen" style="display:block">a <?= e(tasa_texto($m['tasa_bcv'])) ?> Bs por dólar</span>
+        <?php endif ?></dd></div>
       <?php if ($m['saldo'] !== null): ?>
         <div class="dato"><dt>Saldo tras el movimiento</dt><dd>Bs <?= bs((float) $m['saldo']) ?></dd></div><?php endif ?>
       <?php if ($m['archivo']): ?>

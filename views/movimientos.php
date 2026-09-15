@@ -13,7 +13,7 @@ $export = $_GET['export'] ?? '';
 if ($export === 'csv' || $export === 'xlsx') {
     [$w, $p] = where_filtros($f);
     $sql = "SELECT m.fecha, c.nombre cuenta, c.banco, m.referencia, m.concepto, m.nota_banco,
-                   m.debito, m.credito, m.saldo,
+                   m.tipo, m.debito, m.credito, m.saldo,
                    COALESCE(cat.nombre,'Sin clasificar') categoria, COALESCE(cat.grupo,'') grupo,
                    m.beneficiario, m.justificacion, m.origen, u.nombre autor, t.tasa tasa_bcv
               FROM movimientos m
@@ -28,7 +28,7 @@ if ($export === 'csv' || $export === 'xlsx') {
 
     $cab = ['Fecha', 'Cuenta', 'Banco', 'Referencia', 'Concepto del banco', 'Nota del banco',
             'Débito', 'Crédito', 'Saldo', 'Categoría', 'Grupo', 'Beneficiario', 'Justificación', 'Clasificado por',
-            'Quién lo hizo', 'Tasa BCV'];
+            'Quién lo hizo', 'Tasa BCV', 'US$'];
 
     $filas = (function () use ($s) {
         while ($r = $s->fetch()) {
@@ -42,6 +42,9 @@ if ($export === 'csv' || $export === 'xlsx') {
                 (string) ($r['autor'] ?? ''),
                 // Como número, no como texto: en la hoja de cálculo la usan para dividir.
                 $r['tasa_bcv'] === null ? '' : (float) $r['tasa_bcv'],
+                // Sin redondear, como la columna CAMBIO de su hoja: si se suman
+                // mil filas redondeadas a dos decimales, el total ya no cuadra.
+                en_dolares($r, 6) ?? '',
             ];
         }
     })();
@@ -51,11 +54,12 @@ if ($export === 'csv' || $export === 'xlsx') {
     if ($export === 'csv') {
         exportar_csv($nombre, $cab, $filas);
     }
-    exportar_xlsx($nombre, $cab, $filas, [6, 7, 8, 14]);
+    exportar_xlsx($nombre, $cab, $filas, [6, 7, 8, 15, 16]);
 }
 
 $lista = listar_movimientos($f, $pagina);
 $res = resumen($f);
+$usd = resumen_dolares($f);
 $reparto = por_categoria($f, 14);
 $cats = categorias();
 $cuentasLista = cuentas();
@@ -71,7 +75,9 @@ $acciones = '<span data-guia="exportar"><a class="btn" href="' . e(url(['export'
 
 encabezado_html('Movimientos', 'movimientos',
     number_format((int) ($res['n'] ?? 0), 0, ',', '.') . ' movimientos · <b class="num">Bs ' . bs($totalCol) . '</b>'
-    . ' · exportas exactamente lo que estás viendo', $acciones);
+    . ' · <b class="num">US$ ' . e(dolares_texto($usd['usd'])) . '</b>'
+    . ($usd['sin_tasa'] > 0 ? ' (' . $usd['sin_tasa'] . ' sin tasa del BCV)' : '')
+    . ' · se exporta exactamente lo que está viendo', $acciones);
 
 /** Selector de categoría con grupos. */
 function opciones_categoria(array $cats, ?int $sel): void
@@ -147,7 +153,9 @@ function opciones_categoria(array $cats, ?int $sel): void
     <table>
       <thead><tr>
         <th>Fecha</th><th>Cuenta</th><th>Concepto</th><th>Referencia</th>
-        <th>Categoría</th><th class="der"><?= $f['tipo'] === 'C' ? 'Crédito' : 'Débito' ?> Bs</th><th class="der">Saldo Bs</th>
+        <th>Categoría</th><th class="der"><?= match ($f['tipo']) { 'C' => 'Crédito', 'D' => 'Débito', default => 'Monto' } ?> Bs</th>
+        <th class="der" title="A la tasa del BCV del día de la operación. Negativo lo que sale, positivo lo que entra">US$</th>
+        <th class="der">Saldo Bs</th>
         <th class="der" title="Tasa oficial del BCV el día de la operación">Tasa BCV</th>
       </tr></thead>
       <tbody>
@@ -172,6 +180,8 @@ function opciones_categoria(array $cats, ?int $sel): void
           <td class="monto <?= $m['tipo'] === 'C' ? 'c' : 'd' ?>">
             <span class="barra" style="width:<?= number_format($anch, 1, '.', '') ?>%"></span>
             <span><?= bs($monto) ?></span></td>
+          <?php $dol = en_dolares($m); ?>
+          <td class="der num<?= $dol !== null && $dol < 0 ? ' negativo' : '' ?>" style="white-space:nowrap"><?= e(dolares_texto($dol)) ?></td>
           <td class="der num<?= $m['saldo'] !== null && (float) $m['saldo'] < 0 ? ' negativo' : '' ?>" style="color:var(--mudo);white-space:nowrap">
             <?= $m['saldo'] === null ? '—' : bs((float) $m['saldo']) ?></td>
           <td class="der num" style="color:var(--mudo);white-space:nowrap"><?= e(tasa_texto($m['tasa_bcv'])) ?></td>
