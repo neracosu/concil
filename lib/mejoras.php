@@ -80,8 +80,9 @@ function mejoras(): array
                 'De los que seguían por justificar y ya traían su texto, 157 quedaron con la misma '
                 . 'categoría que el equipo usa para ese tipo de pago: las recargas de tarjeta en Compra '
                 . 'de divisas, los anticipos en Préstamos y adelantos, la mercancía en Proveedores. '
-                . 'Cuatro se dejaron para que los decida una persona, porque no había ninguno parecido '
-                . 'ya decidido.',
+                . 'Otros 2 recibieron la categoría que traía la primera versión del libro (telefonía y '
+                . 'vuelto). Tres se dejaron para que los decida una persona, porque no había ninguno '
+                . 'parecido ya decidido.',
             ],
         ],
         [
