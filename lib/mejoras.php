@@ -58,6 +58,11 @@ function mejoras(): array
                 . 'escrito, 231 eran idénticas al libro.',
                 'Al justificar un grupo entero, si deja el cuadro en blanco cada movimiento conserva '
                 . 'su propia justificación.',
+                'De los que seguían por justificar y ya traían su texto, 157 quedaron con la misma '
+                . 'categoría que el equipo usa para ese tipo de pago: las recargas de tarjeta en Compra '
+                . 'de divisas, los anticipos en Préstamos y adelantos, la mercancía en Proveedores. '
+                . 'Cuatro se dejaron para que los decida una persona, porque no había ninguno parecido '
+                . 'ya decidido.',
             ],
         ],
         [
