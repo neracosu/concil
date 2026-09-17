@@ -283,6 +283,41 @@ function celda(array $fila, ?int $idx): string
 }
 
 /**
+ * Guarda una copia del archivo tal como lo entregó el banco, con el número de
+ * la carga por delante para encontrarlo desde `importaciones.id`.
+ *
+ * Hasta el 17/09/2026 el archivo se borraba en cuanto entraba. Ese día el
+ * Tesoro de Armor Market dejó de cuadrar: el 15 se había cargado dos veces —a
+ * media tarde y completo a la mañana siguiente— y el banco ya no traía cuatro
+ * de las filas de la tarde. Sin el archivo se pudo saber cuántas eran y cuánto
+ * sumaban, pero no cuáles.
+ *
+ * Nunca tumba una carga: los movimientos ya están guardados cuando se llama.
+ * Si la copia falla, el aviso de PHP va al registro de fallos y se sigue.
+ */
+function archivar_extracto(string $ruta, int $impId, string $archivoNombre): void
+{
+    if (!is_file($ruta)) {
+        return;
+    }
+    $carpeta = EXTRACTOS_DIR . '/' . date('Y-m');
+    // Con @ porque dos cargas a la vez estrenando el mes chocan al crearla, y
+    // eso no es un fallo. Lo que importa es si al final la carpeta está.
+    if (!is_dir($carpeta) && !@mkdir($carpeta, 0700, true) && !is_dir($carpeta)) {
+        trigger_error('No se pudo crear la carpeta de extractos: ' . $carpeta, E_USER_WARNING);
+        return;
+    }
+    // El nombre lo pone quien sube el archivo: se queda solo con lo que no
+    // puede sacarlo de la carpeta. Los últimos 80 caracteres, que es donde va
+    // la extensión.
+    $nombre = trim((string) preg_replace('/[^A-Za-z0-9._-]+/', '_', $archivoNombre), '._');
+    $destino = sprintf('%s/%06d-%s', $carpeta, $impId, substr($nombre, -80) ?: 'extracto');
+    if (copy($ruta, $destino)) {
+        chmod($destino, 0600);
+    }
+}
+
+/**
  * Importa el archivo a la cuenta indicada.
  * Deduplica por firma+ocurrencia, así una carga repetida no genera copias
  * y un extracto acumulativo solo agrega las filas nuevas.
@@ -490,6 +525,11 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
                           suma_debito = ?, suma_credito = ?, descuadre = ? WHERE id = ?')
         ->execute([$filas, $insertados, $duplicados, $automaticos,
                    $sumaD, $sumaC, mb_substr($cuadre['discrepa'], 0, 255), $impId]);
+
+    // Aquí dentro y no en la pantalla, para que lo guarde también una carga
+    // hecha desde la consola. También cuando todo eran repetidos: es la
+    // constancia de lo que el banco entregó ese día.
+    archivar_extracto($ruta, $impId, $archivoNombre);
 
     return [
         'importacion' => $impId,

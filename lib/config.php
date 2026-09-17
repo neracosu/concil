@@ -25,6 +25,9 @@ require_once __DIR__ . '/mejoras.php';
 define('APP_VERSION', version_actual());
 const DATA_DIR    = '/home/mardenli/conciliacion_data';
 const UPLOAD_DIR  = DATA_DIR . '/uploads';
+// Uploads es de paso y se vacía al terminar cada carga. Aquí queda, para
+// siempre, el archivo tal como lo entregó el banco.
+const EXTRACTOS_DIR = DATA_DIR . '/extractos';
 const SECRETS     = DATA_DIR . '/secrets.php';
 
 /**

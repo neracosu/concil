@@ -379,6 +379,27 @@ ocurrencia es el número de vez que esa firma aparece **dentro del archivo que s
 está importando**. No la cambies por un contador global: rompería la carga de
 extractos acumulativos.
 
+**El control de duplicados añade, nunca quita.** Si un día se carga dos veces
+—bajado a media tarde y completo a la mañana siguiente— y entre una y otra el
+banco retiró o cambió una fila, la de la tarde se queda para siempre y el saldo
+`calculado` sale corrido por lo que sumen. Le pasó al Tesoro de Armor Market
+con el 15/09/2026: 1.033 filas a las 15:34, 2.963 al día siguiente, y solo
+1.029 reconocidas como repetidas; las 4 que sobraban dejaban la cuenta
+Bs 6.604,57 por encima del banco. Se mide sin el archivo: las filas de cargas
+anteriores en esas fechas menos `importaciones.duplicados` de la carga completa
+da cuántas sobran, y el total del día en `movimientos` menos
+`suma_debito/suma_credito` de esa carga da cuánto suman. **Cuáles** son solo lo
+dice el archivo. Volver a cargar el mes no lo arregla —las filas viejas siguen
+ahí— y deshacer la carga de la tarde se lleva lo que ya se justificó en ella.
+
+**El archivo original se guarda, y es con lo que se atiende un «no me cuadra».**
+Desde el 17/09/2026 `archivar_extracto()` deja copia de cada carga en
+`EXTRACTOS_DIR/AAAA-MM/NNNNNN-nombre`, con el id de `importaciones` por delante,
+también cuando todo eran repetidos. Se llama dentro de `importar()`, con los
+movimientos ya confirmados, y no tumba la carga si falla: el aviso va al
+registro de fallos. `uploads/` sigue siendo de paso. De las cargas 1 a 102 no
+hay archivo: hay que pedirlo.
+
 **El reparto de un pago se rehace entero.** `repartir_pago()` borra los enlaces
 de ese movimiento y los vuelve a escribir, así que quitar una factura es no
 mandarla. Por eso `lista_facturas()` tiene que seguir dibujando las facturas que

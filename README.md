@@ -436,6 +436,12 @@ mkdir -p ~/conciliacion_data/uploads
 chmod 700 ~/conciliacion_data ~/conciliacion_data/uploads
 ```
 
+`uploads/` es de paso: se vacía al terminar cada carga. La copia de cada archivo
+tal como lo entregó el banco queda en `~/conciliacion_data/extractos/AAAA-MM/`,
+que el sistema crea solo, con el número de la carga delante del nombre. Es lo
+que se compara fila por fila cuando un saldo no cuadra. El respaldo diario es de
+la base, no de esa carpeta: si se muda el servidor, hay que llevársela.
+
 **3. Crear la base de datos** y un usuario con permisos sobre ella.
 
 **4. Escribir las credenciales** en `~/conciliacion_data/secrets.php`:

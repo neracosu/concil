@@ -41,6 +41,21 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-17', 'version' => '2.7.21', 'tipo' => 'proteccion',
+            'titulo' => 'El sistema guarda el archivo original de cada carga',
+            'resumen' => 'Hasta hoy, el archivo del banco se leía y se descartaba: quedaban los movimientos, '
+                       . 'pero no el archivo. Desde ahora se guarda una copia de cada uno, tal como lo entregó '
+                       . 'el banco, junto al número de su carga. Si un saldo no cuadra, ya se puede comparar '
+                       . 'fila por fila contra lo que el banco entregó ese día, sin pedirle a nadie que lo '
+                       . 'vuelva a descargar.',
+            'detalles' => [
+                'Las copias quedan en el servidor, fuera del alcance de internet, igual que los respaldos '
+                . 'de la base. Usted no tiene que hacer nada distinto al cargar.',
+                'Vale para las cargas de hoy en adelante. Los archivos de las cargas anteriores no se '
+                . 'conservaron.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-17', 'version' => '2.7.20', 'tipo' => 'correccion',
             'titulo' => 'Guardar en la ficha de un movimiento vuelve a funcionar',
             'resumen' => 'Al abrir un movimiento ya justificado, cambiarle la categoría o la justificación '
