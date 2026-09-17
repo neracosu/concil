@@ -222,7 +222,8 @@ qué banco es, o un dato de la ficha que ni la cuenta tiene ni el archivo trae.
 Se pueden soltar los archivos de **todos los bancos a la vez**. Y una carga
 entera se puede deshacer: `deshacer_importacion()` borra sus movimientos y su
 línea de historial, avisando antes de cuántos repartos a facturas se van a
-perder, porque eso sí es trabajo de una persona.
+perder, porque eso sí es trabajo de una persona. El botón está en el resultado
+de la carga y en las últimas cargas del panel.
 
 ### Otros detalles que el lector resuelve
 

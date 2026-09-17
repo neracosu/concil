@@ -41,6 +41,24 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-17', 'version' => '2.7.18', 'tipo' => 'mejora',
+            'titulo' => 'Una carga que entró en la cuenta equivocada se deshace desde el panel',
+            'resumen' => 'Hoy el extracto del 16/09 de Bicentenario Armor Market entró por error en la cuenta '
+                       . 'de Bicentenario Armor Pets. El botón para deshacer una carga solo aparecía justo '
+                       . 'después de cargarla, y al salir de esa pantalla ya no había cómo. Ahora las últimas '
+                       . 'cargas del panel traen el botón «Deshacer»: antes de quitar nada, el sistema dice '
+                       . 'cuántos movimientos se van, cuántos ya estaban clasificados y si se pierde algún '
+                       . 'pago repartido entre facturas.',
+            'detalles' => [
+                'La carga de hoy ya se deshizo: los 156 movimientos del 16/09 de Armor Market salieron de la '
+                . 'cuenta de Armor Pets. En Armor Market siguen, porque ahí sí habían entrado bien.',
+                'Los extractos de Bicentenario no traen el número de cuenta, y como hay dos cuentas de ese '
+                . 'banco el sistema no puede adivinar a cuál va: por eso pregunta. Al elegir, fíjese en el '
+                . 'nombre y en los últimos cuatro dígitos que aparecen al lado.',
+                'Deshacer una carga no se puede revertir. Por eso pregunta antes y cuenta lo que se pierde.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-15', 'version' => '2.7.17', 'tipo' => 'mejora',
             'titulo' => 'Cada movimiento, también en dólares',
             'resumen' => 'El equipo pidió ver cuánto representa cada operación en dólares, como en la '

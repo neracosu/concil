@@ -50,6 +50,8 @@ if ($candidatas !== []) {
         }
     }
 }
+// Para el botón de deshacer: qué se llevaría cada una, en una sola pasada.
+$resumenes = resumenes_importaciones(array_column($ultimas, 'id'));
 
 // Justificar es lo que se hace todos los días; cargar, una vez al mes. Manda
 // el trabajo pendiente, y en el tamaño grande, que es el que se encuentra.
@@ -206,7 +208,7 @@ encabezado_html('Panel', 'panel',
     </div>
   </div>
 
-  <div class="marco-tabla">
+  <div class="marco-tabla" data-guia="cargas">
     <div class="tabla-scroll">
       <table>
         <thead><tr><th>Última carga</th><th>Cuenta</th><th class="der">Nuevos</th><th class="der">Repetidos</th><th class="der">Auto</th></tr></thead>
@@ -214,7 +216,24 @@ encabezado_html('Panel', 'panel',
         <?php foreach ($ultimas as $u): ?>
           <tr>
             <td><span class="txt"><?= e(mb_strimwidth($u['archivo'], 0, 30, '…')) ?></span>
-                <span class="origen"><?= e(date('d/m/Y H:i', strtotime($u['creado_en']))) ?></span></td>
+                <span class="origen"><?= e(date('d/m/Y H:i', strtotime($u['creado_en']))) ?></span>
+              <?php // Si un archivo entró en la cuenta que no era, se devuelve desde
+                    // aquí: la pantalla de resultado de la carga se va al salir de ella.
+                    // Va debajo del nombre, como en esa pantalla, y no en una columna
+                    // fija: en la columna derecha del panel esa columna tapaba las
+                    // cifras de repetidos y auto.
+                    $res = $resumenes[(int) $u['id']] ?? []; ?>
+              <?php if ($res !== []): ?>
+                <form method="post" action="?r=carga" style="margin-top:6px">
+                  <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+                  <input type="hidden" name="accion" value="deshacer">
+                  <input type="hidden" name="importacion" value="<?= (int) $u['id'] ?>">
+                  <input type="hidden" name="volver" value="panel">
+                  <button class="btn btn-sm" title="Quitar entera esta carga, por ejemplo si entró en la cuenta equivocada"
+                          data-confirmar="<?= e(aviso_deshacer($res)) ?>">Deshacer</button>
+                </form>
+              <?php endif ?>
+            </td>
             <td><?= e($u['cuenta'] ?? '—') ?></td>
             <td class="der num" style="color:var(--entrada)"><?= number_format((int) $u['insertados'], 0, ',', '.') ?></td>
             <td class="der num" style="color:var(--mudo)"><?= number_format((int) $u['duplicados'], 0, ',', '.') ?></td>
@@ -222,7 +241,7 @@ encabezado_html('Panel', 'panel',
           </tr>
         <?php endforeach ?>
         <?php if ($ultimas === []): ?>
-          <tr><td colspan="5" class="vacio"><b>Aún no has cargado extractos</b>Empieza por «Cargar extractos».</td></tr>
+          <tr><td colspan="5" class="vacio"><b>Aún no ha cargado extractos</b>Empiece por «Cargar extractos».</td></tr>
         <?php endif ?>
         </tbody>
       </table>

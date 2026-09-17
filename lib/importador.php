@@ -636,34 +636,80 @@ function choque_de_banco(int $cuentaId, array $a): string
  */
 function resumen_importacion(int $impId): array
 {
-    $pdo = db();
-    $s = $pdo->prepare('SELECT i.archivo, i.creado_en, i.insertados, c.nombre cuenta, c.sede_id
-                          FROM importaciones i LEFT JOIN cuentas c ON c.id = i.cuenta_id
-                         WHERE i.id = ?');
-    $s->execute([$impId]);
-    $i = $s->fetch();
-    if ($i === false || (int) $i['sede_id'] !== (int) sede_actual()) {
-        return [];      // de otra unidad de negocio, o ya no existe
+    return resumenes_importaciones([$impId])[$impId] ?? [];
+}
+
+/**
+ * Lo mismo para varias cargas de una vez: tres consultas en total y no tres
+ * por carga, porque el panel lo pide para sus últimas seis en cada visita.
+ * Devuelve id → resumen, y solo de la unidad de negocio activa: una carga de
+ * otra unidad, o cuya cuenta ya no existe, no aparece.
+ */
+function resumenes_importaciones(array $ids): array
+{
+    $ids = array_values(array_unique(array_map('intval', $ids)));
+    if ($ids === []) {
+        return [];
     }
-    $c = $pdo->prepare('SELECT COUNT(*) n,
+    $pdo = db();
+    $marcas = implode(',', array_fill(0, count($ids), '?'));
+    $s = $pdo->prepare("SELECT i.id, i.archivo, i.creado_en, c.nombre cuenta
+                          FROM importaciones i JOIN cuentas c ON c.id = i.cuenta_id
+                         WHERE i.id IN ($marcas) AND c.sede_id = ?");
+    $s->execute([...$ids, (int) sede_actual()]);
+    $res = [];
+    foreach ($s as $i) {
+        $res[(int) $i['id']] = [
+            'archivo'      => (string) $i['archivo'],
+            'cuenta'       => (string) $i['cuenta'],
+            'creado_en'    => (string) $i['creado_en'],
+            'movimientos'  => 0,
+            'clasificados' => 0,
+            'traspasos'    => 0,
+            'pagos'        => 0,
+        ];
+    }
+    if ($res === []) {
+        return [];
+    }
+    $c = $pdo->prepare("SELECT importacion_id, COUNT(*) n,
                                SUM(categoria_id IS NOT NULL) clasificados,
                                SUM(traspaso_id IS NOT NULL) traspasos
-                          FROM movimientos WHERE importacion_id = ?');
-    $c->execute([$impId]);
-    $r = $c->fetch() ?: [];
-    $p = $pdo->prepare('SELECT COUNT(*) FROM pagos_factura p
-                          JOIN movimientos m ON m.id = p.movimiento_id
-                         WHERE m.importacion_id = ?');
-    $p->execute([$impId]);
-    return [
-        'archivo'      => (string) $i['archivo'],
-        'cuenta'       => (string) $i['cuenta'],
-        'creado_en'    => (string) $i['creado_en'],
-        'movimientos'  => (int) ($r['n'] ?? 0),
-        'clasificados' => (int) ($r['clasificados'] ?? 0),
-        'traspasos'    => (int) ($r['traspasos'] ?? 0),
-        'pagos'        => (int) $p->fetchColumn(),
-    ];
+                          FROM movimientos WHERE importacion_id IN ($marcas)
+                         GROUP BY importacion_id");
+    $c->execute($ids);
+    foreach ($c as $r) {
+        $k = (int) $r['importacion_id'];
+        if (isset($res[$k])) {
+            $res[$k]['movimientos']  = (int) $r['n'];
+            $res[$k]['clasificados'] = (int) $r['clasificados'];
+            $res[$k]['traspasos']    = (int) $r['traspasos'];
+        }
+    }
+    $p = $pdo->prepare("SELECT m.importacion_id, COUNT(*) n
+                          FROM pagos_factura p JOIN movimientos m ON m.id = p.movimiento_id
+                         WHERE m.importacion_id IN ($marcas)
+                         GROUP BY m.importacion_id");
+    $p->execute($ids);
+    foreach ($p as $r) {
+        $k = (int) $r['importacion_id'];
+        if (isset($res[$k])) {
+            $res[$k]['pagos'] = (int) $r['n'];
+        }
+    }
+    return $res;
+}
+
+/**
+ * La pregunta que se hace antes de deshacer, la misma en la pantalla de carga
+ * y en el panel: lo que se pierde se cuenta en un solo sitio.
+ */
+function aviso_deshacer(array $res): string
+{
+    return 'Se van a quitar ' . number_format($res['movimientos'] ?? 0, 0, ',', '.') . ' movimientos de esta carga'
+        . (!empty($res['clasificados']) ? ', ' . number_format($res['clasificados'], 0, ',', '.') . ' de ellos ya clasificados' : '')
+        . (!empty($res['pagos']) ? ', y se perderá el reparto de ' . $res['pagos'] . ' pago(s) entre facturas' : '')
+        . '. Esto no se puede deshacer. ¿Continuar?';
 }
 
 /**
@@ -671,14 +717,17 @@ function resumen_importacion(int $impId): array
  * historial, como si nunca se hubiera subido.
  *
  * Hace falta desde que el extracto se carga solo al subirlo: si alguien sube el
- * archivo que no era, tiene que poder devolverlo sin llamar a nadie. Solo toca
+ * archivo que no era, tiene que poder devolverlo sin llamar a nadie. Por eso el
+ * botón está también en las últimas cargas del panel, y no solo en el resultado
+ * de la carga: el 17/09/2026 un extracto entró en la cuenta hermana, la persona
+ * salió de esa pantalla a los cinco segundos y ya no había cómo. Solo toca
  * cargas de la unidad de negocio activa.
  */
 function deshacer_importacion(int $impId): array
 {
     $r = resumen_importacion($impId);
     if ($r === []) {
-        throw new RuntimeException('Esa carga no es de esta unidad de negocio.');
+        throw new RuntimeException('Esa carga ya no está: puede que alguien la haya deshecho hace un momento, o que sea de otra unidad de negocio.');
     }
     $pdo = db();
     $pdo->beginTransaction();

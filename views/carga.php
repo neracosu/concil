@@ -125,7 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $ex) {
             flash('mal', 'No se pudo deshacer: ' . $ex->getMessage());
         }
-        redirigir('?r=carga');
+        // El botón vive en dos pantallas; se vuelve a la que lo pulsó.
+        redirigir(($_POST['volver'] ?? '') === 'panel' ? '?r=panel' : '?r=carga');
     }
 
     /* ---------- Volver a la pantalla anterior sin perder lo subido ---------- */
@@ -517,9 +518,7 @@ encabezado_html('Cargar extractos', 'carga',
                   <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
                   <input type="hidden" name="accion" value="deshacer">
                   <input type="hidden" name="importacion" value="<?= (int) $r['importacion'] ?>">
-                  <button class="btn btn-sm" data-confirmar="Se van a quitar <?= number_format($res['movimientos'] ?? 0, 0, ',', '.') ?> movimientos de esta carga<?=
-                      !empty($res['clasificados']) ? ', ' . number_format($res['clasificados'], 0, ',', '.') . ' de ellos ya clasificados' : '' ?><?=
-                      !empty($res['pagos']) ? ', y se perderá el reparto de ' . $res['pagos'] . ' pago(s) entre facturas' : '' ?>. Esto no se puede deshacer. ¿Continuar?">
+                  <button class="btn btn-sm" data-confirmar="<?= e(aviso_deshacer($res)) ?>">
                     Deshacer esta carga
                   </button>
                 </form>

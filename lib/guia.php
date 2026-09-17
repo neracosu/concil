@@ -59,6 +59,13 @@ function guia_pasos(): array
             'texto' => 'Lo que entró, lo que salió y con cuánto quedó cada cuenta.',
             'nota' => 'Si dice «falta saldo inicial», hay que cargarle el saldo de arranque una sola vez. Se lo muestro al final.',
         ],
+        [
+            'ruta' => 'panel', 'sel' => '[data-guia="cargas"]',
+            'titulo' => 'Si un archivo entró donde no era, se devuelve',
+            'texto' => 'Aquí quedan las últimas cargas. Si un extracto entró en la cuenta equivocada, «Deshacer» lo saca '
+                     . 'entero, y antes le dice cuántos movimientos se van y si alguno ya estaba clasificado.',
+            'nota' => 'Después cargue el mismo archivo en la cuenta correcta y listo.',
+        ],
 
         // ------------------------------------------------------------ Cargar
         [

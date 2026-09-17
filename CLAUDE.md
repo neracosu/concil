@@ -301,7 +301,14 @@ enseña.
 **Se puede deshacer una carga entera** con `deshacer_importacion()`. Limpia a
 mano el `traspaso_id` de las parejas antes de borrar, porque esa columna no
 tiene clave foránea. Los `pagos_factura` sí caen por FK: eso es trabajo de una
-persona que se pierde, así que la pantalla lo avisa contándolo antes.
+persona que se pierde, así que la pantalla lo avisa contándolo antes. El botón
+va en **dos** sitios, el resultado de la carga y las últimas cargas del panel,
+porque el resultado no se guarda: el 17/09/2026 un extracto de Bicentenario
+entró en la cuenta hermana —ese banco no imprime el número de cuenta y con dos
+cuentas suyas el sistema pregunta— y quien lo cargó salió de la pantalla a los
+cinco segundos. La frase de confirmación sale de `aviso_deshacer()` para que
+las dos pantallas digan lo mismo, y el panel pide los resúmenes en lote con
+`resumenes_importaciones()`, no uno por carga.
 
 **Los repetidos por fecha corrida se marcan, no se rechazan.** Bicentenario y el
 Tesoro mueven al mes siguiente operaciones de fin de mes; como la fecha entra en
