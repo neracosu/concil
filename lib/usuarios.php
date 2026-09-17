@@ -199,9 +199,49 @@ function pin_ocupado(string $pin, int $salvo = 0): bool
     return (int) $s->fetchColumn() > 0;
 }
 
+/**
+ * El maestro principal es la cuenta con la que nació la instalación: la primera
+ * de la tabla. Desde que el rol de maestro se reparte hace falta uno al que
+ * nadie pueda sacar; si dos maestros pueden darse de baja entre sí, el sistema
+ * es del que haga clic primero.
+ *
+ * `ajustes.usuario_principal` es para el día que la instalación cambie de
+ * manos. Se escribe a mano en la base, a propósito sin pantalla: una pantalla
+ * para nombrar al principal sería la forma de quitarlo. Si apunta a alguien
+ * que no existe se ignora, para que una errata no deje a nadie sin proteger.
+ */
+function usuario_principal_id(): int
+{
+    static $id = null;
+    if ($id === null) {
+        $id = (int) ajuste('usuario_principal', '0');
+        if ($id <= 0 || usuario($id) === null) {
+            $id = (int) db()->query('SELECT MIN(id) FROM usuarios')->fetchColumn();
+        }
+    }
+    return $id;
+}
+
+/**
+ * La ficha del maestro principal solo la toca esa misma persona. Cambiarle el
+ * PIN a alguien es poder entrar en su lugar: si otro maestro pudiera, darlo de
+ * baja sobraría —bastaría con quitarle la clave y firmar con su nombre—.
+ */
+function ficha_ajena_protegida(int $id): bool
+{
+    return $id === usuario_principal_id() && usuario_id_actual() !== $id;
+}
+
 /** Cambia el PIN de un usuario. */
 function cambiar_pin_usuario(int $id, string $pin): ?string
 {
+    // La pantalla no ofrece nada de esto, así que quien llega hasta aquí mandó
+    // el formulario a mano: se rechaza y queda anotado. Lo mismo en las otras
+    // tres funciones de abajo.
+    if (ficha_ajena_protegida($id)) {
+        bitacora('intento_rechazado', 'Cambiarle el PIN al maestro principal');
+        return 'El PIN del maestro principal solo lo cambia esa persona, desde Mi perfil.';
+    }
     if (($err = pin_valido($pin)) !== null) {
         return $err;
     }
@@ -217,6 +257,10 @@ function cambiar_pin_usuario(int $id, string $pin): ?string
 
 function renombrar_usuario(int $id, string $nombre): ?string
 {
+    if (ficha_ajena_protegida($id)) {
+        bitacora('intento_rechazado', 'Cambiarle el nombre al maestro principal');
+        return 'El nombre del maestro principal solo lo cambia esa persona, desde Mi perfil.';
+    }
     $nombre = mb_substr(limpiar($nombre), 0, 120);
     if ($nombre === '') {
         return 'El nombre no puede quedar vacío.';
@@ -226,14 +270,19 @@ function renombrar_usuario(int $id, string $nombre): ?string
 }
 
 /**
- * Da de baja o de alta a alguien. Nunca al último maestro que quede activo:
- * dejaría el sistema sin nadie que pueda crear usuarios.
+ * Da de baja o de alta a alguien. Nunca al maestro principal —ni él mismo, que
+ * un clic de más lo dejaría fuera de su propio sistema— ni al último maestro
+ * que quede activo: dejaría el sistema sin nadie que pueda crear usuarios.
  */
 function activar_usuario(int $id, bool $activo): ?string
 {
     $u = usuario($id);
     if ($u === null) {
         return 'Ese usuario no existe.';
+    }
+    if (!$activo && $id === usuario_principal_id()) {
+        bitacora('intento_rechazado', 'Dar de baja al maestro principal');
+        return 'Al maestro principal no se le puede dar de baja.';
     }
     if (!$activo && (int) $u['maestro'] === 1) {
         $otros = (int) db()->query('SELECT COUNT(*) FROM usuarios WHERE maestro = 1 AND activo = 1 AND id <> ' . $id)
@@ -267,6 +316,10 @@ function cambiar_maestro(int $id, bool $maestro): ?string
     }
     if ($maestro && (int) $u['activo'] !== 1) {
         return 'Esa persona está dada de baja. Reactívela primero y después dele el rol.';
+    }
+    if (!$maestro && $id === usuario_principal_id()) {
+        bitacora('intento_rechazado', 'Quitarle el rol al maestro principal');
+        return 'Al maestro principal no se le puede quitar el rol.';
     }
     if (!$maestro) {
         $s = db()->prepare('SELECT COUNT(*) FROM usuarios WHERE maestro = 1 AND activo = 1 AND id <> ?');

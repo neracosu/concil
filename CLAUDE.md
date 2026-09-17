@@ -482,6 +482,24 @@ bitácora y las visitas. Y la constancia de una acción así va **dentro** de la
 función que la hace (`purgar_rastro()`), no en la pantalla: desde dos pantallas
 distintas, una se acordaba y la otra no.
 
+**El maestro principal no se toca, y eso va en cada función, no en la vista.**
+Desde el 17/09/2026 el rol de maestro se da y se quita en Usuarios
+(`cambiar_maestro()`), y el mismo día el dueño pidió que a su cuenta no la pueda
+sacar nadie. `usuario_principal_id()` es la cuenta con la que nació la
+instalación —el id más bajo—, salvo que `ajustes.usuario_principal` diga otra
+cosa; ese ajuste se escribe a mano en la base y **no tiene pantalla a
+propósito**: una pantalla para nombrar al principal sería la forma de quitarlo.
+Ni él mismo puede darse de baja o quitarse el rol, y su nombre y su PIN solo
+los cambia él (`ficha_ajena_protegida()`): cambiarle el PIN a alguien es poder
+entrar en su lugar. **Si añades una función que modifique a un usuario, pásala
+por ahí**, y anota el rechazo como `intento_rechazado`: la pantalla no ofrece
+esos botones, así que quien llega mandó el formulario a mano. Para probarlo sin
+apuntarle nunca a la cuenta de verdad, se pone el ajuste apuntando a un usuario
+de usar y tirar, se le ataca desde otro, y se borra el ajuste al terminar. Y un
+guion CLI que arme sesiones **no puede imprimir nada antes de `session_start()`**:
+la sesión queda en cero bytes y todos los POST caen en la pantalla de acceso
+con un 200 que parece bueno.
+
 **La presencia está escrita dos veces**, en PHP (`ojito_html`, `presente_html`,
 `quien_esta`) y en JavaScript (`pastilla`, `quienEsta`, el mapa `mismo`), porque
 la página sale ya pintada y el latido la repinta. Las dos copias ya se

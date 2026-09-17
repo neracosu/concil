@@ -70,6 +70,7 @@ $lista = usuarios();
 // que se va a rechazar.
 $maestrosActivos = count(array_filter($lista, fn($u) => $u['maestro'] && $u['activo']));
 $yoId = usuario_id_actual();
+$principalId = usuario_principal_id();
 // La misma lista y la misma ventana que la barra de arriba: con diez minutos
 // aquí y cuatro allá, la misma persona salía en una y no en la otra.
 $activos = presencia_viva(true);
@@ -106,10 +107,12 @@ encabezado_html('Usuarios', 'usuarios',
     <table>
       <thead><tr><th>Persona</th><th>Ahora</th><th>Última entrada</th><th>Estado</th><th class="acciones-fijas"></th></tr></thead>
       <tbody>
-      <?php foreach ($lista as $u): $act = $enPantalla[(int) $u['id']] ?? null; ?>
+      <?php foreach ($lista as $u):
+          $act = $enPantalla[(int) $u['id']] ?? null;
+          $esPrincipal = (int) $u['id'] === $principalId; ?>
         <tr>
           <td><a href="?r=persona&amp;id=<?= (int) $u['id'] ?>" title="Ver todo lo de esta persona"><b><?= e($u['nombre']) ?></b></a>
-            <?php if ($u['maestro']): ?><span class="etq">maestro</span><?php endif ?></td>
+            <?php if ($u['maestro']): ?><span class="etq"><?= $esPrincipal ? 'maestro principal' : 'maestro' ?></span><?php endif ?></td>
           <td style="font-size:12.5px;color:var(--mudo)">
             <?= $act ? 'En ' . e(nombre_pantalla((string) $act['pantalla'])) : '—' ?></td>
           <td class="fecha"><?= $u['ultimo_acceso']
@@ -117,6 +120,9 @@ encabezado_html('Usuarios', 'usuarios',
           <td><?= $u['activo']
               ? '<span class="etq"><i style="background:var(--entrada)"></i>puede entrar</span>'
               : '<span class="etq vacia">dado de baja</span>' ?></td>
+          <?php if ($esPrincipal): ?>
+          <td class="acciones-fijas"><span class="nota" style="color:var(--mudo);font-size:0.8125rem">protegido</span></td>
+          <?php else: ?>
           <td class="acciones-fijas">
             <?php
             $puedeQuitar = $u['maestro'] && !($u['activo'] && $maestrosActivos <= 1);
@@ -144,9 +150,13 @@ encabezado_html('Usuarios', 'usuarios',
               <button class="btn btn-sm"><?= $u['activo'] ? 'Dar de baja' : 'Reactivar' ?></button>
             </form>
           </td>
+          <?php endif ?>
         </tr>
         <tr>
           <td colspan="5" style="padding-top:0">
+            <?php if ($esPrincipal && (int) $u['id'] !== $yoId): ?>
+            <p class="nota" style="margin:2px 0 12px;color:var(--mudo);font-size:0.8125rem">Su nombre y su PIN solo los cambia esta persona, desde Mi perfil.</p>
+            <?php else: ?>
             <div class="usuario-edicion">
               <form method="post" class="usuario-form">
                 <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
@@ -168,6 +178,7 @@ encabezado_html('Usuarios', 'usuarios',
                 <button class="btn btn-sm">Poner PIN nuevo</button>
               </form>
             </div>
+            <?php endif ?>
           </td>
         </tr>
       <?php endforeach ?>
@@ -178,6 +189,7 @@ encabezado_html('Usuarios', 'usuarios',
 <p class="nota" style="margin:10px 2px 0">
   El <b>maestro</b> es quien da de alta y de baja a los demás, les cambia el PIN y ve el rastro de todos.
   En lo demás, todos hacen lo mismo. Puede haber más de un maestro; lo que el sistema no permite es quedarse sin ninguno.
+  Al <b>maestro principal</b> nadie puede darlo de baja ni quitarle el rol, y su nombre y su PIN solo los cambia esa persona.
 </p>
 
 <div class="tarjeta" style="margin-top:14px">

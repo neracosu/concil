@@ -41,6 +41,21 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-17', 'version' => '2.7.24', 'tipo' => 'proteccion',
+            'titulo' => 'El maestro principal queda firme: nadie puede darlo de baja',
+            'resumen' => 'Ahora que puede haber varios maestros, hacía falta que uno quedara firme: si dos '
+                       . 'maestros pueden darse de baja entre sí, el sistema es de quien haga clic primero. La '
+                       . 'cuenta con la que nació el sistema queda como «maestro principal»: nadie puede darla de '
+                       . 'baja ni quitarle el rol, y su nombre y su PIN solo los cambia esa misma persona, desde '
+                       . 'Mi perfil.',
+            'detalles' => [
+                'En Usuarios aparece con la etiqueta «maestro principal» y la palabra «protegido» donde los '
+                . 'demás tienen sus botones.',
+                'Si alguien intenta saltarse la pantalla para hacerlo igual, el sistema lo rechaza y lo deja '
+                . 'anotado en el rastro, con quién fue y desde dónde.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-17', 'version' => '2.7.23', 'tipo' => 'mejora',
             'titulo' => 'Más de un maestro: el rol se da y se quita desde Usuarios',
             'resumen' => 'Hasta ahora había un solo maestro y no había cómo nombrar a otro: si esa persona '
