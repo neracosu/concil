@@ -41,6 +41,21 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-17', 'version' => '2.7.23', 'tipo' => 'mejora',
+            'titulo' => 'Más de un maestro: el rol se da y se quita desde Usuarios',
+            'resumen' => 'Hasta ahora había un solo maestro y no había cómo nombrar a otro: si esa persona '
+                       . 'no estaba, nadie podía dar de alta a alguien nuevo ni cambiarle el PIN a quien lo '
+                       . 'olvidó. Ahora, en Usuarios, cada persona tiene su botón «Hacer maestro», y quien ya '
+                       . 'lo es, «Quitar maestro».',
+            'detalles' => [
+                'El maestro es quien da de alta y de baja a los demás, les cambia el PIN y ve el rastro de '
+                . 'todos. En lo demás, todos siguen haciendo lo mismo.',
+                'El sistema no deja quedarse sin ningún maestro: al último que queda no se le puede quitar '
+                . 'el rol ni dar de baja.',
+                'Cada vez que se da o se quita el rol queda anotado en el rastro, con quién lo hizo y cuándo.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-17', 'version' => '2.7.22', 'tipo' => 'mejora',
             'titulo' => 'Con cuánto cerró cada cuenta, día por día',
             'resumen' => 'Hay bancos, como el Tesoro, que no mandan el saldo en su archivo. El sistema calculaba el '

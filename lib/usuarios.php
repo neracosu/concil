@@ -161,7 +161,7 @@ function pin_valido(string $pin): ?string
         return 'El PIN debe tener exactamente 6 dígitos.';
     }
     if (preg_match('/^(\d)\1{5}$/', $pin)) {
-        return 'No uses un PIN con los 6 dígitos iguales.';
+        return 'No use un PIN con los 6 dígitos iguales.';
     }
     if (in_array($pin, ['123456', '654321', '012345', '111111', '000000'], true)) {
         return 'Ese PIN es demasiado predecible.';
@@ -178,13 +178,13 @@ function crear_usuario(string $nombre, string $pin): ?string
 {
     $nombre = mb_substr(limpiar($nombre), 0, 120);
     if ($nombre === '') {
-        return 'Escribe el nombre de la persona.';
+        return 'Escriba el nombre de la persona.';
     }
     if (($err = pin_valido($pin)) !== null) {
         return $err;
     }
     if (pin_ocupado($pin)) {
-        return 'Ese PIN ya lo usa otra persona. Elige otro.';
+        return 'Ese PIN ya lo usa otra persona. Elija otro.';
     }
     db()->prepare('INSERT INTO usuarios (nombre, pin_hash, pin_busqueda) VALUES (?, ?, ?)')
         ->execute([$nombre, password_hash($pin, PASSWORD_DEFAULT), huella_pin($pin)]);
@@ -206,7 +206,7 @@ function cambiar_pin_usuario(int $id, string $pin): ?string
         return $err;
     }
     if (pin_ocupado($pin, $id)) {
-        return 'Ese PIN ya lo usa otra persona. Elige otro.';
+        return 'Ese PIN ya lo usa otra persona. Elija otro.';
     }
     db()->prepare('UPDATE usuarios SET pin_hash = ?, pin_busqueda = ? WHERE id = ?')
         ->execute([password_hash($pin, PASSWORD_DEFAULT), huella_pin($pin), $id]);
@@ -239,11 +239,45 @@ function activar_usuario(int $id, bool $activo): ?string
         $otros = (int) db()->query('SELECT COUNT(*) FROM usuarios WHERE maestro = 1 AND activo = 1 AND id <> ' . $id)
                            ->fetchColumn();
         if ($otros === 0) {
-            return 'No puedes desactivar al único maestro: nadie podría dar de alta a los demás.';
+            return 'No puede dar de baja al único maestro: nadie podría dar de alta a los demás. Primero haga maestro a otra persona.';
         }
     }
     db()->prepare('UPDATE usuarios SET activo = ? WHERE id = ?')->execute([$activo ? 1 : 0, $id]);
     bitacora($activo ? 'usuario_activado' : 'usuario_desactivado', (string) $u['nombre']);
+    return null;
+}
+
+/**
+ * Da o quita el rol de maestro. Nunca al último que quede activo, por lo mismo
+ * que en `activar_usuario()`: sin maestro nadie puede devolverle el rol a
+ * nadie, y solo se arreglaría tocando la base a mano.
+ *
+ * La constancia va aquí dentro y no en la pantalla: decidir quién administra a
+ * los demás es justo lo que alguien querrá revisar después.
+ */
+function cambiar_maestro(int $id, bool $maestro): ?string
+{
+    $u = usuario($id);
+    if ($u === null) {
+        return 'Ese usuario no existe.';
+    }
+    // Un doble clic no es un cambio: ni se escribe ni se anota.
+    if ((int) $u['maestro'] === ($maestro ? 1 : 0)) {
+        return null;
+    }
+    if ($maestro && (int) $u['activo'] !== 1) {
+        return 'Esa persona está dada de baja. Reactívela primero y después dele el rol.';
+    }
+    if (!$maestro) {
+        $s = db()->prepare('SELECT COUNT(*) FROM usuarios WHERE maestro = 1 AND activo = 1 AND id <> ?');
+        $s->execute([$id]);
+        if ((int) $s->fetchColumn() === 0) {
+            return 'No puede quitarle el rol al único maestro: nadie podría dar de alta a los demás. '
+                 . 'Primero haga maestro a otra persona.';
+        }
+    }
+    db()->prepare('UPDATE usuarios SET maestro = ? WHERE id = ?')->execute([$maestro ? 1 : 0, $id]);
+    bitacora($maestro ? 'maestro_dado' : 'maestro_quitado', (string) $u['nombre']);
     return null;
 }
 

@@ -43,9 +43,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash($err === null ? 'ok' : 'mal', $err ?? 'Listo.');
         redirigir('?r=usuarios');
     }
+
+    if ($accion === 'maestro') {
+        $id  = (int) ($_POST['id'] ?? 0);
+        $dar = (string) ($_POST['valor'] ?? '0') === '1';
+        $err = cambiar_maestro($id, $dar);
+        // Quien se quita el rol a sí mismo ya no puede volver aquí: si se le
+        // mandara a esta pantalla, el «solo el maestro» de arriba le pisaría
+        // el mensaje y no sabría si el cambio se hizo.
+        if ($err === null && !$dar && $id === usuario_id_actual()) {
+            flash('ok', 'Listo. Usted ya no es maestro: dejó de ver Usuarios y Rastro y auditoría. '
+                      . 'Si lo necesita de vuelta, pídaselo a otro maestro.');
+            redirigir('?r=perfil');
+        }
+        $nombre = (string) (usuario($id)['nombre'] ?? '');
+        flash($err === null ? 'ok' : 'mal', $err ?? ($dar
+            ? "«{$nombre}» ahora es maestro: ya puede dar de alta a otras personas y ver el rastro de todos."
+            : "«{$nombre}» ya no es maestro. Todo lo demás lo sigue haciendo igual."));
+        redirigir('?r=usuarios');
+    }
 }
 
 $lista = usuarios();
+// El botón de quitar el rol no se le dibuja al único maestro que queda. La
+// puerta de verdad está en `cambiar_maestro()`; esto solo evita ofrecer algo
+// que se va a rechazar.
+$maestrosActivos = count(array_filter($lista, fn($u) => $u['maestro'] && $u['activo']));
+$yoId = usuario_id_actual();
 // La misma lista y la misma ventana que la barra de arriba: con diez minutos
 // aquí y cuatro allá, la misma persona salía en una y no en la otra.
 $activos = presencia_viva(true);
@@ -80,7 +104,7 @@ encabezado_html('Usuarios', 'usuarios',
 <div class="marco-tabla">
   <div class="tabla-scroll">
     <table>
-      <thead><tr><th>Persona</th><th>Ahora</th><th>Última entrada</th><th>Estado</th><th></th></tr></thead>
+      <thead><tr><th>Persona</th><th>Ahora</th><th>Última entrada</th><th>Estado</th><th class="acciones-fijas"></th></tr></thead>
       <tbody>
       <?php foreach ($lista as $u): $act = $enPantalla[(int) $u['id']] ?? null; ?>
         <tr>
@@ -93,7 +117,25 @@ encabezado_html('Usuarios', 'usuarios',
           <td><?= $u['activo']
               ? '<span class="etq"><i style="background:var(--entrada)"></i>puede entrar</span>'
               : '<span class="etq vacia">dado de baja</span>' ?></td>
-          <td class="der">
+          <td class="acciones-fijas">
+            <?php
+            $puedeQuitar = $u['maestro'] && !($u['activo'] && $maestrosActivos <= 1);
+            $puedeDar    = !$u['maestro'] && $u['activo'];
+            if ($puedeQuitar || $puedeDar):
+                $aviso = $puedeDar
+                    ? "«{$u['nombre']}» podrá dar de alta y de baja a otras personas, cambiarles el PIN y ver el rastro de todos. ¿Continuar?"
+                    : ((int) $u['id'] === $yoId
+                        ? 'Usted dejará de ver Usuarios y Rastro y auditoría, y solo otro maestro podrá devolverle el rol. ¿Continuar?'
+                        : "«{$u['nombre']}» dejará de ver Usuarios y Rastro y auditoría. Todo lo demás lo sigue haciendo igual. ¿Continuar?");
+            ?>
+              <form method="post" style="display:inline">
+                <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
+                <input type="hidden" name="accion" value="maestro">
+                <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                <input type="hidden" name="valor" value="<?= $puedeDar ? '1' : '0' ?>">
+                <button class="btn btn-sm" data-confirmar="<?= e($aviso) ?>"><?= $puedeDar ? 'Hacer maestro' : 'Quitar maestro' ?></button>
+              </form>
+            <?php endif ?>
             <form method="post" style="display:inline">
               <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
               <input type="hidden" name="accion" value="activar">
@@ -133,6 +175,10 @@ encabezado_html('Usuarios', 'usuarios',
     </table>
   </div>
 </div>
+<p class="nota" style="margin:10px 2px 0">
+  El <b>maestro</b> es quien da de alta y de baja a los demás, les cambia el PIN y ve el rastro de todos.
+  En lo demás, todos hacen lo mismo. Puede haber más de un maestro; lo que el sistema no permite es quedarse sin ninguno.
+</p>
 
 <div class="tarjeta" style="margin-top:14px">
   <h2>Dar de alta a alguien</h2>
