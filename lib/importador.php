@@ -290,7 +290,8 @@ function celda(array $fila, ?int $idx): string
  * Al terminar compara lo importado con los totales que el propio archivo
  * declara en su pie. Si no cuadran, deshace todo: significa que se leyó mal.
  */
-function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombre, ?array $info = null): array
+function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombre, ?array $info = null,
+                  bool $forzar = false): array
 {
     // Se importa con el mismo análisis que se mostró al confirmar. Volver a
     // analizar aquí podría dar otro mapeo: si en el mismo lote se acaba de
@@ -303,6 +304,9 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     $m = $info['mapa'];
     $pdo = db();
 
+    // La línea del historial entra en la misma transacción que las filas: si
+    // el archivo resulta ser de otra cuenta, se deshace todo junto.
+    $pdo->beginTransaction();
     $pdo->prepare('INSERT INTO importaciones (archivo, cuenta_id, formato) VALUES (?, ?, ?)')
         ->execute([$archivoNombre, $cuentaId, $info['banco'] ?: 'genérico']);
     $impId = (int) $pdo->lastInsertId();
@@ -347,7 +351,6 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     $nC = 0;
     $fechaMin = null;
 
-    $pdo->beginTransaction();
     foreach (leer_filas($ruta, $ext) as $fila) {
         $fila_i++;
         if (!$encabezadoPasado) {
@@ -446,6 +449,18 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
     }
     $descargar();
 
+    // Si estas mismas operaciones ya están en otra cuenta de la unidad, lo más
+    // probable es que el archivo sea de aquella. Se deshace todo, sin dejar ni
+    // la línea del historial, y se le pregunta a quien carga. Solo cuando ya
+    // lo confirmó ($forzar) se sigue adelante.
+    if (!$forzar && $insertados > 0) {
+        $gemela = carga_gemela($impId, $insertados);
+        if ($gemela !== null) {
+            $pdo->rollBack();
+            return ['gemela' => $gemela, 'filas' => $filas, 'insertados' => 0, 'duplicados' => 0, 'auto' => 0];
+        }
+    }
+
     // Lo que suma el archivo de verdad, fila por fila. Esta es la cifra buena.
     // El resumen que el banco imprime en el pie se compara, pero no manda: hay
     // extractos que llegan con su propio total mal calculado, y antes eso
@@ -491,6 +506,61 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
         // el 08/09 y nadie lo supo hasta que el saldo no cuadró.
         'laguna'      => aviso_dias_sin_cargar(dias_sin_cargar($cuentaId, $impId)),
     ];
+}
+
+/**
+ * Otra cuenta de la misma unidad de negocio que ya tiene estas mismas
+ * operaciones, o null si ninguna.
+ *
+ * La firma lleva la cuenta a propósito —dos cuentas pueden tener movimientos
+ * iguales—, así que el control de duplicados no ve que un archivo entró en la
+ * cuenta hermana. Pasó el 17/09/2026: el extracto de Bicentenario Armor Market
+ * entró en Armor Pets, porque ese banco no imprime el número de cuenta y con
+ * dos cuentas suyas la pantalla pregunta. Aquí se compara lo mismo que la firma
+ * menos la cuenta —fecha, montos, referencia y concepto— entre las filas recién
+ * insertadas, todavía sin confirmar, y las demás cuentas de la unidad.
+ *
+ * Medido ese día sobre las 91 cargas reales: ninguna llega al 1 % de
+ * coincidencia con otra cuenta (comisiones iguales el mismo día), y la carga
+ * equivocada daba el 100 %. El umbral es 9 de cada 10 filas nuevas, y al menos
+ * 3: un archivo de dos comisiones rutinarias no tiene por qué sonar.
+ */
+function carga_gemela(int $impId, int $nuevos): ?array
+{
+    if ($nuevos < 3) {
+        return null;
+    }
+    $q = db()->prepare('SELECT oc.id cuenta_id, oc.nombre cuenta, COUNT(DISTINCT m.id) n, MAX(o.creado_en) cuando
+                          FROM movimientos m
+                          JOIN cuentas mc ON mc.id = m.cuenta_id
+                          JOIN cuentas oc ON oc.sede_id = mc.sede_id AND oc.id <> mc.id
+                          JOIN movimientos o ON o.cuenta_id = oc.id AND o.fecha = m.fecha
+                                            AND o.debito = m.debito AND o.credito = m.credito
+                                            AND o.referencia = m.referencia AND o.concepto = m.concepto
+                         WHERE m.importacion_id = ?
+                         GROUP BY oc.id, oc.nombre
+                         ORDER BY n DESC LIMIT 1');
+    $q->execute([$impId]);
+    $g = $q->fetch();
+    if ($g === false || (int) $g['n'] < max(3, (int) ceil($nuevos * 0.9))) {
+        return null;
+    }
+    return [
+        'cuenta_id' => (int) $g['cuenta_id'],
+        'cuenta'    => (string) $g['cuenta'],
+        'n'         => (int) $g['n'],
+        'de'        => $nuevos,
+        'cuando'    => (string) $g['cuando'],
+    ];
+}
+
+/** Cómo se le cuenta a la persona lo que encontró carga_gemela(). */
+function aviso_gemela(array $g): string
+{
+    return 'Estas operaciones ya están en «' . $g['cuenta'] . '»: '
+        . number_format($g['n'], 0, ',', '.') . ' de ' . number_format($g['de'], 0, ',', '.')
+        . ' coinciden con lo cargado allá el ' . date('d/m/Y \a \l\a\s H:i', strtotime($g['cuando']))
+        . '. No se guardó nada.';
 }
 
 /**

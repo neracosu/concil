@@ -223,7 +223,11 @@ Se pueden soltar los archivos de **todos los bancos a la vez**. Y una carga
 entera se puede deshacer: `deshacer_importacion()` borra sus movimientos y su
 línea de historial, avisando antes de cuántos repartos a facturas se van a
 perder, porque eso sí es trabajo de una persona. El botón está en el resultado
-de la carga y en las últimas cargas del panel.
+de la carga y en las últimas cargas del panel. Y si las operaciones del archivo
+ya están en otra cuenta de la misma unidad, `carga_gemela()` lo detecta antes
+de confirmar la transacción: no se guarda nada y la pantalla propone esa
+cuenta, con una casilla para cargar de todas formas si la equivocada fue la
+carga anterior.
 
 ### Otros detalles que el lector resuelve
 

@@ -169,7 +169,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'importar' && $errFila === []) {
         [$resultados, $fallidos] = procesar_lote($lote, $elegidas, $nuevas, $omitir,
             (array) ($_POST['banco_nuevo'] ?? []),
-            [(array) ($_POST['f_numero'] ?? []), (array) ($_POST['f_titular'] ?? []), (array) ($_POST['f_rif'] ?? [])]);
+            [(array) ($_POST['f_numero'] ?? []), (array) ($_POST['f_titular'] ?? []), (array) ($_POST['f_rif'] ?? [])],
+            (array) ($_POST['forzar'] ?? []));
         limpiar_lote($fallidos === [] ? null : array_keys($fallidos));
         $paso = 'resultado';
     }
@@ -186,7 +187,7 @@ if ($paso === 'subir') {
  * solo en cuanto se sube, y el que necesitó que alguien confirmara algo antes.
  */
 function procesar_lote(array $lote, array $elegidas, array $nuevas, array $omitir,
-                       array $bancos, array $ficha): array
+                       array $bancos, array $ficha, array $forzar = []): array
 {
     [$fNums, $fTits, $fRifs] = $ficha;
     $resultados = [];
@@ -242,7 +243,24 @@ function procesar_lote(array $lote, array $elegidas, array $nuevas, array $omiti
                 $ficha->execute([$cid]);
                 $datos = $ficha->fetch() ?: [];
                 $incompleta = ficha_incompleta($datos);
-                $r = importar($a['ruta'], $a['ext'], $cid, $a['nombre'], $a['info'] ?? null);
+                $r = importar($a['ruta'], $a['ext'], $cid, $a['nombre'], $a['info'] ?? null, isset($forzar[$i]));
+                if (!empty($r['gemela'])) {
+                    // Se queda en el lote con la gemela anotada: al volver, su
+                    // tarjeta enseña el aviso y deja elegir la otra cuenta o
+                    // cargarlo de todas formas.
+                    $_SESSION['lote'][$i]['gemela'] = $r['gemela'];
+                    $fallidos[$i] = true;
+                    $resultados[] = ['nombre' => $a['nombre'], 'error' => aviso_gemela($r['gemela'])
+                        . ' Vuelva atrás para elegir esa cuenta o para cargarlo de todas formas.'];
+                    continue;
+                }
+                if (isset($forzar[$i]) && (int) $r['insertados'] > 0) {
+                    // Alguien decidió que sí iba aquí aunque otra cuenta ya lo
+                    // tuviera: que quede quién y cuándo.
+                    bitacora('importacion_forzada', $a['nombre'] . ' · ' . $r['insertados']
+                        . ' movimientos en la cuenta ' . $cid . ' aunque ya estaban en la cuenta '
+                        . (int) ($a['gemela']['cuenta_id'] ?? 0));
+                }
                 $r['aviso'] = $incompleta === [] ? '' : 'A esta cuenta le falta ' . implode(', ', $incompleta)
                     . '. Complétala en Cuentas: sin esos datos no se puede avisar si un archivo va a la cuenta equivocada.';
                 $r['nombre'] = $a['nombre'];
@@ -383,6 +401,9 @@ encabezado_html('Cargar extractos', 'carga',
                   $mismoBanco = cuentas_del_banco((string) $a['banco'], $cuentasLista);
                   if (isset($prevCuenta[$i])) {
                       $sug = $prevCuenta[$i] === 'nueva' ? null : (int) $prevCuenta[$i];
+                  } elseif (!empty($a['gemela'])) {
+                      // Ya está en otra cuenta: se propone esa, que es lo seguro.
+                      $sug = (int) $a['gemela']['cuenta_id'];
                   }
                   foreach ($cuentasLista as $c): ?>
                     <?php $ult = preg_replace('/\D/', '', (string) $c['numero']); ?>
@@ -418,6 +439,19 @@ encabezado_html('Cargar extractos', 'carga',
             <?php endif ?>
             <?php if (isset($errFila[$i])): ?>
               <div class="aviso aviso-mal" style="margin-top:14px"><b>Falta un dato.</b> <?= e($errFila[$i]) ?></div>
+            <?php endif ?>
+            <?php if (!empty($a['gemela'])): ?>
+              <div class="aviso aviso-mal" style="margin-top:14px">
+                <b>Este archivo ya está cargado en otra cuenta.</b>
+                <?= e(aviso_gemela($a['gemela'])) ?>
+                Si es de esa cuenta, déjela elegida arriba: no se va a duplicar nada.
+                Si de verdad es de otra, y la que quedó mal es aquella carga, marque la casilla,
+                importe, y después deshaga la otra desde el panel.
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;letter-spacing:0">
+                <input type="checkbox" name="forzar[<?= $i ?>]" value="1" style="width:auto">
+                Sí, cargar de todas formas en la cuenta elegida
+              </label>
             <?php endif ?>
             <?php $chequeos = comprobaciones($a); if ($chequeos !== []): ?>
               <ul class="comprobaciones">

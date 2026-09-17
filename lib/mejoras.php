@@ -41,6 +41,26 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-17', 'version' => '2.7.19', 'tipo' => 'proteccion',
+            'titulo' => 'Si un archivo ya está cargado en otra cuenta, el sistema lo dice antes de guardarlo',
+            'resumen' => 'Hasta hoy, un extracto podía entrar en la cuenta equivocada sin que nada avisara: '
+                       . 'el control de repetidos mira cada cuenta por separado, y para él las operaciones de '
+                       . 'Armor Market en la cuenta de Armor Pets eran todas nuevas. Ahora, al cargar, el sistema '
+                       . 'compara las operaciones del archivo con las demás cuentas de la empresa. Si ya están en '
+                       . 'otra, no guarda nada y se lo dice: cuál cuenta las tiene, cuántas coinciden y cuándo '
+                       . 'entraron allá.',
+            'detalles' => [
+                'En la pantalla siguiente queda propuesta la cuenta que ya las tiene. Si el archivo es de esa '
+                . 'cuenta, basta con importar: no se duplica nada. Si de verdad es de la cuenta que usted eligió, '
+                . 'y la que quedó mal fue la carga anterior, marque «cargar de todas formas», importe, y después '
+                . 'deshaga la otra desde el panel.',
+                'Se avisa cuando 9 de cada 10 operaciones nuevas del archivo ya están en otra cuenta. Se probó '
+                . 'contra las 91 cargas hechas hasta hoy: ninguna habría sonado por error, y la de esta mañana '
+                . 'sí.',
+                'Cuando alguien carga de todas formas, queda anotado en la bitácora quién y cuándo.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-17', 'version' => '2.7.18', 'tipo' => 'mejora',
             'titulo' => 'Una carga que entró en la cuenta equivocada se deshace desde el panel',
             'resumen' => 'Hoy el extracto del 16/09 de Bicentenario Armor Market entró por error en la cuenta '

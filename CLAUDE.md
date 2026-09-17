@@ -310,6 +310,22 @@ cinco segundos. La frase de confirmación sale de `aviso_deshacer()` para que
 las dos pantallas digan lo mismo, y el panel pide los resúmenes en lote con
 `resumenes_importaciones()`, no uno por carga.
 
+**La cuenta hermana se detecta con las filas ya insertadas, no antes.** La
+firma lleva la cuenta a propósito, así que el control de duplicados no ve que
+un archivo entró en otra cuenta de la misma unidad. `carga_gemela()` corre
+dentro de la transacción de `importar()`, con las filas nuevas todavía sin
+confirmar, y compara lo mismo que la firma menos la cuenta (fecha, montos,
+referencia, concepto) contra las demás cuentas de la sede, por
+`idx_mov_saldos`. Si 9 de cada 10 filas nuevas (y al menos 3) ya están en
+otra, hace `rollBack()` —por eso la línea de `importaciones` entra en la misma
+transacción— y devuelve `gemela` en vez de lanzar: `procesar_lote()` deja el
+archivo en el lote con la gemela anotada, y la tarjeta de confirmar propone
+esa cuenta y ofrece la casilla `forzar[i]`, que va a `importar()` como sexto
+argumento y deja `importacion_forzada` en la bitácora. Umbral medido el
+17/09/2026 sobre las 91 cargas reales: ninguna pasa del 1 % con otra cuenta
+(comisiones iguales el mismo día) y la carga equivocada daba el 100 %. **No
+bajes el «al menos 3»**: un archivo de dos comisiones rutinarias no debe sonar.
+
 **Los repetidos por fecha corrida se marcan, no se rechazan.** Bicentenario y el
 Tesoro mueven al mes siguiente operaciones de fin de mes; como la fecha entra en
 la firma, el control de duplicados no las ve. `marcar_repetidos()` corre después
