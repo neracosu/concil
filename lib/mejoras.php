@@ -41,6 +41,20 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-17', 'version' => '2.7.20', 'tipo' => 'correccion',
+            'titulo' => 'Guardar en la ficha de un movimiento vuelve a funcionar',
+            'resumen' => 'Al abrir un movimiento ya justificado, cambiarle la categoría o la justificación '
+                       . 'y darle a Guardar, no pasaba nada. Era un error de la pantalla, no de la base: dos '
+                       . 'bloques de esa ficha (unir un traspaso y corregir la tasa del día) estaban mal '
+                       . 'encajados y dejaban el botón Guardar desconectado. Desde el 06/09 nadie podía '
+                       . 'guardar desde ahí; el trabajo diario en «Por justificar» no se vio afectado. Ya '
+                       . 'está corregido, y el botón «Quitar clasificación» también vuelve a responder.',
+            'detalles' => [
+                'Si en estos días editó un movimiento desde su ficha y no vio el mensaje verde de '
+                . '«Movimiento actualizado», ese cambio no quedó guardado: vuelva a hacerlo.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-17', 'version' => '2.7.19', 'tipo' => 'proteccion',
             'titulo' => 'Si un archivo ya está cargado en otra cuenta, el sistema lo dice antes de guardarlo',
             'resumen' => 'Hasta hoy, un extracto podía entrar en la cuenta equivocada sin que nada avisara: '

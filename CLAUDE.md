@@ -429,6 +429,19 @@ fila por fila: en días hábiles 1.913 filas usan la tasa del día anterior.
 paso correspondiente se salta en silencio. Al añadir una sección nueva, añade su
 ancla y su paso.
 
+**Nunca un `<form>` dentro de otro.** El navegador ignora el `<form>` anidado,
+pero su `</form>` cierra el de afuera: todo lo que venga después queda sin
+formulario y el botón de guardar no hace nada, sin error en ningún registro.
+Pasó en la ficha del movimiento del 06/09 al 17/09/2026 —los bloques de
+traspaso y de tasa iban dentro del formulario de la ficha—: once días sin que
+nadie pudiera guardar desde ahí, y la bitácora lo delataba con cero
+`correccion`. Un bloque con su propio POST dentro de otro formulario va como
+formulario vacío aparte y sus campos y su botón se atan con `form="id"`. Para
+detectarlo: renderizar con el Chrome sin cabeza (`--dump-dom`) y comparar
+cuántos `<form` hay en el HTML y cuántos en el DOM; si difieren, hay uno
+anidado. Y al probar una pantalla no basta un GET en 200: el POST que guarda
+tiene que dejar su línea en la bitácora.
+
 **Esconder el botón no es cerrar la puerta.** El permiso se comprueba en el
 manejador del POST, no en el HTML que lo dibuja: un formulario se manda a mano.
 Le pasó al borrado del rastro —la tarjeta iba dentro de un `if (es_maestro())`

@@ -111,7 +111,20 @@ $provActual = (string) ($m['proveedor_id']
 encabezado_html('Movimiento', 'movimientos',
     e(date('d/m/Y', strtotime($m['fecha']))) . ' · ' . e($m['cuenta']),
     '<a class="btn" href="?r=movimientos">Volver a la lista</a>');
+
+// Los bloques de traspaso y de la tasa mandan sus propios POST, pero no pueden
+// ser un <form> dentro del formulario de la ficha: el navegador ignora un
+// <form> anidado y su </form> cierra el de afuera, así que el botón Guardar
+// del final quedaba sin formulario y no hacía nada. Estuvo así del 06/09 al
+// 17/09/2026 sin que nadie pudiera guardar desde aquí; se notó porque editar
+// un movimiento ya justificado solo se puede en esta pantalla. Cada bloque
+// tiene su formulario vacío aquí arriba, y sus campos y su botón se le atan
+// con el atributo form="…", que es lo que HTML prevé para esto.
+$posibles = $m['traspaso_id'] ? [] : traspasos_posibles($m);
 ?>
+<?php if ($m['traspaso_id']): ?><form method="post" id="f-soltar"></form><?php endif ?>
+<?php foreach ($posibles as $p): ?><form method="post" id="f-atar-<?= (int) $p['id'] ?>"></form><?php endforeach ?>
+<form method="post" id="f-tasa"></form>
 <form method="post">
 <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
 <input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
@@ -162,15 +175,15 @@ encabezado_html('Movimiento', 'movimientos',
         <span class="origen"><?= e(mb_strimwidth((string) $m['tr_concepto'], 0, 80, '…')) ?></span>
         <div class="acciones" style="margin-top:10px">
           <a class="btn" href="?r=movimiento&amp;id=<?= (int) $m['traspaso_id'] ?>">Ver el otro lado</a>
-          <form method="post" style="display:inline">
-            <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
-            <input type="hidden" name="accion" value="soltar">
-            <input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
-            <button class="btn">No son el mismo dinero</button>
-          </form>
+          <span>
+            <input type="hidden" name="csrf" value="<?= e(csrf()) ?>" form="f-soltar">
+            <input type="hidden" name="accion" value="soltar" form="f-soltar">
+            <input type="hidden" name="id" value="<?= (int) $m['id'] ?>" form="f-soltar">
+            <button class="btn" form="f-soltar">No son el mismo dinero</button>
+          </span>
         </div>
       </div>
-    <?php else: $posibles = traspasos_posibles($m); if ($posibles !== []): ?>
+    <?php elseif ($posibles !== []): ?>
       <details class="tasa-mano" data-guia="traspaso">
         <summary>¿Es un traspaso a otra cuenta suya?</summary>
         <p class="nota" style="margin:0 0 12px">
@@ -179,21 +192,22 @@ encabezado_html('Movimiento', 'movimientos',
           pasando de una cuenta a la otra, únalos: dejará de parecer un gasto y un ingreso.
         </p>
         <?php foreach ($posibles as $p): ?>
-          <form method="post" class="traspaso-opcion">
-            <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
-            <input type="hidden" name="accion" value="atar">
-            <input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
-            <input type="hidden" name="otro_id" value="<?= (int) $p['id'] ?>">
+          <?php $f = 'f-atar-' . (int) $p['id']; ?>
+          <div class="traspaso-opcion">
+            <input type="hidden" name="csrf" value="<?= e(csrf()) ?>" form="<?= $f ?>">
+            <input type="hidden" name="accion" value="atar" form="<?= $f ?>">
+            <input type="hidden" name="id" value="<?= (int) $m['id'] ?>" form="<?= $f ?>">
+            <input type="hidden" name="otro_id" value="<?= (int) $p['id'] ?>" form="<?= $f ?>">
             <span>
               <b><?= e($p['cuenta']) ?></b> · <?= e(date('d/m/Y', strtotime((string) $p['fecha']))) ?>
               · Bs <?= bs((float) $p['monto']) ?>
               <span class="origen"><?= e(mb_strimwidth((string) $p['concepto'], 0, 64, '…')) ?></span>
             </span>
-            <button class="btn">Es este</button>
-          </form>
+            <button class="btn" form="<?= $f ?>">Es este</button>
+          </div>
         <?php endforeach ?>
       </details>
-    <?php endif; endif ?>
+    <?php endif ?>
 
     <details class="tasa-mano">
       <summary>La tasa de ese día no es la correcta</summary>
@@ -202,19 +216,19 @@ encabezado_html('Movimiento', 'movimientos',
         Vale para todas las operaciones de esa fecha, no solo para esta, y la
         próxima consulta al BCV ya no la cambia.
       </p>
-      <form method="post">
-        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
-        <input type="hidden" name="accion" value="tasa">
-        <input type="hidden" name="id" value="<?= (int) $m['id'] ?>">
-        <input type="hidden" name="fecha" value="<?= e(substr((string) $m['fecha'], 0, 10)) ?>">
+      <div>
+        <input type="hidden" name="csrf" value="<?= e(csrf()) ?>" form="f-tasa">
+        <input type="hidden" name="accion" value="tasa" form="f-tasa">
+        <input type="hidden" name="id" value="<?= (int) $m['id'] ?>" form="f-tasa">
+        <input type="hidden" name="fecha" value="<?= e(substr((string) $m['fecha'], 0, 10)) ?>" form="f-tasa">
         <div class="par">
           <div><label>Bolívares por dólar</label>
-            <input type="text" name="tasa" required inputmode="decimal"
+            <input type="text" name="tasa" required inputmode="decimal" form="f-tasa"
                    placeholder="Ej.: 807,38" value="<?= e($m['tasa_bcv'] === null ? '' : tasa_texto($m['tasa_bcv'])) ?>"></div>
           <div style="display:flex;align-items:flex-end">
-            <button class="btn btn-oro">Guardar esa tasa</button></div>
+            <button class="btn btn-oro" form="f-tasa">Guardar esa tasa</button></div>
         </div>
-      </form>
+      </div>
     </details>
 
     <?php if ((int) $parecidos['n'] > 0): ?>
