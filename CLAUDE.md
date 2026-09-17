@@ -181,6 +181,17 @@ que hay que respetar ahí:
   llama. Pasa de verdad: Bancrecer tiene el mismo día cargado dos veces con
   montos distintos, del libro y del extracto.
 
+**El cierre de cada día es la misma regla escrita otra vez.** `cierres_por_dia()`
+da para cada fecha lo que daría `saldo_cuenta($id, $fecha)`, pero encadenando
+desde la víspera en vez de sumar la historia entera una vez por día. Se comparó
+a fuerza bruta el 17/09/2026: 1.246 cierres en las 22 cuentas, ninguno distinto
+ni en la cifra ni en la fuente. **Si tocas `saldos_de_cuentas()`, toca la otra
+y repite esa comparación.** Se enseña en Movimientos con una cuenta elegida y
+se llega desde el saldo de Cuentas; el enlace lleva `tipo=` vacío escrito a
+mano, porque `url()` tira los valores vacíos y sin él `filtros()` vuelve a
+«solo débitos». Un día con `cargas > 1` se señala: es el rastro de un archivo
+bajado antes del cierre.
+
 **Los totales del pie del archivo no mandan.** Totalizamos nosotros, fila por
 fila, y esa es la cifra que se guarda y se muestra. El resumen que el banco
 imprime al pie se compara y, si difiere, se avisa —nunca se rechaza la carga—.

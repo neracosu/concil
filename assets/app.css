@@ -706,6 +706,23 @@ tr:has(+ .fila-justificar:not([hidden])) td { border-bottom-color:transparent }
 .tasa-mano>*:last-child{margin-bottom:14px}
 .tasa-mano{margin-top:16px}
 .conceptos .tabla-scroll{margin-bottom:14px}
+
+/* El cierre de cada día, en Movimientos con una cuenta elegida. Plegado para
+   que no empuje la lista hacia abajo; el renglón que lo abre es lo que se
+   pulsa, así que lleva la altura mínima de un botón. */
+.cierres{margin-bottom:14px;padding-top:0;padding-bottom:0}
+.cierres>summary{cursor:pointer;min-height:2.75rem;padding:0.75rem 0;font-size:0.9375rem;color:var(--oro-claro);list-style-position:inside}
+.cierres[open]>summary{border-bottom:1px solid var(--linea);margin-bottom:0.75rem}
+.cierres>summary b{color:var(--texto)}
+.cierres>p{font-size:0.8438rem;color:var(--suave);margin:0 0 0.75rem;max-width:68ch}
+.cierres .tabla-scroll{margin-bottom:1rem}
+.cierres .aviso-dia{display:block;font-size:0.75rem;color:var(--pendiente)}
+
+/* El saldo de Cuentas, que lleva al cierre de cada día. Número y rótulo en un
+   solo enlace: así lo que se pulsa pasa de los 44 px sin engordar el renglón. */
+.saldo-dias{display:inline-block;padding:0.375rem 0}
+.saldo-dias span{display:block;font-family:var(--sans);font-size:0.75rem;font-weight:400;letter-spacing:0;color:var(--oro-claro)}
+.saldo-dias:hover span,.saldo-dias:focus-visible span{text-decoration:underline}
 .conceptos table{font-size:0.7812rem}
 .conceptos thead th{position:static}
 

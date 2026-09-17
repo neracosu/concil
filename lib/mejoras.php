@@ -41,6 +41,23 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-17', 'version' => '2.7.22', 'tipo' => 'mejora',
+            'titulo' => 'Con cuánto cerró cada cuenta, día por día',
+            'resumen' => 'Hay bancos, como el Tesoro, que no mandan el saldo en su archivo. El sistema calculaba el '
+                       . 'saldo de hoy, pero no enseñaba el de cada día, y cuando una cuenta no cuadraba no había '
+                       . 'cómo saber desde cuándo. Ahora, en Cuentas, debajo de cada saldo está «ver día por día»: '
+                       . 'muestra cuánto salió, cuánto entró y con cuánto cerró la cuenta cada día. Se compara con '
+                       . 'el banco, y el primer día que no coincida es donde hay que revisar.',
+            'detalles' => [
+                'También aparece en Movimientos al elegir una cuenta. Cada día lleva a sus movimientos con un clic.',
+                'Si un día entró repartido en dos archivos —por ejemplo, uno bajado a media tarde y otro al día '
+                . 'siguiente—, el sistema lo señala: entre una bajada y otra el banco puede retirar o cambiar '
+                . 'operaciones, y ese día es el primer sospechoso. Por eso conviene cargar cada día con el '
+                . 'archivo del día ya cerrado.',
+                'En los bancos que sí mandan su saldo, el cierre de cada día es el que informó el banco.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-17', 'version' => '2.7.21', 'tipo' => 'proteccion',
             'titulo' => 'El sistema guarda el archivo original de cada carga',
             'resumen' => 'Hasta hoy, el archivo del banco se leía y se descartaba: quedaban los movimientos, '

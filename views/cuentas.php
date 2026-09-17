@@ -168,7 +168,17 @@ encabezado_html('Cuentas', 'cuentas', count($lista) . ' cuentas registradas');
                      laptop, tapado por los botones. Lo pidió el equipo el 10/09/2026. */
                   $sal = $saldos[(int) $c['id']] ?? ['saldo' => 0.0, 'fuente' => 'parcial']; ?>
             <td class="der num<?= $sal['saldo'] < 0 ? ' negativo' : '' ?>" style="white-space:nowrap">
-              <?= bs($sal['saldo']) ?>
+              <?php /* Cuando un saldo no cuadra, lo primero es saber desde qué día.
+                       El número y el rótulo van en el mismo enlace para que haya
+                       dónde hacer clic; «tipo=» vacío para que abajo salgan
+                       entradas y salidas, no solo las salidas. */
+                    if ($c['f1']): ?>
+                <a class="saldo-dias" data-guia="diapordia" title="Con cuánto cerró esta cuenta cada día"
+                   href="?r=movimientos&amp;cuenta=<?= (int) $c['id'] ?>&amp;tipo=&amp;cierres=1#cierres"><?= bs($sal['saldo']) ?>
+                  <span>ver día por día</span></a>
+              <?php else: ?>
+                <?= bs($sal['saldo']) ?>
+              <?php endif ?>
               <span class="origen" style="display:block"><?= $sal['fuente'] === 'banco' ? 'según el banco'
                   : ($sal['fuente'] === 'calculado' ? 'calculado' : 'falta saldo inicial') ?></span></td>
             <td class="fecha"><?= $c['f1'] ? e(date('d/m/Y', strtotime($c['f1'])) . ' → ' . date('d/m/Y', strtotime($c['f2']))) : '—' ?></td>

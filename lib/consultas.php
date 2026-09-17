@@ -377,6 +377,94 @@ function saldos_de_cuentas(array $ids, ?string $hasta = null): array
     return $r;
 }
 
+/**
+ * Con cuánto cerró la cuenta cada día, del más reciente hacia atrás.
+ *
+ * Lo pidió el equipo el 17/09/2026. El Tesoro no imprime saldo, y cuando la
+ * cuenta dejó de cuadrar no había cómo ver desde qué día venía la diferencia:
+ * con el cierre de cada día puesto al lado del banco, el primero que no
+ * coincide es donde hay que mirar. `cargas` dice cuántos archivos alimentaron
+ * ese día: si son dos, una parte se bajó antes de que el día cerrara, y entre
+ * una bajada y otra el banco pudo retirar o cambiar algo —que fue el caso—.
+ *
+ * Da, para cada día, lo mismo que saldo_cuenta($id, $dia), pero encadenando
+ * desde el día anterior en vez de sumar la historia entera una vez por día.
+ * **Es la misma regla que saldos_de_cuentas() escrita otra vez: si tocas una,
+ * toca la otra**, y vuelve a comparar las dos sobre todas las cuentas.
+ */
+function cierres_por_dia(int $cuentaId, string $desde = '', string $hasta = '', int $maxDias = 31): array
+{
+    $pdo = db();
+    $hoy = date('Y-m-d');
+    $hasta = ($hasta !== '' && $hasta < $hoy) ? $hasta : $hoy;   // nunca más allá de hoy, como el saldo
+
+    // Dónde empieza: el día número $maxDias contando hacia atrás. Se busca
+    // antes, dentro del índice, para no agrupar años de historia y quedarse
+    // con un mes.
+    $s = $pdo->prepare('SELECT fecha FROM movimientos WHERE cuenta_id = ? AND fecha <= ?
+                      GROUP BY fecha ORDER BY fecha DESC LIMIT 1 OFFSET ' . max(0, $maxDias - 1));
+    $s->execute([$cuentaId, $hasta]);
+    $tope = $s->fetchColumn();
+    if ($tope !== false && $tope > $desde) {
+        $desde = (string) $tope;
+    }
+
+    $w = 'cuenta_id = ? AND fecha <= ?';
+    $p = [$cuentaId, $hasta];
+    if ($desde !== '') {
+        $w .= ' AND fecha >= ?';
+        $p[] = $desde;
+    }
+    $s = $pdo->prepare("SELECT fecha, COUNT(*) n, SUM(debito) deb, SUM(credito) cre,
+                               SUM(saldo IS NOT NULL) con_saldo, COUNT(DISTINCT importacion_id) cargas
+                          FROM movimientos WHERE $w GROUP BY fecha ORDER BY fecha");
+    $s->execute($p);
+    $dias = $s->fetchAll(PDO::FETCH_ASSOC);
+    if ($dias === []) {
+        return [];
+    }
+
+    // De dónde se parte: el cierre del día anterior al primero, con la función
+    // de siempre. Y si para entonces el banco ya había informado algún saldo,
+    // porque de eso depende que la ficha de la cuenta pinte algo o no.
+    $vispera = date('Y-m-d', strtotime($dias[0]['fecha'] . ' -1 day'));
+    $previo = (float) saldo_cuenta($cuentaId, $vispera)['saldo'];
+    $s = $pdo->prepare('SELECT MAX(CASE WHEN saldo IS NOT NULL THEN fecha END) FROM movimientos
+                         WHERE cuenta_id = ? AND fecha <= ?');
+    $s->execute([$cuentaId, $vispera]);
+    $hayBanco = $s->fetchColumn() !== null;
+
+    $s = $pdo->prepare('SELECT saldo_inicial, saldo_fecha FROM cuentas WHERE id = ?');
+    $s->execute([$cuentaId]);
+    $ficha = $s->fetch(PDO::FETCH_ASSOC) ?: [];
+    $arranque = $ficha['saldo_fecha'] ?? null;
+
+    $delDia = $pdo->prepare('SELECT saldo, debito, credito FROM movimientos
+                              WHERE cuenta_id = ? AND fecha = ? AND saldo IS NOT NULL ORDER BY id');
+    $r = [];
+    foreach ($dias as $d) {
+        if ((int) $d['con_saldo'] > 0) {
+            $delDia->execute([$cuentaId, $d['fecha']]);
+            $filas = $delDia->fetchAll(PDO::FETCH_ASSOC);
+            $cierre = saldo_de_cierre($filas) ?? (float) end($filas)['saldo'];
+            $fuente = 'banco';
+            $hayBanco = true;
+        } elseif (!$hayBanco && $arranque !== null && $d['fecha'] < $arranque) {
+            // Antes de la fecha del saldo de arranque no se suma nada: el
+            // arranque ya lo trae dentro.
+            $cierre = (float) ($ficha['saldo_inicial'] ?? 0);
+            $fuente = 'calculado';
+        } else {
+            $cierre = round($previo + (float) $d['cre'] - (float) $d['deb'], 2);
+            $fuente = ($hayBanco || $arranque !== null) ? 'calculado' : 'parcial';
+        }
+        $previo = $cierre;
+        $r[] = ['fecha' => $d['fecha'], 'n' => (int) $d['n'], 'deb' => (float) $d['deb'], 'cre' => (float) $d['cre'],
+                'cierre' => $cierre, 'fuente' => $fuente, 'cargas' => (int) $d['cargas']];
+    }
+    return array_reverse($r);
+}
+
 /** Entradas, salidas y saldo de cada cuenta en el período filtrado. */
 function saldos_por_cuenta(array $f): array
 {

@@ -198,6 +198,13 @@ function guia_pasos(): array
                     . 'las facturas son de quien las debe.',
         ],
         [
+            'ruta' => 'cuentas', 'sel' => '[data-guia="diapordia"]',
+            'titulo' => 'Si un saldo no le cuadra, mire el día por día',
+            'texto' => 'Debajo de cada saldo está «ver día por día»: le muestra con cuánto cerró esa cuenta cada día. '
+                     . 'Compárelo con el banco. <b>El primer día que no coincida es donde hay que revisar.</b>',
+            'nota' => 'Sirve sobre todo con los bancos que no mandan el saldo en su archivo, como el Tesoro.',
+        ],
+        [
             'ruta' => 'cuentas', 'sel' => '[data-guia="saldoinicial"]',
             'titulo' => 'Esto sí conviene hacerlo hoy',
             'texto' => 'Algunos bancos no mandan el saldo en su archivo. Escriba aquí cuánto tenía la cuenta '

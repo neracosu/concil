@@ -64,6 +64,13 @@ $reparto = por_categoria($f, 14);
 $cats = categorias();
 $cuentasLista = cuentas();
 
+// Con una sola cuenta elegida se puede decir con cuánto cerró cada día. El id
+// llega por la dirección, así que solo vale si es de esta unidad de negocio.
+$cierres = [];
+if ($f['cuenta'] > 0 && in_array($f['cuenta'], array_map('intval', array_column($cuentasLista, 'id')), true)) {
+    $cierres = cierres_por_dia($f['cuenta'], $f['desde'], $f['hasta']);
+}
+
 $totalCol = $f['tipo'] === 'C' ? (float) ($res['cre'] ?? 0) : (float) ($res['deb'] ?? 0);
 $maxMonto = 0.0;
 foreach ($lista['filas'] as $m) {
@@ -140,6 +147,46 @@ function opciones_categoria(array $cats, ?int $sel): void
     </select></div>
   <div class="filtros-pie"><button class="btn btn-oro">Filtrar</button><a class="btn" href="?r=movimientos">Limpiar</a></div>
 </form>
+
+<?php if ($cierres): $ult = $cierres[0]; ?>
+  <details class="tarjeta cierres" id="cierres" data-guia="cierres"<?= isset($_GET['cierres']) ? ' open' : '' ?>>
+    <summary>Saldo al cierre de cada día · el <?= e(date('d/m/Y', strtotime($ult['fecha']))) ?> cerró en
+      <b class="num<?= $ult['cierre'] < 0 ? ' negativo' : '' ?>">Bs <?= bs($ult['cierre']) ?></b></summary>
+    <p><?php if ($ult['fuente'] === 'banco'): ?>
+        Es el saldo con el que el banco cerró cada día, según su propio archivo.
+      <?php else: ?>
+        Este banco no manda el saldo en su archivo, así que el sistema lo calcula: parte del último saldo
+        conocido, le suma lo que entró cada día y le resta lo que salió.
+      <?php endif ?>
+      Compare cada cierre con el del banco: <b>el primer día que no coincida es donde hay que revisar</b>.</p>
+    <div class="tabla-scroll">
+      <table>
+        <thead><tr><th>Día</th><th class="der">Movimientos</th><th class="der">Salió Bs</th>
+          <th class="der">Entró Bs</th><th class="der">Saldo al cierre Bs</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ($cierres as $d): ?>
+          <tr>
+            <?php /* A mano y no con url(): esa función tira los valores vacíos,
+                     y sin «tipo=» la pantalla vuelve a enseñar solo las salidas. */ ?>
+            <td class="fecha"><a href="?r=movimientos&amp;cuenta=<?= (int) $f['cuenta'] ?>&amp;tipo=&amp;desde=<?= e($d['fecha']) ?>&amp;hasta=<?= e($d['fecha']) ?>"
+                  title="Ver los movimientos de ese día"><?= e(date('d/m/Y', strtotime($d['fecha']))) ?></a></td>
+            <td class="der num"><?= number_format($d['n'], 0, ',', '.') ?></td>
+            <td class="der num" style="color:var(--salida)"><?= bs($d['deb']) ?></td>
+            <td class="der num" style="color:var(--entrada)"><?= bs($d['cre']) ?></td>
+            <td class="der num<?= $d['cierre'] < 0 ? ' negativo' : '' ?>"><b><?= bs($d['cierre']) ?></b></td>
+            <td><span class="origen"><?= $d['fuente'] === 'banco' ? 'según el banco'
+                  : ($d['fuente'] === 'calculado' ? 'calculado' : 'falta saldo inicial') ?></span>
+              <?php if ($d['cargas'] > 1): ?>
+                <span class="aviso-dia" title="Una parte de este día se cargó en un archivo y el resto en otro. Si el primero se bajó antes de que el día cerrara, el banco pudo cambiar o retirar algo después.">entró
+                  en <?= $d['cargas'] ?> archivos: si no coincide, empiece por aquí</span>
+              <?php endif ?></td>
+          </tr>
+        <?php endforeach ?>
+        </tbody>
+      </table>
+    </div>
+  </details>
+<?php endif ?>
 
 <?php if ($totalCol > 0 && $reparto): ?>
   <div class="tarjeta" style="margin-bottom:14px">
