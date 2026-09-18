@@ -35,6 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('mal', 'Elija una categoría antes de guardar.');
         redirigir(url([], 'pendientes'));
     }
+    // Se comprueba antes de crear la regla: sin filas, la regla nacería con cero
+    // aciertos y el aviso diría «0 movimientos justificados», que no orienta.
+    if ($accion === 'seleccion' && array_filter(array_map('intval', (array) ($_POST['ids'] ?? []))) === []) {
+        flash('mal', 'Marque al menos una casilla de la izquierda antes de justificar.');
+        redirigir(url([], 'pendientes'));
+    }
 
     $reglaId = null;
     if (!empty($_POST['crear_regla'])) {
@@ -223,7 +229,10 @@ function form_clasificar(array $cats, string $accion, array $ocultos, string $pa
       </div>
       <div style="border-top:1px solid var(--linea);padding-top:12px" <?= $idForm === 'g0' ? 'data-guia="regla"' : '' ?>>
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--texto);margin-bottom:10px">
-          <input type="checkbox" name="crear_regla" value="1" style="width:auto"<?= $att ?> <?= $suelto ? '' : 'checked' ?>>
+          <?php /* Marcada solo cuando hay un patrón que proponer: en el de «varios de una
+                   vez» las filas se eligieron a mano y una regla con patrón vacío no
+                   pasa la validación, así que salir marcada frustraba el primer intento. */ ?>
+          <input type="checkbox" name="crear_regla" value="1" style="width:auto"<?= $att ?> <?= !$suelto && $patronSugerido !== '' ? 'checked' : '' ?>>
           Guardar como regla para que se clasifique solo de aquí en adelante
         </label>
         <div class="par">
@@ -407,11 +416,6 @@ if ($modo === 'grupos'):
       <div class="filtros-pie"><button class="btn">Filtrar</button><a class="btn" href="?r=pendientes&modo=lista">Limpiar</a></div>
     </form>
 
-    <form method="post" id="fSel">
-      <input type="hidden" name="csrf" value="<?= e(csrf()) ?>">
-      <input type="hidden" name="accion" value="seleccion">
-    </form>
-
     <div class="marco-tabla">
         <div class="tabla-scroll">
           <table>
@@ -425,7 +429,7 @@ if ($modo === 'grupos'):
             <tbody>
             <?php foreach ($lista['filas'] as $m): $anch = $maxMonto > 0 ? (float) $m['debito'] / $maxMonto * 100 : 0; ?>
               <tr>
-                <td><input type="checkbox" name="ids[]" value="<?= $m['id'] ?>" style="width:auto" form="fSel" aria-label="Seleccionar"></td>
+                <td><input type="checkbox" name="ids[]" value="<?= $m['id'] ?>" style="width:auto" form="fClas" aria-label="Seleccionar"></td>
                 <td class="fecha"><?= e(date('d/m/y', strtotime($m['fecha']))) ?></td>
                 <td style="font-size:12.5px;color:var(--mudo)"><?= e($m['cuenta']) ?></td>
                 <td class="concepto"><span class="txt"><?= e($m['concepto']) ?></span>
@@ -465,11 +469,12 @@ if ($modo === 'grupos'):
       <h2>Clasificar varios de una vez</h2>
       <p class="nota" style="margin:0 0 12px">Marque las casillas de la izquierda y use este formulario.
         Para uno solo, es más rápido el botón <b>Justificar</b> de su propia fila.</p>
-      <?php form_clasificar($cats, 'seleccion', [], '', 'fClas') ?>
+      <?php /* Las casillas de la tabla van atadas a este formulario con form="fClas",
+               igual que el botón: el <form> se cierra dentro de form_clasificar() y lo
+               que quede fuera sin ese atributo no envía nada. */
+      form_clasificar($cats, 'seleccion', [], '', 'fClas') ?>
       <div class="acciones" style="margin-top:14px">
-        <button class="btn btn-oro" onclick="document.querySelectorAll('input[name=\'ids[]\']:checked').forEach(function(c){var h=document.createElement('input');h.type='hidden';h.name='ids[]';h.value=c.value;document.getElementById('fClas').appendChild(h)});">
-          Justificar seleccionados
-        </button>
+        <button class="btn btn-oro" form="fClas">Justificar seleccionados</button>
       </div>
     </div>
 <?php endif ?>

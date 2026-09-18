@@ -41,6 +41,22 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-18', 'version' => '2.7.25', 'tipo' => 'correccion',
+            'titulo' => '«Justificar seleccionados» no hacía nada',
+            'resumen' => 'En Por justificar, modo «Uno por uno», se podían marcar varias casillas y llenar el '
+                       . 'cuadro de «Clasificar varios de una vez», pero el botón no enviaba nada: las casillas '
+                       . 'y el botón no estaban conectados con el formulario. Lo reportó el equipo por el grupo. '
+                       . 'Ahora marca las filas que quiera, elige la categoría y todas quedan justificadas de un '
+                       . 'solo clic.',
+            'detalles' => [
+                'Si pulsa el botón sin haber marcado ninguna casilla, el sistema se lo dice en vez de '
+                . 'responder «0 movimientos justificados».',
+                'En ese cuadro la opción «Guardar como regla» sale ahora sin marcar: las filas se eligieron a '
+                . 'mano y no hay un patrón común que proponer. Márquela y escriba el patrón si de verdad '
+                . 'quiere una regla.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-17', 'version' => '2.7.24', 'tipo' => 'proteccion',
             'titulo' => 'El maestro principal queda firme: nadie puede darlo de baja',
             'resumen' => 'Ahora que puede haber varios maestros, hacía falta que uno quedara firme: si dos '
