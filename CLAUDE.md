@@ -471,8 +471,12 @@ nadie pudiera guardar desde ahí, y la bitácora lo delataba con cero
 formulario vacío aparte y sus campos y su botón se atan con `form="id"`. Para
 detectarlo: renderizar con el Chrome sin cabeza (`--dump-dom`) y comparar
 cuántos `<form` hay en el HTML y cuántos en el DOM; si difieren, hay uno
-anidado. Y al probar una pantalla no basta un GET en 200: el POST que guarda
-tiene que dejar su línea en la bitácora.
+anidado. **La otra cara: un botón que quede después del `</form>` y sin
+`form="id"` tampoco envía nada**, y no hay error en ningún sitio. Así estuvo
+«Justificar seleccionados» de Pendientes desde el primer commit hasta el
+18/09/2026: el `onclick` copiaba las casillas al formulario y el botón, huérfano,
+no lo enviaba. Y al probar una pantalla no basta un GET en 200: **cada botón
+que guarda** tiene que dejar su línea en la bitácora, no solo el principal.
 
 **Esconder el botón no es cerrar la puerta.** El permiso se comprueba en el
 manejador del POST, no en el HTML que lo dibuja: un formulario se manda a mano.
