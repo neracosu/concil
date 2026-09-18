@@ -318,6 +318,26 @@ function archivar_extracto(string $ruta, int $impId, string $archivoNombre): voi
 }
 
 /**
+ * ¿Es la fila un rótulo de saldo y no una operación? Mercantil imprime «SALDO
+ * INICIAL» y «SALDO FINAL» como renglones del extracto, sin referencia y con el
+ * saldo repetido en la columna del monto, y entraban como cobros de millones
+ * que no existen (9 filas y Bs 10 M en las cargas 33, 51, 75, 81 y 108, medido
+ * el 18/09/2026). Se exigen las tres cosas —el texto, sin referencia y el monto
+ * igual al saldo— para no tragarse una operación real cuyo concepto empiece
+ * por SALDO.
+ */
+function es_rotulo_de_saldo(string $concepto, string $referencia, float $monto, string $saldoTxt): bool
+{
+    if (trim($referencia) !== '' || trim($saldoTxt) === '') {
+        return false;
+    }
+    if (!preg_match('/^SALDO (INICIAL|FINAL|ANTERIOR|ACTUAL)\b/', norm($concepto))) {
+        return false;
+    }
+    return abs($monto - abs(a_monto($saldoTxt))) < 0.005;
+}
+
+/**
  * Importa el archivo a la cuenta indicada.
  * Deduplica por firma+ocurrencia, así una carga repetida no genera copias
  * y un extracto acumulativo solo agrega las filas nuevas.
@@ -419,6 +439,12 @@ function importar(string $ruta, string $ext, int $cuentaId, string $archivoNombr
             $credito = abs(a_monto(celda($fila, $m['credito'])));
         }
         if ($debito == 0.0 && $credito == 0.0) {
+            $ignoradas++;
+            continue;
+        }
+        // Va antes de sumar: un rótulo de saldo que contara como cobro infla
+        // las entradas del panel y de los reportes, no solo la lista.
+        if (es_rotulo_de_saldo(celda($fila, $m['concepto']), celda($fila, $m['referencia']), $debito + $credito, celda($fila, $m['saldo']))) {
             $ignoradas++;
             continue;
         }

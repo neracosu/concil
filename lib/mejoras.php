@@ -41,6 +41,20 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-18', 'version' => '2.7.26', 'tipo' => 'correccion',
+            'titulo' => 'Mercantil: los renglones «Saldo inicial» y «Saldo final» ya no entran como cobros',
+            'resumen' => 'El extracto de Mercantil imprime el saldo con que abre y con que cierra como si '
+                       . 'fueran dos renglones más, y el sistema los tomaba por cobros: en cinco cargas '
+                       . 'entraron nueve «cobros» por más de Bs 10 millones que no existían. El saldo de la '
+                       . 'cuenta salía bien, porque viene del banco, pero las entradas de Mercantil en el '
+                       . 'panel y en los reportes estaban infladas. Ahora esos renglones se reconocen y se '
+                       . 'saltan, y los nueve que ya estaban se quitaron.',
+            'detalles' => [
+                'Un renglón se toma por rótulo de saldo solo si dice «Saldo inicial» o «Saldo final», no '
+                . 'trae referencia y su monto es igual al saldo. Una operación de verdad no cumple las tres.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-18', 'version' => '2.7.25', 'tipo' => 'correccion',
             'titulo' => '«Justificar seleccionados» no hacía nada',
             'resumen' => 'En Por justificar, modo «Uno por uno», se podían marcar varias casillas y llenar el '
