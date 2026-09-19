@@ -153,7 +153,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
             $elegida = (string) ($elegidas[$i] ?? '');
-            if ($elegida === 'nueva' || (int) $elegida <= 0) {
+            if ($elegida === '') {
+                // Con varias cuentas del mismo banco el selector sale sin nada
+                // elegido. Antes salía «Crear cuenta nueva», y así nació una
+                // tercera cuenta de Bicentenario que nadie quería.
+                $errFila[$i] = 'Elija a cuál de sus cuentas va este archivo. Si de verdad es de una cuenta que todavía no está registrada, elija «Crear cuenta nueva».';
+            } elseif ($elegida === 'nueva' || (int) $elegida <= 0) {
                 if ((trim((string) ($nuevas[$i] ?? '')) ?: $a['cuenta']) === '') {
                     $errFila[$i] = 'Escriba cómo se va a llamar esta cuenta. Sin nombre no se puede crear, ni elegirla después.';
                 }
@@ -161,8 +166,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($errFila !== []) {
             $paso = 'confirmar';
-            $mensaje = ['tipo' => 'mal', 'texto' => 'Falta el nombre de ' . count($errFila)
-                . ' cuenta(s). Sus archivos siguen aquí: complete lo que falta y vuelva a darle a importar.'];
+            $mensaje = ['tipo' => 'mal', 'texto' => 'Falta un dato en ' . count($errFila)
+                . ' archivo(s). Sus archivos siguen aquí: complete lo que falta y vuelva a darle a importar.'];
         }
     }
 
@@ -399,19 +404,32 @@ encabezado_html('Cargar extractos', 'carga',
                   // solo: aquí y allá tiene que proponer lo mismo.
                   $sug = cuenta_sugerida($a, $cuentasLista);
                   $mismoBanco = cuentas_del_banco((string) $a['banco'], $cuentasLista);
+                  // Sin elegir: hay varias cuentas de ese banco y nada que las
+                  // separe. Se deja en blanco para que elija una persona; con
+                  // «Crear cuenta nueva» ya puesta, un clic creaba otra.
+                  $sinElegir = false;
+                  $porArranque = false;
                   if (isset($prevCuenta[$i])) {
-                      $sug = $prevCuenta[$i] === 'nueva' ? null : (int) $prevCuenta[$i];
+                      $sinElegir = $prevCuenta[$i] === '';
+                      $sug = in_array($prevCuenta[$i], ['nueva', ''], true) ? null : (int) $prevCuenta[$i];
                   } elseif (!empty($a['gemela'])) {
                       // Ya está en otra cuenta: se propone esa, que es lo seguro.
                       $sug = (int) $a['gemela']['cuenta_id'];
+                  } elseif ($sug === null && count($mismoBanco) > 1) {
+                      $sug = cuenta_por_arranque($a, $mismoBanco);
+                      $porArranque = $sug !== null;
+                      $sinElegir = $sug === null;
                   }
+                  if ($sinElegir): ?>
+                    <option value="" selected>— Elija a cuál de sus cuentas va —</option>
+                  <?php endif;
                   foreach ($cuentasLista as $c): ?>
                     <?php $ult = preg_replace('/\D/', '', (string) $c['numero']); ?>
                     <option value="<?= $c['id'] ?>" <?= $sug === (int) $c['id'] ? 'selected' : '' ?>>
                       <?= e($c['nombre']) ?><?= $c['banco'] ? ' — ' . e($c['banco']) : '' ?><?=
                         strlen($ult) >= 4 ? ' · termina en ' . e(substr($ult, -4)) : '' ?></option>
                   <?php endforeach ?>
-                  <option value="nueva" <?= $sug === null ? 'selected' : '' ?>>➕ Crear cuenta nueva</option>
+                  <option value="nueva" <?= $sug === null && !$sinElegir ? 'selected' : '' ?>>➕ Crear cuenta nueva</option>
                 </select>
               </div>
               <div>
@@ -432,9 +450,14 @@ encabezado_html('Cargar extractos', 'carga',
             <?php if (count($mismoBanco) > 1): ?>
               <div class="aviso aviso-nota" style="margin-top:14px">
                 <b>Hay <?= count($mismoBanco) ?> cuentas suyas en <?= e($a['banco']) ?>.</b>
-                El sistema no adivina cuál es: la misma empresa, con el mismo RIF, puede tener
-                varias cuentas en un banco y solo el número las distingue. Revise que sea la correcta
-                antes de importar.
+                <?php if ($porArranque): ?>
+                  Se propone la de arriba porque este archivo arranca en <?= e(bs((float) $a['arranque'])) ?>,
+                  que es justo el saldo con el que cerró esa cuenta. Revise que sea la correcta antes de importar.
+                <?php else: ?>
+                  El sistema no adivina cuál es: la misma empresa, con el mismo RIF, puede tener
+                  varias cuentas en un banco y solo el número las distingue. Elija arriba a cuál va
+                  antes de importar.
+                <?php endif ?>
               </div>
             <?php endif ?>
             <?php if (isset($errFila[$i])): ?>

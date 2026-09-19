@@ -1248,6 +1248,10 @@ function fusionar_cuentas(int $origen, int $destino): array
         $mover->execute([$destino, $firma, 1, $f['id']]);
         $movidos++;
     }
+    // Las cargas se mudan con sus movimientos. Si no, al borrar la cuenta su
+    // `cuenta_id` queda en NULL, desaparecen de las últimas cargas del panel y
+    // ya no hay botón con el que deshacerlas.
+    $pdo->prepare('UPDATE importaciones SET cuenta_id = ? WHERE cuenta_id = ?')->execute([$destino, $origen]);
     $pdo->prepare('DELETE FROM cuentas WHERE id = ?')->execute([$origen]);
     $pdo->commit();
 
@@ -1268,6 +1272,37 @@ function cuentas_del_banco(string $banco, array $cuentas): array
         return [];
     }
     return array_values(array_filter($cuentas, fn($c) => norm((string) $c['banco']) === norm($banco)));
+}
+
+/**
+ * Entre varias cuentas del mismo banco, la que cerró justo con lo que este
+ * archivo dice que arranca. Null si ninguna, o si más de una.
+ *
+ * Solo sirve para proponer en la pantalla que pregunta, nunca para que el
+ * archivo entre solo: `cuenta_sugerida()` sigue sin adivinar. Hace falta porque
+ * Bicentenario no imprime el número de cuenta y sí el saldo de arranque: dos
+ * veces en tres días (17 y 19/09/2026) su extracto acabó donde no era, la
+ * segunda en una cuenta nueva que nadie quería crear.
+ *
+ * Se compara contra el saldo que imprimió el banco (`fuente = banco`), al
+ * centavo. Uno calculado puede coincidir por casualidad, y un cero lo
+ * comparten todas las cuentas recién abiertas.
+ */
+function cuenta_por_arranque(array $a, array $candidatas): ?int
+{
+    $arranque = $a['arranque'] ?? null;
+    if ($arranque === null || abs((float) $arranque) < 0.005 || count($candidatas) < 2) {
+        return null;
+    }
+    $saldos = saldos_de_cuentas(array_map(fn($c) => (int) $c['id'], $candidatas));
+    $casan = [];
+    foreach ($saldos as $id => $s) {
+        if (($s['fuente'] ?? '') === 'banco' && $s['saldo'] !== null
+            && abs((float) $s['saldo'] - (float) $arranque) < 0.005) {
+            $casan[] = (int) $id;
+        }
+    }
+    return count($casan) === 1 ? $casan[0] : null;
 }
 
 /**
@@ -1305,12 +1340,19 @@ function cuenta_sugerida(array $a, array $cuentas): ?int
             return $cand[0];
         }
     }
-    foreach ($cuentas as $c) {
-        if (norm((string) $c['nombre']) === norm((string) $a['cuenta']) && (string) $a['cuenta'] !== '') {
-            return (int) $c['id'];
+    $mismas = cuentas_del_banco((string) $a['banco'], $cuentas);
+    // Cuando el archivo no trae título, el nombre propuesto es el del banco. Con
+    // varias cuentas ahí, que una se llame como el banco no dice que el archivo
+    // sea suyo: el 19/09/2026 se creó sin querer una cuenta «Bicentenario» y a
+    // partir de ese momento los extractos de las otras dos entraban solos en ella.
+    $soloElBanco = norm((string) $a['cuenta']) === norm((string) $a['banco']) && count($mismas) > 1;
+    if (!$soloElBanco) {
+        foreach ($cuentas as $c) {
+            if (norm((string) $c['nombre']) === norm((string) $a['cuenta']) && (string) $a['cuenta'] !== '') {
+                return (int) $c['id'];
+            }
         }
     }
-    $mismas = cuentas_del_banco((string) $a['banco'], $cuentas);
     return count($mismas) === 1 ? (int) $mismas[0]['id'] : null;
 }
 

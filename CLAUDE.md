@@ -309,6 +309,21 @@ esas dos funciones, acuérdate de que la vista y la decisión automática tienen
 que proponer lo mismo o el archivo entrará en un sitio distinto al que se
 enseña.
 
+**Cuando hay que preguntar la cuenta, «Crear cuenta nueva» no puede salir
+elegida.** Bicentenario no imprime el número y hay dos cuentas suyas, así que
+el sistema pregunta; el selector salía con «➕ Crear cuenta nueva» puesta y el
+nombre «Bicentenario» ya escrito, y el 19/09/2026 un clic creó una tercera
+cuenta. Peor: como se llamaba igual que el banco, `cuenta_sugerida()` casaba
+por nombre y **todo extracto de Bicentenario pasó a entrar solo en ella**, sin
+preguntar. Ahora, con varias cuentas del banco, el selector sale en blanco
+(`value=""`, que el POST rechaza) y el casamiento por nombre se salta cuando el
+nombre propuesto es solo el del banco. `cuenta_por_arranque()` propone la
+cuenta cuyo saldo `banco` es, al centavo, el saldo de arranque que imprime el
+archivo: **solo propone en la pantalla, nunca decide la carga automática**, y
+no mira saldos `calculado` ni ceros. Y `fusionar_cuentas()` se lleva también
+las `importaciones`: si no, quedan con `cuenta_id` NULL, fuera del panel y sin
+botón de deshacer.
+
 **Se puede deshacer una carga entera** con `deshacer_importacion()`. Limpia a
 mano el `traspaso_id` de las parejas antes de borrar, porque esa columna no
 tiene clave foránea. Los `pagos_factura` sí caen por FK: eso es trabajo de una

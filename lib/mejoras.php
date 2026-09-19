@@ -41,6 +41,22 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-19', 'version' => '2.7.27', 'tipo' => 'correccion',
+            'titulo' => 'Al cargar un extracto ya no se crea una cuenta nueva sin querer',
+            'resumen' => 'Cuando el banco no imprime el número de cuenta y usted tiene varias cuentas ahí —pasa '
+                       . 'con Bicentenario—, el sistema pregunta a cuál va el archivo. Esa pregunta salía con '
+                       . '«Crear cuenta nueva» ya elegida, y con un clic nacía una cuenta que nadie quería: el '
+                       . 'extracto quedaba «afuera» y el saldo de la cuenta de verdad no se movía. Ahora la '
+                       . 'pregunta sale en blanco y hay que elegir. Y si el archivo arranca justo en el saldo '
+                       . 'con el que cerró una de sus cuentas, el sistema le propone esa y le dice por qué.',
+            'detalles' => [
+                'Una cuenta que se llame igual que el banco ya no se queda con los extractos de las demás '
+                . 'cuentas de ese banco.',
+                'Al unir dos cuentas, las cargas de la que desaparece pasan a la otra: siguen saliendo en '
+                . 'el panel y se pueden deshacer.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-18', 'version' => '2.7.26', 'tipo' => 'correccion',
             'titulo' => 'Mercantil: los renglones «Saldo inicial» y «Saldo final» ya no entran como cobros',
             'resumen' => 'El extracto de Mercantil imprime el saldo con que abre y con que cierra como si '
