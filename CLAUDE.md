@@ -13,7 +13,10 @@ es hosting cPanel compartido y esa restricción es deliberada.
 
 ## Entorno de este servidor
 
-- La instalación de producción vive en `public_html/vipsoft.cloud/conciliacion`.
+- La instalación de producción vive en `public_html/concil.app` y se sirve en
+  **https://concil.app**. Se mudó ahí el 20/09/2026; la ruta vieja
+  `public_html/vipsoft.cloud/conciliacion` hoy es solo un reenvío, y la copia
+  de aquel día quedó en `DATA_DIR/app-vieja-20260920`.
   **Editar un archivo es desplegarlo**: no hay build ni paso de publicación. Si
   vas a tocar varios archivos que dependen entre sí (por ejemplo `lib/guia.php`
   y `views/_layout.php`), hazlo rápido y verifica enseguida — durante esos
@@ -31,8 +34,15 @@ es hosting cPanel compartido y esa restricción es deliberada.
   servidor desde WHM (tiene acceso; no hay que mandarlo al proveedor). Ojo:
   `opcache.enable_cli` está en Off, así que `php -m` en la shell no lo lista
   aunque esté cargado en el SAPI web.
-- El dominio corre **ea-php83**, fijado en el `.htaccess` de
-  `public_html/vipsoft.cloud`, no en el de la aplicación.
+- El dominio corre **ea-php83**, fijado en MultiPHP para `concil.app`
+  (`uapi LangPHP php_set_vhost_versions version=ea-php83 vhost-0=concil.app`).
+  cPanel escribe su bloque de `AddHandler` al final del `.htaccess` de la
+  aplicación: si rehaces ese archivo, consérvalo.
+- **Las reglas que tapan `lib/`, `views/` y `.git` van sin prefijo de ruta**,
+  porque la aplicación vive en la raíz del dominio. Antes llevaban
+  `/conciliacion/` por delante y escritas así habrían dejado de proteger al
+  mudarse: el repositorio entero habría quedado descargable. Si algún día se
+  mueve a una subcarpeta, hay que volver a ponérselo.
 - Hay claves SSH por proyecto en `~/.ssh/config` con `IdentitiesOnly`. Son user
   keys de la cuenta `neracosu`, no deploy keys.
 

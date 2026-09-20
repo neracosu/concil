@@ -41,6 +41,20 @@ function mejoras(): array
 {
     return [
         [
+            'fecha' => '2026-09-20', 'version' => '2.8', 'tipo' => 'nuevo',
+            'titulo' => 'CONCIL ya tiene su propia dirección: concil.app',
+            'resumen' => 'El sistema dejó de vivir dentro de la página de VIP Soft y ahora se entra por '
+                       . 'su propia dirección: concil.app. Es más corta, más fácil de dictar por teléfono y '
+                       . 'más fácil de guardar en el celular. Sus cuentas, sus cargas y sus usuarios son los '
+                       . 'mismos de siempre: no se movió nada de lo suyo, solo la puerta de entrada. El '
+                       . 'enlace viejo sigue sirviendo y lo trae aquí solo.',
+            'detalles' => [
+                'La primera vez le va a pedir el PIN otra vez: para el navegador es una dirección nueva.',
+                'La conexión va cifrada siempre, aunque escriba la dirección sin más.',
+                'Si tenía guardado un enlace a una pantalla concreta, sigue llevando a esa misma pantalla.',
+            ],
+        ],
+        [
             'fecha' => '2026-09-19', 'version' => '2.7.27', 'tipo' => 'correccion',
             'titulo' => 'Al cargar un extracto ya no se crea una cuenta nueva sin querer',
             'resumen' => 'Cuando el banco no imprime el número de cuenta y usted tiene varias cuentas ahí —pasa '
