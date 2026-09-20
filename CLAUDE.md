@@ -13,10 +13,17 @@ es hosting cPanel compartido y esa restricción es deliberada.
 
 ## Entorno de este servidor
 
-- La instalación de producción vive en `public_html/concil.app` y se sirve en
-  **https://concil.app**. Se mudó ahí el 20/09/2026; la ruta vieja
-  `public_html/vipsoft.cloud/conciliacion` hoy es solo un reenvío, y la copia
-  de aquel día quedó en `DATA_DIR/app-vieja-20260920`.
+- **Una instalación por empresa, cada una en su subdominio.** La de Armor
+  Market vive en `public_html/armor.concil.app` y se sirve en
+  **https://armor.concil.app**. `concil.app` a secas ya **no** es la
+  aplicación: es el sitio público de venta, y vive en
+  `public_html/concil.app` con su propio código (ver `DATA_DIR/landing/`).
+  Todo esto se montó el 20/09/2026; `public_html/vipsoft.cloud/conciliacion`
+  quedó de reenvío y la copia de aquel día está en
+  `DATA_DIR/app-vieja-20260920`.
+- El DNS de `concil.app` tiene **comodín**: cualquier subdominio ya resuelve a
+  este servidor, así que dar de alta una empresa nueva es crear el subdominio
+  en cPanel y pedirle certificado a AutoSSL. No hay que tocar DNS.
   **Editar un archivo es desplegarlo**: no hay build ni paso de publicación. Si
   vas a tocar varios archivos que dependen entre sí (por ejemplo `lib/guia.php`
   y `views/_layout.php`), hazlo rápido y verifica enseguida — durante esos

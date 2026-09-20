@@ -1,4 +1,4 @@
-# CONCIL · concil.app — configuración del dominio
+# CONCIL · armor.concil.app — espacio de Armor Market
 # La aplicación vive en la raíz del dominio desde el 20/09/2026. Antes estaba
 # en una carpeta de vipsoft.cloud y las reglas de más abajo llevaban esa ruta
 # por delante; escritas así ya no protegían nada al mudarse.
@@ -9,7 +9,7 @@ RewriteEngine On
 RewriteCond %{REQUEST_URI} !^/\.well-known/
 RewriteCond %{HTTPS} !=on [OR]
 RewriteCond %{HTTP_HOST} ^www\. [NC]
-RewriteRule ^(.*)$ https://concil.app/$1 [R=301,L]
+RewriteRule ^(.*)$ https://armor.concil.app/$1 [R=301,L]
 
 # Sin listados de directorio
 Options -Indexes
@@ -55,7 +55,6 @@ RedirectMatch 404 ^/\.git(/.*)?$
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
 </IfModule>
-
 
 # php -- BEGIN cPanel-generated handler, do not edit
 # Set the “ea-php83” package as the default “PHP” programming language.
